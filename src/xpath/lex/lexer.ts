@@ -352,15 +352,20 @@ function readDigits(state: LexerState): void {
 }
 
 function readString(state: LexerState, quote: string): void {
+  const start = capturePosition(state);
   advanceChar(state);
 
   while (true) {
     const current = peekChar(state);
     if (current === undefined) {
       throw new XPathError(XPST0003, 'Unterminated string literal.', {
-        line: state.line,
-        column: state.column,
-        offset: state.index,
+        source: '<xpath>',
+        line: start.line,
+        column: start.column,
+        offset: start.index,
+        endLine: state.line,
+        endColumn: state.column,
+        endOffset: state.index,
       });
     }
 
@@ -411,9 +416,13 @@ function readName(state: LexerState): string {
 
 function unexpectedCharacter(start: SourcePosition, character: string): XPathError {
   return new XPathError(XPST0003, `Unexpected character ${JSON.stringify(character)}.`, {
+    source: '<xpath>',
     line: start.line,
     column: start.column,
     offset: start.index,
+    endLine: start.line,
+    endColumn: start.column + 1,
+    endOffset: start.index + 1,
   });
 }
 

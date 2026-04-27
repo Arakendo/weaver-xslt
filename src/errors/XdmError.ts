@@ -10,6 +10,12 @@ export interface SourceLocation {
   column?: number;
   /** Character offset into the source. */
   offset?: number;
+  /** 1-based end line number. */
+  endLine?: number;
+  /** 1-based end column number. */
+  endColumn?: number;
+  /** Character offset for the end of the span. */
+  endOffset?: number;
 }
 
 /**
@@ -18,12 +24,14 @@ export interface SourceLocation {
  */
 export class XdmError extends Error {
   readonly code: ErrorCode;
+  readonly detailMessage: string;
   readonly location?: SourceLocation;
 
   constructor(code: ErrorCode, message: string, location?: SourceLocation) {
     super(`[${code}] ${message}`);
     this.name = 'XdmError';
     this.code = code;
+    this.detailMessage = message;
     if (location !== undefined) {
       this.location = location;
     }

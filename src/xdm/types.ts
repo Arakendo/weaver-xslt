@@ -19,8 +19,11 @@ export interface XdmNode extends XdmItem {
   readonly node: Node;
 }
 
-/** An XDM sequence is just an iterable of items. */
-export type XdmSequence = Iterable<XdmItem>;
+/** Engine-owned sequence abstraction used across XPath and XSLT layers. */
+export interface XdmSequence extends Iterable<XdmItem> {
+  readonly size: number;
+  toArray(): readonly XdmItem[];
+}
 
 export function createXdmBoolean(value: boolean): XdmAtomicValue {
   return { xdmKind: 'atomic', type: 'xs:boolean', value };
