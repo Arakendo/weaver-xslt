@@ -2,13 +2,13 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { parseXml } from '../../src/xml/parse.js';
-import { createXdmNode, type XdmAtomicValue, type XdmItem, type XdmNode } from '../../src/xdm/types.js';
-import { evaluate } from '../../src/xpath/eval/evaluator.js';
-import { parseXPath } from '../../src/xpath/parse/parser.js';
-import type { DynamicContext } from '../../src/xpath/eval/context.js';
+import { parseXml } from '../../../src/xml/parse.js';
+import { createXdmNode, type XdmAtomicValue, type XdmItem, type XdmNode } from '../../../src/xdm/types.js';
+import { evaluate } from '../../../src/xpath/eval/evaluator.js';
+import { parseXPath } from '../../../src/xpath/parse/parser.js';
+import type { DynamicContext } from '../../../src/xpath/eval/context.js';
 
-const REPO_ROOT = join(import.meta.dirname, '..', '..');
+const REPO_ROOT = join(import.meta.dirname, '..', '..', '..');
 const QT3_ROOT = join(REPO_ROOT, 'vendor', 'qt3tests');
 
 type Qt3SliceCase = {

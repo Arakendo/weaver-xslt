@@ -136,7 +136,7 @@ sequence/atomization rules are right, or everything downstream is cursed
 - `substring()` and `string-join()` now work through the same string-value path.
 - `sum()`, `min()`, `max()`, and `avg()` now work over atomized numeric sequences.
 - `distinct-values()` now works over atomized sequences.
-- `matches()`, `replace()`, and `tokenize()` now have an initial regex translator slice with ECMAScript-compatible regexes plus `q` handling, `x` whitespace/comment handling, XML name escapes (`\i`, `\I`, `\c`, `\C`) both outside character classes and in ordinary/negated character classes, and an initial character-class subtraction slice; the broader schema-regex translator is still pending.
+- `matches()`, `replace()`, and `tokenize()` now have an initial regex translator slice with ECMAScript-compatible regexes plus `q` handling, `x` whitespace/comment handling, XML name escapes (`\i`, `\I`, `\c`, `\C`) both outside character classes and in ordinary/negated character classes, an initial character-class subtraction slice, ECMAScript-compatible Unicode property/category escapes such as `\p{Ll}`, `\p{Nd}`, and `\P{Lu}` inside those subtraction forms, and a QT3-backed block-alias table that now covers the current real `\p{Is...}` QT3 block names from the basic multilingual plane through the supplementary private-use areas; the remaining schema-regex translator gaps are outside that current QT3 block-alias surface.
 - The `to` operator now has an initial integer-only range-expression slice.
 - `()` and comma-separated parenthesized expressions now have an initial sequence-constructor slice.
 - `if (...) then ... else ...` now has an initial flow-expression slice.
