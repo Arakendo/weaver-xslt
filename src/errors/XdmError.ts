@@ -1,5 +1,9 @@
 import type { ErrorCode } from './codes.js';
 
+export type ErrorDetailValue = string | number | boolean;
+
+export type ErrorDetails = Readonly<Record<string, ErrorDetailValue>>;
+
 /** Optional source location for an error (stylesheet or XPath expression). */
 export interface SourceLocation {
   /** e.g. 'stylesheet.xsl' or '<xpath>'. */
@@ -26,14 +30,18 @@ export class XdmError extends Error {
   readonly code: ErrorCode;
   readonly detailMessage: string;
   readonly location?: SourceLocation;
+  readonly details?: ErrorDetails;
 
-  constructor(code: ErrorCode, message: string, location?: SourceLocation) {
+  constructor(code: ErrorCode, message: string, location?: SourceLocation, details?: ErrorDetails) {
     super(`[${code}] ${message}`);
     this.name = 'XdmError';
     this.code = code;
     this.detailMessage = message;
     if (location !== undefined) {
       this.location = location;
+    }
+    if (details !== undefined) {
+      this.details = details;
     }
   }
 }

@@ -34,20 +34,28 @@ export type TokenKind =
   | 'greaterThan'
   | 'greaterThanOrEqual'
   | 'doubleColon'
+  | 'assign'
   | 'pipe'
   | 'and'
   | 'eq'
   | 'else'
+  | 'every'
+  | 'for'
   | 'ge'
   | 'gt'
   | 'if'
+  | 'in'
   | 'is'
+  | 'let'
   | 'le'
   | 'lt'
   | 'ne'
   | 'nodeAfter'
   | 'nodeBefore'
   | 'or'
+  | 'return'
+  | 'satisfies'
+  | 'some'
   | 'then'
   | 'to'
   | 'div'
@@ -73,15 +81,22 @@ const KEYWORD_KINDS = {
   div: 'div',
   eq: 'eq',
   else: 'else',
+  every: 'every',
+  for: 'for',
   ge: 'ge',
   gt: 'gt',
   if: 'if',
+  in: 'in',
   is: 'is',
+  let: 'let',
   le: 'le',
   lt: 'lt',
   mod: 'mod',
   ne: 'ne',
   or: 'or',
+  return: 'return',
+  satisfies: 'satisfies',
+  some: 'some',
   then: 'then',
   to: 'to',
 } as const satisfies Record<string, TokenKind>;
@@ -243,6 +258,11 @@ export function tokenize(expression: string): readonly Token[] {
       }
       case ':': {
         advanceChar(state);
+        if (peekChar(state) === '=') {
+          advanceChar(state);
+          tokens.push(makeToken(state, start, 'assign'));
+          break;
+        }
         if (peekChar(state) !== ':') {
           throw unexpectedCharacter(start, current);
         }

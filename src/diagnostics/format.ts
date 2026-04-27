@@ -3,7 +3,7 @@ import type { DiagnosticReport } from './report.js';
 export function formatDiagnostic(report: DiagnosticReport, sourceText?: string): string {
   const header = `${report.severity}[${report.code}]: ${report.message}`;
   if (report.primary === undefined || sourceText === undefined) {
-    return header;
+    return [header, ...formatDetails(report)].join('\n');
   }
 
   const lines = sourceText.split(/\r?\n/);
@@ -24,5 +24,10 @@ export function formatDiagnostic(report: DiagnosticReport, sourceText?: string):
     `--> ${location}`,
     `${lineNumber} | ${lineText}`,
     `${gutterPadding} | ${caretPadding}${'^'.repeat(caretWidth)}`,
+    ...formatDetails(report),
   ].join('\n');
+}
+
+function formatDetails(report: DiagnosticReport): string[] {
+  return report.details.map((detail) => `  = ${detail.key}: ${String(detail.value)}`);
 }

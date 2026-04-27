@@ -7,13 +7,15 @@
 
 import type { Node } from '@xmldom/xmldom';
 
-import { FOAR0001, FOCA0002, XPDY0002, XPST0008, XPST0017, XPTY0004 } from '../../errors/codes.js';
+import { FOAR0001, XPDY0002, XPST0008, XPST0017, XPTY0004 } from '../../errors/codes.js';
 import { XPathError } from '../../errors/XPathError.js';
+import type { ErrorDetails } from '../../errors/XdmError.js';
 import { createSequence, materialize } from '../../xdm/sequence.js';
 import {
   createXdmBoolean,
   createXdmNode,
   createXdmNumber,
+  createXdmQName,
   createXdmString,
   type XdmAtomicValue,
   type XdmItem,
@@ -21,6 +23,7 @@ import {
   type XdmSequence,
 } from '../../xdm/types.js';
 import type { DynamicContext } from './context.js';
+import { compileRegex } from './regex.js';
 import type { PathExpression, StepExpression, XPathAst, XPathBinaryOperator } from '../parse/ast.js';
 
 type SpanLike = {
@@ -42,12 +45,22 @@ function evaluateExpression(ast: XPathAst, context: DynamicContext): XdmItem[] {
       return evaluateBinaryExpression(ast.operator, ast.left, ast.right, context, ast.span);
     case 'contextItem':
       return [requireContextItem(context, ast.span)];
+    case 'for':
+      return evaluateForExpression(ast.bindings, ast.returnExpr, context);
     case 'functionCall':
       return evaluateFunctionCall(ast.callee, ast.arguments, context, ast.span);
     case 'if':
       return effectiveBooleanValue(evaluateExpression(ast.test, context), ast.test.span)
         ? evaluateExpression(ast.thenBranch, context)
         : evaluateExpression(ast.elseBranch, context);
+    case 'quantified':
+      return [
+        createXdmBoolean(
+          evaluateQuantifiedExpression(ast.quantifier, ast.bindings, ast.satisfiesExpr, context),
+        ),
+      ];
+    case 'let':
+      return evaluateLetExpression(ast.bindings, ast.returnExpr, context);
     case 'number':
       return [createXdmNumber(ast.value)];
     case 'string':
@@ -105,7 +118,7 @@ function evaluateFunctionCall(
     }
     case 'fn:substring': {
       if (args.length !== 2 && args.length !== 3) {
-        throw createXPathError(XPST0017, `Function ${normalized} expects 2 or 3 arguments but got ${args.length}.`, span);
+        throwArityError(normalized, args.length, '2..3', span);
       }
       const source = itemToStringValue(evaluateSingletonStringishArg(args[0]!, context, span, normalized));
       const start = Math.round(requireSingleNumber(evaluateExpression(args[1]!, context), span));
@@ -118,7 +131,7 @@ function evaluateFunctionCall(
     }
     case 'fn:concat': {
       if (args.length < 2) {
-        throw createXPathError(XPST0017, `Function ${normalized} expects at least 2 arguments but got ${args.length}.`, span);
+        throwArityError(normalized, args.length, '>=2', span);
       }
       return [createXdmString(args.map((arg) => itemToStringValue(evaluateSingletonStringishArg(arg, context, span, normalized))).join(''))];
     }
@@ -130,7 +143,7 @@ function evaluateFunctionCall(
     }
     case 'fn:matches': {
       if (args.length !== 2 && args.length !== 3) {
-        throw createXPathError(XPST0017, `Function ${normalized} expects 2 or 3 arguments but got ${args.length}.`, span);
+        throwArityError(normalized, args.length, '2..3', span);
       }
       const input = itemToStringValue(evaluateSingletonStringishArg(args[0]!, context, span, normalized));
       const pattern = itemToStringValue(evaluateSingletonStringishArg(args[1]!, context, span, normalized));
@@ -141,7 +154,7 @@ function evaluateFunctionCall(
     }
     case 'fn:replace': {
       if (args.length !== 3 && args.length !== 4) {
-        throw createXPathError(XPST0017, `Function ${normalized} expects 3 or 4 arguments but got ${args.length}.`, span);
+        throwArityError(normalized, args.length, '3..4', span);
       }
       const input = itemToStringValue(evaluateSingletonStringishArg(args[0]!, context, span, normalized));
       const pattern = itemToStringValue(evaluateSingletonStringishArg(args[1]!, context, span, normalized));
@@ -153,7 +166,7 @@ function evaluateFunctionCall(
     }
     case 'fn:tokenize': {
       if (args.length !== 2 && args.length !== 3) {
-        throw createXPathError(XPST0017, `Function ${normalized} expects 2 or 3 arguments but got ${args.length}.`, span);
+        throwArityError(normalized, args.length, '2..3', span);
       }
       const input = itemToStringValue(evaluateSingletonStringishArg(args[0]!, context, span, normalized));
       const pattern = itemToStringValue(evaluateSingletonStringishArg(args[1]!, context, span, normalized));
@@ -267,7 +280,7 @@ function evaluateFunctionCall(
     }
     case 'fn:subsequence': {
       if (args.length !== 2 && args.length !== 3) {
-        throw createXPathError(XPST0017, `Function ${normalized} expects 2 or 3 arguments but got ${args.length}.`, span);
+        throwArityError(normalized, args.length, '2..3', span);
       }
       const items = evaluateExpression(args[0]!, context);
       const start = Math.trunc(requireSingleNumber(evaluateExpression(args[1]!, context), span));
@@ -285,6 +298,11 @@ function evaluateFunctionCall(
     case 'fn:local-name': {
       const item = evaluateOptionalSingletonNodeArg(normalized, args, context, span);
       return [createXdmString(getLocalNameValue(item))];
+    }
+    case 'fn:node-name': {
+      const item = evaluateOptionalSingletonNodeArg(normalized, args, context, span);
+      const name = getNodeNameValue(item);
+      return name.length === 0 ? [] : [createXdmQName(name)];
     }
     case 'fn:true':
       requireArity(normalized, args, 0, span);
@@ -305,7 +323,10 @@ function evaluateFunctionCall(
       requireArity(normalized, args, 1, span);
       return [createXdmNumber(Math.round(requireSingleNumber(evaluateExpression(args[0]!, context), span)))];
     default:
-      throw createXPathError(XPST0017, `Unknown function ${callee} with arity ${args.length}.`, span);
+      throw createXPathError(XPST0017, `Unknown function ${callee} with arity ${args.length}.`, span, {
+        functionName: callee,
+        actualArity: args.length,
+      });
   }
 }
 
@@ -404,6 +425,96 @@ function evaluateRangeExpression(
     items.push(createXdmNumber(value));
   }
   return items;
+}
+
+function evaluateLetExpression(
+  bindings: readonly { name: string; value: XPathAst }[],
+  returnExpr: XPathAst,
+  context: DynamicContext,
+): XdmItem[] {
+  const variables = new Map(context.variables);
+
+  for (const binding of bindings) {
+    variables.set(binding.name, evaluateExpression(binding.value, { ...context, variables }));
+  }
+
+  return evaluateExpression(returnExpr, {
+    ...context,
+    variables,
+  });
+}
+
+function evaluateForExpression(
+  bindings: readonly { name: string; value: XPathAst }[],
+  returnExpr: XPathAst,
+  context: DynamicContext,
+): XdmItem[] {
+  return evaluateFlowBindings(bindings, context, (variables) =>
+    evaluateExpression(returnExpr, {
+      ...context,
+      variables,
+    }),
+  );
+}
+
+function evaluateQuantifiedExpression(
+  quantifier: 'some' | 'every',
+  bindings: readonly { name: string; value: XPathAst }[],
+  satisfiesExpr: XPathAst,
+  context: DynamicContext,
+): boolean {
+  if (quantifier === 'some') {
+    return evaluateFlowBindings(bindings, context, (variables) => {
+      const result = effectiveBooleanValue(
+        evaluateExpression(satisfiesExpr, {
+          ...context,
+          variables,
+        }),
+        satisfiesExpr.span,
+      );
+      return result ? [createXdmBoolean(true)] : [];
+    }).length > 0;
+  }
+
+  let sawBinding = false;
+  const failures = evaluateFlowBindings(bindings, context, (variables) => {
+    sawBinding = true;
+    const result = effectiveBooleanValue(
+      evaluateExpression(satisfiesExpr, {
+        ...context,
+        variables,
+      }),
+      satisfiesExpr.span,
+    );
+    return result ? [] : [createXdmBoolean(false)];
+  });
+
+  return sawBinding ? failures.length === 0 : true;
+}
+
+function evaluateFlowBindings(
+  bindings: readonly { name: string; value: XPathAst }[],
+  context: DynamicContext,
+  project: (variables: ReadonlyMap<string, unknown>) => XdmItem[],
+  variables = new Map(context.variables),
+  index = 0,
+): XdmItem[] {
+  if (index >= bindings.length) {
+    return project(variables);
+  }
+
+  const binding = bindings[index]!;
+  const input = evaluateExpression(binding.value, {
+    ...context,
+    variables,
+  });
+  const results: XdmItem[] = [];
+  for (const item of input) {
+    const nextVariables = new Map(variables);
+    nextVariables.set(binding.name, [item]);
+    results.push(...evaluateFlowBindings(bindings, context, project, nextVariables, index + 1));
+  }
+  return results;
 }
 
 function compareNodes(
@@ -543,7 +654,10 @@ function requireSingleNumber(items: readonly XdmItem[], span: SpanLike): number 
     item?.xdmKind !== 'atomic' ||
     (item as XdmAtomicValue).type !== 'xs:double'
   ) {
-    throw createXPathError(XPTY0004, 'Expected a single numeric value.', span);
+    throw createXPathError(XPTY0004, 'Expected a single numeric value.', span, {
+      expectedType: 'xs:double',
+      actualType: describeItemsType(items),
+    });
   }
   return (item as XdmAtomicValue).value as number;
 }
@@ -551,7 +665,10 @@ function requireSingleNumber(items: readonly XdmItem[], span: SpanLike): number 
 function requireSingleInteger(items: readonly XdmItem[], span: SpanLike, description: string): number {
   const value = requireSingleNumber(items, span);
   if (!Number.isInteger(value)) {
-    throw createXPathError(XPTY0004, `${description} must be an integer in this slice.`, span);
+    throw createXPathError(XPTY0004, `${description} must be an integer in this slice.`, span, {
+      expectedType: 'xs:integer',
+      actualType: 'xs:double',
+    });
   }
   return value;
 }
@@ -563,7 +680,10 @@ function requireContextItem(context: DynamicContext, span: SpanLike): XdmItem {
     throw createXPathError(XPDY0002, 'The XPath expression requires a context item.', span);
   }
   if (items.length !== 1) {
-    throw createXPathError(XPTY0004, 'The XPath expression requires a single context item.', span);
+    throw createXPathError(XPTY0004, 'The XPath expression requires a single context item.', span, {
+      expectedType: 'singleton item()',
+      actualType: describeItemsType(items),
+    });
   }
   return item;
 }
@@ -801,7 +921,10 @@ function coerceValueToItems(value: unknown, span: SpanLike): XdmItem[] {
     return [createXdmString(value)];
   }
 
-  throw createXPathError(XPTY0004, 'Unsupported external value in the dynamic context.', span);
+  throw createXPathError(XPTY0004, 'Unsupported external value in the dynamic context.', span, {
+    expectedType: 'supported XDM value',
+    actualType: describeExternalValueType(value),
+  });
 }
 
 function effectiveBooleanValue(items: readonly XdmItem[], span: SpanLike): boolean {
@@ -814,7 +937,10 @@ function effectiveBooleanValue(items: readonly XdmItem[], span: SpanLike): boole
   }
 
   if (items.length !== 1 || items[0]?.xdmKind !== 'atomic') {
-    throw createXPathError(XPTY0004, 'Expected an effective boolean value.', span);
+    throw createXPathError(XPTY0004, 'Expected an effective boolean value.', span, {
+      expectedType: 'effective boolean value',
+      actualType: describeItemsType(items),
+    });
   }
 
   const atomic = items[0] as XdmAtomicValue;
@@ -843,7 +969,11 @@ function evaluateOptionalSingletonItemArg(
     return undefined;
   }
   if (items.length !== 1) {
-    throw createXPathError(XPTY0004, `Function ${name} requires an empty sequence or singleton item.`, span);
+    throw createXPathError(XPTY0004, `Function ${name} requires an empty sequence or singleton item.`, span, {
+      functionName: name,
+      expectedType: 'empty-sequence() or singleton item()',
+      actualType: describeItemsType(items),
+    });
   }
   return items[0];
 }
@@ -859,7 +989,11 @@ function evaluateOptionalSingletonNodeArg(
     return undefined;
   }
   if (!isXdmNode(item)) {
-    throw createXPathError(XPTY0004, `Function ${name} requires a node argument.`, span);
+    throw createXPathError(XPTY0004, `Function ${name} requires a node argument.`, span, {
+      functionName: name,
+      expectedType: 'node()',
+      actualType: describeItemType(item),
+    });
   }
   return item;
 }
@@ -875,7 +1009,11 @@ function evaluateSingletonStringishArg(
     return undefined;
   }
   if (items.length !== 1) {
-    throw createXPathError(XPTY0004, `Function ${name} requires empty-sequence() or a singleton item argument.`, span);
+    throw createXPathError(XPTY0004, `Function ${name} requires empty-sequence() or a singleton item argument.`, span, {
+      functionName: name,
+      expectedType: 'empty-sequence() or singleton item()',
+      actualType: describeItemsType(items),
+    });
   }
   return items[0];
 }
@@ -930,36 +1068,6 @@ function normalizeSpace(value: string): string {
   return value.trim().replace(/\s+/g, ' ');
 }
 
-function compileRegex(pattern: string, flags: string, span: SpanLike, global = false): RegExp {
-  const ecmaFlags = toEcmaRegexFlags(flags, span, global);
-  try {
-    return new RegExp(pattern, ecmaFlags);
-  } catch {
-    throw createXPathError(FOCA0002, 'Invalid regular expression for the current ECMAScript-compatible regex slice.', span);
-  }
-}
-
-function toEcmaRegexFlags(flags: string, span: SpanLike, global: boolean): string {
-  let result = global ? 'g' : '';
-
-  for (const flag of flags) {
-    if (flag === 'i' || flag === 'm' || flag === 's') {
-      if (!result.includes(flag)) {
-        result += flag;
-      }
-      continue;
-    }
-
-    throw createXPathError(
-      FOCA0002,
-      `Unsupported regular expression flag ${flag} in the current ECMAScript-compatible regex slice.`,
-      span,
-    );
-  }
-
-  return result;
-}
-
 function getNodeNameValue(node: XdmNode | undefined): string {
   if (node === undefined) {
     return '';
@@ -985,8 +1093,29 @@ function compareGeneral(
   rightItems: readonly XdmItem[],
   span: SpanLike,
 ): boolean {
+  if (leftItems.length === 0 || rightItems.length === 0) {
+    return false;
+  }
+
   const leftValues = atomizeItems(leftItems);
   const rightValues = atomizeItems(rightItems);
+
+  if (leftValues.some((value) => typeof value === 'boolean') || rightValues.some((value) => typeof value === 'boolean')) {
+    const leftBoolean = effectiveBooleanValue(leftItems, span);
+    const rightBoolean = effectiveBooleanValue(rightItems, span);
+
+    switch (operator) {
+      case '=':
+        return leftBoolean === rightBoolean;
+      case '!=':
+        return leftBoolean !== rightBoolean;
+      default:
+        throw createXPathError(XPTY0004, 'Relational general comparison is not defined for booleans in this slice.', span, {
+          expectedType: 'non-boolean operands for relational general comparison',
+          actualType: `${describeAtomizedValuesType(leftValues)} vs ${describeAtomizedValuesType(rightValues)}`,
+        });
+    }
+  }
 
   for (const left of leftValues) {
     for (const right of rightValues) {
@@ -1012,12 +1141,20 @@ function atomizeItems(items: readonly XdmItem[]): readonly (boolean | number | s
 function atomizedNumericValues(items: readonly XdmItem[], span: SpanLike, functionName: string): number[] {
   return atomizeItems(items).map((value) => {
     if (typeof value === 'boolean') {
-      throw createXPathError(XPTY0004, `Function ${functionName} requires numeric values after atomization.`, span);
+      throw createXPathError(XPTY0004, `Function ${functionName} requires numeric values after atomization.`, span, {
+        functionName,
+        expectedType: 'numeric value after atomization',
+        actualType: 'xs:boolean',
+      });
     }
 
     const numericValue = coerceNumericValue(value);
     if (numericValue === undefined) {
-      throw createXPathError(XPTY0004, `Function ${functionName} requires numeric values after atomization.`, span);
+      throw createXPathError(XPTY0004, `Function ${functionName} requires numeric values after atomization.`, span, {
+        functionName,
+        expectedType: 'numeric value after atomization',
+        actualType: 'xs:string',
+      });
     }
 
     return numericValue;
@@ -1032,7 +1169,10 @@ function compareAtomicValues(
 ): boolean {
   if (typeof left === 'boolean' || typeof right === 'boolean') {
     if (typeof left !== 'boolean' || typeof right !== 'boolean') {
-      throw createXPathError(XPTY0004, 'Boolean comparisons require boolean operands.', span);
+      throw createXPathError(XPTY0004, 'Boolean comparisons require boolean operands.', span, {
+        expectedType: 'boolean operands',
+        actualType: `${describeAtomizedValueType(left)} vs ${describeAtomizedValueType(right)}`,
+      });
     }
 
     switch (operator) {
@@ -1041,7 +1181,10 @@ function compareAtomicValues(
       case '!=':
         return left !== right;
       default:
-        throw createXPathError(XPTY0004, 'Relational comparison is not defined for booleans in this slice.', span);
+        throw createXPathError(XPTY0004, 'Relational comparison is not defined for booleans in this slice.', span, {
+          expectedType: 'eq/ne boolean comparison',
+          actualType: 'xs:boolean',
+        });
     }
   }
 
@@ -1063,7 +1206,10 @@ function atomizeSingleton(
   }
 
   if (items.length !== 1) {
-    throw createXPathError(XPTY0004, 'Value comparisons require singleton operands.', span);
+    throw createXPathError(XPTY0004, 'Value comparisons require singleton operands.', span, {
+      expectedType: 'singleton operand',
+      actualType: describeItemsType(items),
+    });
   }
 
   const [item] = items;
@@ -1084,7 +1230,11 @@ function requireSingletonNode(
   }
 
   if (items.length !== 1 || items[0]?.xdmKind !== 'node') {
-    throw createXPathError(XPTY0004, `Node comparisons require a singleton node on the ${side} side.`, span);
+    throw createXPathError(XPTY0004, `Node comparisons require a singleton node on the ${side} side.`, span, {
+      expectedType: 'singleton node()',
+      actualType: describeItemsType(items),
+      operandRole: side,
+    });
   }
 
   return items[0] as XdmNode;
@@ -1146,11 +1296,17 @@ function compareValueOperands(
 ): boolean {
   if (typeof left === 'boolean' || typeof right === 'boolean') {
     if (typeof left !== 'boolean' || typeof right !== 'boolean') {
-      throw createXPathError(XPTY0004, 'Value comparisons require matching operand types.', span);
+      throw createXPathError(XPTY0004, 'Value comparisons require matching operand types.', span, {
+        expectedType: 'matching operand types',
+        actualType: `${describeAtomizedValueType(left)} vs ${describeAtomizedValueType(right)}`,
+      });
     }
 
     if (operator !== 'eq' && operator !== 'ne') {
-      throw createXPathError(XPTY0004, 'Relational value comparisons are not defined for booleans.', span);
+      throw createXPathError(XPTY0004, 'Relational value comparisons are not defined for booleans.', span, {
+        expectedType: 'eq/ne boolean value comparison',
+        actualType: 'xs:boolean',
+      });
     }
 
     return compareScalars(operator, left, right);
@@ -1158,7 +1314,10 @@ function compareValueOperands(
 
   if (typeof left === 'number' || typeof right === 'number') {
     if (typeof left !== 'number' || typeof right !== 'number') {
-      throw createXPathError(XPTY0004, 'Value comparisons require matching operand types.', span);
+      throw createXPathError(XPTY0004, 'Value comparisons require matching operand types.', span, {
+        expectedType: 'matching operand types',
+        actualType: `${describeAtomizedValueType(left)} vs ${describeAtomizedValueType(right)}`,
+      });
     }
 
     return compareScalars(operator, left, right);
@@ -1203,7 +1362,7 @@ function compareScalars<T extends boolean | number | string>(
   }
 }
 
-function createXPathError(code: string, message: string, span: SpanLike): XPathError {
+function createXPathError(code: string, message: string, span: SpanLike, details?: ErrorDetails): XPathError {
   return new XPathError(code, message, {
     source: '<xpath>',
     line: span.line,
@@ -1212,11 +1371,89 @@ function createXPathError(code: string, message: string, span: SpanLike): XPathE
     endLine: span.endLine,
     endColumn: span.endColumn,
     endOffset: span.end,
-  });
+  }, details);
 }
 
 function requireArity(name: string, args: readonly XPathAst[], expected: number, span: SpanLike): void {
   if (args.length !== expected) {
-    throw createXPathError(XPST0017, `Function ${name} expects ${expected} arguments but got ${args.length}.`, span);
+    throwArityError(name, args.length, String(expected), span);
   }
+}
+
+function throwArityError(name: string, actualArity: number, arityRequirement: string, span: SpanLike): never {
+  const requirementLabel = arityRequirement.includes('..')
+    ? arityRequirement.replace('..', ' or ')
+    : arityRequirement === '>=2'
+      ? 'at least 2'
+      : arityRequirement;
+  throw createXPathError(XPST0017, `Function ${name} expects ${requirementLabel} arguments but got ${actualArity}.`, span, {
+    functionName: name,
+    actualArity,
+    arityRequirement,
+  });
+}
+
+function describeItemsType(items: readonly XdmItem[]): string {
+  if (items.length === 0) {
+    return 'empty-sequence()';
+  }
+
+  if (items.length === 1) {
+    return describeItemType(items[0]!);
+  }
+
+  const uniqueTypes = [...new Set(items.map((item) => describeItemType(item)))];
+  return `sequence(${items.length}) of ${uniqueTypes.join(' | ')}`;
+}
+
+function describeItemType(item: XdmItem): string {
+  if (item.xdmKind === 'node') {
+    return 'node()';
+  }
+
+  return (item as XdmAtomicValue).type;
+}
+
+function describeAtomizedValueType(value: boolean | number | string): string {
+  if (typeof value === 'boolean') {
+    return 'xs:boolean';
+  }
+
+  if (typeof value === 'number') {
+    return 'xs:double';
+  }
+
+  return 'xs:string';
+}
+
+function describeAtomizedValuesType(values: readonly (boolean | number | string)[]): string {
+  if (values.length === 0) {
+    return 'empty-sequence()';
+  }
+
+  if (values.length === 1) {
+    return describeAtomizedValueType(values[0]!);
+  }
+
+  const uniqueTypes = [...new Set(values.map((value) => describeAtomizedValueType(value)))];
+  return `sequence(${values.length}) of ${uniqueTypes.join(' | ')}`;
+}
+
+function describeExternalValueType(value: unknown): string {
+  if (value === null) {
+    return 'null';
+  }
+  if (value === undefined) {
+    return 'undefined';
+  }
+  if (Array.isArray(value)) {
+    return 'Array';
+  }
+  if (typeof value === 'object' && 'constructor' in (value as object)) {
+    const constructorName = (value as { constructor?: { name?: string } }).constructor?.name;
+    if (constructorName !== undefined && constructorName.length > 0) {
+      return constructorName;
+    }
+  }
+  return typeof value;
 }

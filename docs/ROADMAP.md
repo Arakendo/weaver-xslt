@@ -130,16 +130,19 @@ sequence/atomization rules are right, or everything downstream is cursed
 - `boolean()` and `not()` now reuse effective-boolean-value semantics over evaluated sequences.
 - `true()`, `false()`, `abs()`, `floor()`, `ceiling()`, and `round()` now work through the shared function dispatch path.
 - `string()`, `string-length()`, `number()`, `data()`, and `root()` now work through local string-value and atomization helpers.
-- `name()` and `local-name()` now work for singleton node arguments.
+- `name()`, `local-name()`, and `node-name()` now work for singleton node arguments.
 - `reverse()`, `head()`, `tail()`, and `subsequence()` now work over evaluated sequences.
 - `concat()`, `normalize-space()`, `contains()`, `starts-with()`, `ends-with()`, `upper-case()`, and `lower-case()` now work through the shared string-value helpers.
 - `substring()` and `string-join()` now work through the same string-value path.
 - `sum()`, `min()`, `max()`, and `avg()` now work over atomized numeric sequences.
 - `distinct-values()` now works over atomized sequences.
-- `matches()`, `replace()`, and `tokenize()` now have an initial ECMAScript-compatible regex slice; the schema-regex translator is still pending.
+- `matches()`, `replace()`, and `tokenize()` now have an initial regex translator slice with ECMAScript-compatible regexes plus `q` handling, `x` whitespace/comment handling, and XML name escapes (`\i`, `\I`, `\c`, `\C`) outside character classes plus in-class support for ordinary `\i`/`\I`/`\c`/`\C` usage; negated character classes that also contain XML name complement escapes and the broader schema-regex translator are still pending.
 - The `to` operator now has an initial integer-only range-expression slice.
 - `()` and comma-separated parenthesized expressions now have an initial sequence-constructor slice.
 - `if (...) then ... else ...` now has an initial flow-expression slice.
+- `let $x := ... return ...` now has an initial binding-expression slice with sequential local bindings.
+- `for $x in ... return ...` now supports multiple bindings in the initial iteration-expression slice.
+- `some $x in ... satisfies ...` and `every $x in ... satisfies ...` now support multiple bindings in the initial quantified-expression slice.
 - Value comparison operators `eq ne lt le gt ge` are now distinct from general comparison,
   including a first type-error guard for mismatched singleton operands.
 - The `parent` axis is now available via both `..` and `parent::`.
@@ -180,11 +183,11 @@ sequence/atomization rules are right, or everything downstream is cursed
       not a silent `false`
 - [ ] `position()` and `last()` inside predicates work correctly against
       nested paths
-- [ ] Regex translator has its own fixture suite (inputs from W3C regex
+- [x] Regex translator has its own fixture suite (inputs from W3C regex
       examples, outputs = ECMAScript source strings)
-- [ ] Error messages show the *subexpression* that failed, not just the
+- [x] Error messages show the *subexpression* that failed, not just the
       whole expression
-- [ ] Required-detail validation exists for at least the codes the engine
+- [x] Required-detail validation exists for at least the codes the engine
   materially depends on in this slice (`XPTY0004`, `XPST0017`, etc.)
 
 ---

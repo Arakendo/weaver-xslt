@@ -86,7 +86,7 @@ export function diagnosticReportFromError(error: unknown): DiagnosticReport {
     message: error.detailMessage,
     related: [],
     frames: [],
-    details: [],
+    details: toDiagnosticDetails(error.details),
     suggestions: [],
     causes: [],
   };
@@ -103,6 +103,19 @@ export function assertValidDiagnostic(report: DiagnosticReport): void {
     throw new Error('Diagnostic code must be non-empty.');
   }
 
+  const detailKeys = new Set<string>();
+  for (const detail of report.details) {
+    if (detail.key.length === 0) {
+      throw new Error('Diagnostic detail keys must be non-empty.');
+    }
+    if (detailKeys.has(detail.key)) {
+      throw new Error(`Duplicate diagnostic detail key ${detail.key}.`);
+    }
+    detailKeys.add(detail.key);
+  }
+
+  assertRequiredDetails(report, detailKeys);
+
   if (report.primary !== undefined) {
     assertValidSpan(report.primary);
   }
@@ -111,6 +124,11 @@ export function assertValidDiagnostic(report: DiagnosticReport): void {
     assertValidSpan(related.span);
   }
 }
+
+const REQUIRED_DETAIL_KEYS: Readonly<Record<string, readonly string[]>> = {
+  XPST0017: ['functionName', 'actualArity'],
+  XPTY0004: ['expectedType', 'actualType'],
+};
 
 function classifyPhase(code: string): DiagnosticPhase {
   if (code.startsWith('XPST') || code.startsWith('XTSE')) {
@@ -164,6 +182,27 @@ function toSourceSpan(location: SourceLocation | undefined): SourceSpan | undefi
     lineEnd: location.endLine ?? location.line,
     columnEnd: location.endColumn ?? location.column + 1,
   };
+}
+
+function toDiagnosticDetails(details: XdmError['details']): readonly DiagnosticDetail[] {
+  if (details === undefined) {
+    return [];
+  }
+
+  return Object.entries(details).map(([key, value]) => ({ key, value }));
+}
+
+function assertRequiredDetails(report: DiagnosticReport, detailKeys: ReadonlySet<string>): void {
+  const requiredKeys = REQUIRED_DETAIL_KEYS[report.code];
+  if (requiredKeys === undefined) {
+    return;
+  }
+
+  for (const key of requiredKeys) {
+    if (!detailKeys.has(key)) {
+      throw new Error(`Diagnostic ${report.code} must include detail ${key}.`);
+    }
+  }
 }
 
 function assertValidSpan(span: SourceSpan): void {

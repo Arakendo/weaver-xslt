@@ -10,7 +10,7 @@ export interface XdmItem {
 
 export interface XdmAtomicValue extends XdmItem {
   readonly xdmKind: 'atomic';
-  readonly type: 'xs:boolean' | 'xs:double' | 'xs:string';
+  readonly type: 'xs:boolean' | 'xs:double' | 'xs:QName' | 'xs:string';
   readonly value: boolean | number | string;
 }
 
@@ -35,6 +35,10 @@ export function createXdmNumber(value: number): XdmAtomicValue {
 
 export function createXdmString(value: string): XdmAtomicValue {
   return { xdmKind: 'atomic', type: 'xs:string', value };
+}
+
+export function createXdmQName(value: string): XdmAtomicValue {
+  return { xdmKind: 'atomic', type: 'xs:QName', value };
 }
 
 export function createXdmNode(node: Node): XdmNode {

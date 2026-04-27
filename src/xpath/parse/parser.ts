@@ -9,12 +9,15 @@ import { XPST0003 } from '../../errors/codes.js';
 import { XPathError } from '../../errors/XPathError.js';
 import { tokenize, type SourceSpan, type Token, type TokenKind } from '../lex/lexer.js';
 import type {
+  ForExpression,
   FunctionCallExpression,
   IfExpression,
   KindTest,
+  LetExpression,
   NameTest,
   NumberLiteral,
   PathExpression,
+  QuantifiedExpression,
   SequenceExpression,
   StepExpression,
   StringLiteral,
@@ -42,8 +45,17 @@ class Parser {
   }
 
   parseExpression(): XPathAst {
+    if (this.current().kind === 'some' || this.current().kind === 'every') {
+      return this.parseQuantifiedExpression();
+    }
+    if (this.current().kind === 'for') {
+      return this.parseForExpression();
+    }
     if (this.current().kind === 'if') {
       return this.parseIfExpression();
+    }
+    if (this.current().kind === 'let') {
+      return this.parseLetExpression();
     }
     return this.parseOrExpression();
   }
@@ -174,6 +186,87 @@ class Parser {
       thenBranch,
       elseBranch,
       span: mergeSpans(ifToken.span, elseBranch.span),
+    };
+  }
+
+  private parseForExpression(): ForExpression {
+    const forToken = this.expect('for', 'Expected for to start the iteration expression.');
+    const bindings = this.parseFlowBindings('for');
+    this.expect('return', 'Expected return after the for input expression.');
+    const returnExpr = this.parseExpression();
+    return {
+      kind: 'for',
+      bindings,
+      returnExpr,
+      span: mergeSpans(forToken.span, returnExpr.span),
+    };
+  }
+
+  private parseQuantifiedExpression(): QuantifiedExpression {
+    const quantifierToken = this.matchAny(['some', 'every']);
+    if (quantifierToken === undefined) {
+      throw createParseError('Expected some or every to start the quantified expression.', this.current().span);
+    }
+
+    const bindings = this.parseFlowBindings('quantified');
+    this.expect('satisfies', 'Expected satisfies after the quantified input expression.');
+    const satisfiesExpr = this.parseExpression();
+    return {
+      kind: 'quantified',
+      quantifier: quantifierToken.kind === 'some' ? 'some' : 'every',
+      bindings,
+      satisfiesExpr,
+      span: mergeSpans(quantifierToken.span, satisfiesExpr.span),
+    };
+  }
+
+  private parseFlowBindings(kind: 'for' | 'quantified'): Array<{ name: string; value: XPathAst; span: SourceSpan }> {
+    const bindings: Array<{ name: string; value: XPathAst; span: SourceSpan }> = [];
+
+    while (true) {
+      this.expect('dollar', `Expected $ to start the ${kind} binding.`);
+      const name = this.expect('name', `Expected a variable name in the ${kind} binding.`);
+      this.expect('in', `Expected in after the ${kind} variable.`);
+      const value = this.parseExpression();
+      bindings.push({
+        name: name.value,
+        value,
+        span: mergeSpans(name.span, value.span),
+      });
+      if (this.match('comma') === undefined) {
+        break;
+      }
+    }
+
+    return bindings;
+  }
+
+  private parseLetExpression(): LetExpression {
+    const letToken = this.expect('let', 'Expected let to start the binding expression.');
+    const bindings: Array<{ name: string; value: XPathAst; span: SourceSpan }> = [];
+
+    while (true) {
+      this.expect('dollar', 'Expected $ to start a let binding.');
+      const name = this.expect('name', 'Expected a variable name in the let binding.');
+      this.expect('assign', 'Expected := in the let binding.');
+      const value = this.parseExpression();
+      bindings.push({
+        name: name.value,
+        value,
+        span: mergeSpans(name.span, value.span),
+      });
+      if (this.match('comma') === undefined) {
+        break;
+      }
+    }
+
+    this.expect('return', 'Expected return after the let bindings.');
+    const returnExpr = this.parseExpression();
+    return {
+      kind: 'let',
+      bindings,
+      returnExpr,
+      span: mergeSpans(letToken.span, returnExpr.span),
     };
   }
 

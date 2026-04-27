@@ -3,10 +3,13 @@ import type { SourceSpan } from '../lex/lexer.js';
 export type XPathAst =
   | BinaryExpression
   | ContextItemExpression
+  | ForExpression
   | FunctionCallExpression
   | IfExpression
+  | LetExpression
   | NumberLiteral
   | PathExpression
+  | QuantifiedExpression
   | SequenceExpression
   | StringLiteral
   | UnaryExpression
@@ -76,6 +79,40 @@ export interface IfExpression {
   readonly test: XPathAst;
   readonly thenBranch: XPathAst;
   readonly elseBranch: XPathAst;
+  readonly span: SourceSpan;
+}
+
+export interface LetBinding {
+  readonly name: string;
+  readonly value: XPathAst;
+  readonly span: SourceSpan;
+}
+
+export interface FlowBinding {
+  readonly name: string;
+  readonly value: XPathAst;
+  readonly span: SourceSpan;
+}
+
+export interface LetExpression {
+  readonly kind: 'let';
+  readonly bindings: readonly LetBinding[];
+  readonly returnExpr: XPathAst;
+  readonly span: SourceSpan;
+}
+
+export interface ForExpression {
+  readonly kind: 'for';
+  readonly bindings: readonly FlowBinding[];
+  readonly returnExpr: XPathAst;
+  readonly span: SourceSpan;
+}
+
+export interface QuantifiedExpression {
+  readonly kind: 'quantified';
+  readonly quantifier: 'some' | 'every';
+  readonly bindings: readonly FlowBinding[];
+  readonly satisfiesExpr: XPathAst;
   readonly span: SourceSpan;
 }
 

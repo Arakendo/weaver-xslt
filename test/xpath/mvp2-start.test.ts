@@ -46,6 +46,18 @@ describe('XPath MVP+2 start', () => {
     expect(parseXPath('if (1 eq 1) then 2 else 3')).toMatchObject({
       kind: 'if',
     });
+    expect(parseXPath('let $x := 1 return $x')).toMatchObject({
+      kind: 'let',
+    });
+    expect(parseXPath('for $x in (1, 2) return $x')).toMatchObject({
+      kind: 'for',
+    });
+    expect(parseXPath('for $x in (1, 2), $y in (3, 4) return ($x, $y)')).toMatchObject({
+      kind: 'for',
+    });
+    expect(parseXPath('some $x in (1, 2) satisfies $x eq 2')).toMatchObject({
+      kind: 'quantified',
+    });
   });
 
   it('evaluates integer range expressions', () => {
@@ -94,6 +106,55 @@ describe('XPath MVP+2 start', () => {
     ]);
     expect([...evaluate(parseXPath('if (/root/missing) then 1 else 2'), context)]).toMatchObject([
       { type: 'xs:double', value: 2 },
+    ]);
+  });
+
+  it('evaluates the initial let-return slice', () => {
+    const context = createContext('<root><item>A</item><item>B</item></root>');
+
+    expect([...evaluate(parseXPath('let $x := /root/item[2] return $x'), context)]).toMatchObject([
+      { xdmKind: 'node' },
+    ]);
+    expect([...evaluate(parseXPath('let $x := 1, $y := $x + 1 return ($x, $y)'), context)]).toMatchObject([
+      { type: 'xs:double', value: 1 },
+      { type: 'xs:double', value: 2 },
+    ]);
+  });
+
+  it('evaluates the initial for-return slice', () => {
+    const context = createContext('<root><item>A</item><item>B</item></root>');
+
+    expect([...evaluate(parseXPath('for $x in /root/item return $x'), context)]).toMatchObject([
+      { xdmKind: 'node' },
+      { xdmKind: 'node' },
+    ]);
+    expect([...evaluate(parseXPath('for $x in (1, 2, 3) return $x + 1'), context)]).toMatchObject([
+      { type: 'xs:double', value: 2 },
+      { type: 'xs:double', value: 3 },
+      { type: 'xs:double', value: 4 },
+    ]);
+    expect([...evaluate(parseXPath('for $x in (1, 2), $y in (10, 20) return $x + $y'), context)]).toMatchObject([
+      { type: 'xs:double', value: 11 },
+      { type: 'xs:double', value: 21 },
+      { type: 'xs:double', value: 12 },
+      { type: 'xs:double', value: 22 },
+    ]);
+  });
+
+  it('evaluates the initial some/every satisfies slice', () => {
+    const context = createContext('<root/>');
+
+    expect([...evaluate(parseXPath('some $x in (1, 2, 3) satisfies $x eq 2'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
+    ]);
+    expect([...evaluate(parseXPath('every $x in (1, 2, 3) satisfies $x lt 4'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
+    ]);
+    expect([...evaluate(parseXPath('some $x in (1, 2), $y in (3, 4) satisfies $x + $y eq 6'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
+    ]);
+    expect([...evaluate(parseXPath('every $x in () satisfies $x eq 1'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
     ]);
   });
 
@@ -212,6 +273,10 @@ describe('XPath MVP+2 start', () => {
     expect([...evaluate(parseXPath('name(root(/root/p:item))'), context)]).toMatchObject([
       { type: 'xs:string', value: '' },
     ]);
+    expect([...evaluate(parseXPath('node-name(/root/p:item)'), context)]).toMatchObject([
+      { type: 'xs:QName', value: 'p:item' },
+    ]);
+    expect([...evaluate(parseXPath('node-name(root(/root/p:item))'), context)]).toEqual([]);
   });
 
   it('evaluates sequence-shaping built-ins', () => {
@@ -296,8 +361,47 @@ describe('XPath MVP+2 start', () => {
     expect([...evaluate(parseXPath('matches("ABC", "abc", "i")'), context)]).toMatchObject([
       { type: 'xs:boolean', value: true },
     ]);
+    expect([...evaluate(parseXPath('matches("a.c", "a.c", "q")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
+    ]);
+    expect([...evaluate(parseXPath('matches("a b", "a b", "qx")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
+    ]);
+    expect([...evaluate(parseXPath('matches("a#b", "a#b", "qx")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
+    ]);
+    expect([...evaluate(parseXPath('matches("_:alpha", "\\i\\c*")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
+    ]);
+    expect([...evaluate(parseXPath('matches("1.0", "\\i+")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: false },
+    ]);
+    expect([...evaluate(parseXPath('matches("a b  Z:_", "^[\\s\\i]*$")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
+    ]);
+    expect([...evaluate(parseXPath('matches("1", "^[\\s\\i]*$")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: false },
+    ]);
+    expect([...evaluate(parseXPath('matches("1.0", "^[\\I]+$")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
+    ]);
+    expect([...evaluate(parseXPath('matches("_", "^[\\I]+$")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: false },
+    ]);
+    expect([...evaluate(parseXPath('matches("?a?", "^[\\C\\?a-c\\?]+$")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
+    ]);
+    expect([...evaluate(parseXPath('matches("?d?", "^[\\C\\?a-c\\?]+$")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: false },
+    ]);
+    expect([...evaluate(parseXPath('matches("abc", "a b c", "x")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
+    ]);
     expect([...evaluate(parseXPath('replace("abracadabra", "bra", "*")'), context)]).toMatchObject([
       { type: 'xs:string', value: 'a*cada*' },
+    ]);
+    expect([...evaluate(parseXPath('replace("a.c", "a.c", "*", "q")'), context)]).toMatchObject([
+      { type: 'xs:string', value: '*' },
     ]);
     expect([...evaluate(parseXPath('tokenize("a,b,c", ",")'), context)]).toMatchObject([
       { type: 'xs:string', value: 'a' },
@@ -310,13 +414,21 @@ describe('XPath MVP+2 start', () => {
     let thrown: unknown;
 
     try {
-      [...evaluate(parseXPath('matches("a", ".", "q")'), createContext('<root/>'))];
+      [...evaluate(parseXPath('matches("a", ".", "z")'), createContext('<root/>'))];
     } catch (error) {
       thrown = error;
     }
 
     expect(thrown).toBeInstanceOf(XPathError);
     expect(thrown).toMatchObject({ code: 'FOCA0002' });
+  });
+
+  it('supports XPath x-flag regex comments in the initial translator slice', () => {
+    const context = createContext('<root/>');
+
+    expect([...evaluate(parseXPath('matches("abc", "a # skip\n b c", "x")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
+    ]);
   });
 
   it('supports the parent axis through .. and parent::', () => {
@@ -390,6 +502,17 @@ describe('XPath MVP+2 start', () => {
 
     expect(thrown).toBeInstanceOf(XPathError);
     expect(thrown).toMatchObject({ code: 'XPTY0004' });
+  });
+
+  it('evaluates general comparisons with sequence and boolean coercion semantics', () => {
+    const context = createContext('<root><value>2</value><value>4</value><item/></root>');
+
+    expect([...evaluate(parseXPath('(1, 2, 3) = 2'), context)]).toMatchObject([{ type: 'xs:boolean', value: true }]);
+    expect([...evaluate(parseXPath('/root/value = 4'), context)]).toMatchObject([{ type: 'xs:boolean', value: true }]);
+    expect([...evaluate(parseXPath('1 = true()'), context)]).toMatchObject([{ type: 'xs:boolean', value: true }]);
+    expect([...evaluate(parseXPath('0 = false()'), context)]).toMatchObject([{ type: 'xs:boolean', value: true }]);
+    expect([...evaluate(parseXPath('/root/item = true()'), context)]).toMatchObject([{ type: 'xs:boolean', value: true }]);
+    expect([...evaluate(parseXPath('() = false()'), context)]).toMatchObject([{ type: 'xs:boolean', value: false }]);
   });
 
   it('evaluates value comparisons with singleton semantics', () => {
