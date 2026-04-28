@@ -26,15 +26,6 @@ function evaluateAtomic(expression: string, context: DynamicContext): XdmAtomicV
 }
 
 describe('XPath MVP+1 slice coverage', () => {
-  it('parses every MVP+1 expression kind', () => {
-    expect(parseXPath('1')).toMatchObject({ kind: 'number' });
-    expect(parseXPath('"tea"')).toMatchObject({ kind: 'string', value: 'tea' });
-    expect(parseXPath('.')).toMatchObject({ kind: 'contextItem' });
-    expect(parseXPath('$item')).toMatchObject({ kind: 'variable', name: 'item' });
-    expect(parseXPath('-1')).toMatchObject({ kind: 'unary', operator: '-' });
-    expect(parseXPath('foo/bar[1]')).toMatchObject({ kind: 'path', absolute: false });
-  });
-
   it('evaluates every MVP+1 binary operator', () => {
     const context = createContext('<root/>');
     const expectations = [

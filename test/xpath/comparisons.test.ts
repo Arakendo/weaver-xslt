@@ -42,6 +42,9 @@ describe('XPath comparison coverage', () => {
       { expression: '/root/value <= 2', expected: true },
       { expression: '/root/value > 3', expected: true },
       { expression: '/root/value >= 4', expected: true },
+      { expression: '1 = true()', expected: true },
+      { expression: '0 = false()', expected: true },
+      { expression: '/root/item = true()', expected: true },
       { expression: '() = false()', expected: false },
       { expression: '() != true()', expected: false },
     ] as const;
