@@ -5,6 +5,7 @@ import { parseXPath } from '../../src/xpath/parse/parser.js';
 describe('XPath parser coverage', () => {
   it('parses every MVP+1 expression kind', () => {
     expect(parseXPath('1')).toMatchObject({ kind: 'number' });
+    expect(parseXPath('1.0e0')).toMatchObject({ kind: 'number', value: 1 });
     expect(parseXPath('"tea"')).toMatchObject({ kind: 'string', value: 'tea' });
     expect(parseXPath('.')).toMatchObject({ kind: 'contextItem' });
     expect(parseXPath('$item')).toMatchObject({ kind: 'variable', name: 'item' });
@@ -48,6 +49,21 @@ describe('XPath parser coverage', () => {
     });
     expect(parseXPath('some $x in (1, 2) satisfies $x eq 2')).toMatchObject({
       kind: 'quantified',
+    });
+    expect(parseXPath('$items/item')).toMatchObject({
+      kind: 'path',
+      base: { kind: 'variable', name: 'items' },
+    });
+    expect(parseXPath('/root/item/string(@name)')).toMatchObject({
+      kind: 'path',
+      steps: [
+        { kind: 'step' },
+        { kind: 'step' },
+        { kind: 'functionCall', callee: 'string' },
+      ],
+    });
+    expect(parseXPath('(1 to 25)[. mod 2 eq 0]')).toMatchObject({
+      kind: 'filter',
     });
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { FORX0001, FORX0002 } from '../../../src/errors/codes.js';
 import { XPathError } from '../../../src/errors/XPathError.js';
 import {
   XML_NAME_CHAR_CLASS,
@@ -29,6 +30,7 @@ describe('XPath regex translator fixtures', () => {
       { pattern: 'a.c', flags: 'q', expected: 'a\\.c' },
       { pattern: 'a b', flags: 'qx', expected: 'a b' },
       { pattern: 'a#b', flags: 'qx', expected: 'a#b' },
+      { pattern: '^$', flags: 'm', expected: '(?:^|(?<=\\n)(?!$))(?:$|(?=\\n))' },
       { pattern: '\\i\\c*', flags: '', expected: `[${XML_NAME_START_CHAR_CLASS}][${XML_NAME_CHAR_CLASS}]*` },
       { pattern: '\\I+', flags: '', expected: `[^${XML_NAME_START_CHAR_CLASS}]+` },
       { pattern: '[\\s\\i]*', flags: '', expected: `[\\s${XML_NAME_START_CHAR_CLASS}]*` },
@@ -380,7 +382,7 @@ describe('XPath regex translator fixtures', () => {
     ] as const;
 
     for (const fixture of fixtures) {
-      expect(translateRegexPattern(fixture.pattern, fixture.flags)).toBe(fixture.expected);
+      expect(translateRegexPattern(fixture.pattern, fixture.flags, TEST_SPAN)).toBe(fixture.expected);
     }
   });
 
@@ -388,7 +390,7 @@ describe('XPath regex translator fixtures', () => {
     const fixtures = [
       { flags: '', global: false, pattern: undefined, expected: '' },
       { flags: 'i', global: false, pattern: undefined, expected: 'i' },
-      { flags: 'im', global: true, pattern: undefined, expected: 'gim' },
+      { flags: 'im', global: true, pattern: undefined, expected: 'gi' },
       { flags: 'qx', global: false, pattern: undefined, expected: '' },
       { flags: 'sxi', global: true, pattern: undefined, expected: 'gsi' },
       { flags: '', global: false, pattern: `[${XML_NAME_START_CHAR_CLASS}]`, expected: 'u' },
@@ -398,6 +400,40 @@ describe('XPath regex translator fixtures', () => {
 
     for (const fixture of fixtures) {
       expect(toEcmaRegexFlags(fixture.flags, TEST_SPAN, fixture.global, fixture.pattern)).toBe(fixture.expected);
+    }
+  });
+
+  it('raises FORX0001 for unsupported regex flags', () => {
+    try {
+      toEcmaRegexFlags('z', TEST_SPAN);
+      throw new Error('Expected unsupported regex flag to fail.');
+    } catch (error) {
+      expect(error).toBeInstanceOf(XPathError);
+      expect((error as XPathError).code).toBe(FORX0001);
+    }
+  });
+
+  it('raises FORX0002 for invalid regex patterns', () => {
+    for (const pattern of ['?a', '[^a-d-b-c]', '[^[a-b]]']) {
+      try {
+        compileRegex(pattern, '', TEST_SPAN);
+        throw new Error(`Expected invalid regex pattern ${pattern} to fail.`);
+      } catch (error) {
+        expect(error).toBeInstanceOf(XPathError);
+        expect((error as XPathError).code).toBe(FORX0002);
+      }
+    }
+  });
+
+  it('raises FORX0002 for back-references to groups that are not yet closed', () => {
+    for (const pattern of ['^((#)abc\\1)$', '(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)((m)(n)(o)(p)(q)\\13)$']) {
+      try {
+        compileRegex(pattern, '', TEST_SPAN);
+        throw new Error(`Expected invalid back-reference pattern ${pattern} to fail.`);
+      } catch (error) {
+        expect(error).toBeInstanceOf(XPathError);
+        expect((error as XPathError).code).toBe(FORX0002);
+      }
     }
   });
 
@@ -419,6 +455,8 @@ describe('XPath regex translator fixtures', () => {
     expect(compileRegex('^[^\\C\\?a-c\\?]+$', '', TEST_SPAN).test('?')).toBe(false);
     expect(compileRegex('^[a-d-[b-c]]+$', '', TEST_SPAN).test('ad')).toBe(true);
     expect(compileRegex('^[a-d-[b-c]]+$', '', TEST_SPAN).test('b')).toBe(false);
+    expect(compileRegex('^[a-\\}]+$', '', TEST_SPAN).test('abcxyz}')).toBe(true);
+    expect(compileRegex('^[a-\\}]+$', '', TEST_SPAN).test('')).toBe(false);
     expect(compileRegex('^[\\d-[357]]+$', '', TEST_SPAN).test('24680')).toBe(true);
     expect(compileRegex('^[\\d-[357]]+$', '', TEST_SPAN).test('357')).toBe(false);
     expect(compileRegex('^[a-c-[^a-c]]+$', '', TEST_SPAN).test('abc')).toBe(true);
@@ -970,7 +1008,7 @@ describe('XPath regex translator fixtures', () => {
     }
   });
 
-  it('raises FOCA0002 for unsupported regex flags in the translator fixture suite', () => {
+  it('raises FORX0001 for unsupported regex flags in the translator fixture suite', () => {
     let thrown: unknown;
 
     try {
@@ -980,6 +1018,6 @@ describe('XPath regex translator fixtures', () => {
     }
 
     expect(thrown).toBeInstanceOf(XPathError);
-    expect(thrown).toMatchObject({ code: 'FOCA0002' });
+    expect(thrown).toMatchObject({ code: FORX0001 });
   });
 });

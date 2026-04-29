@@ -29,7 +29,13 @@ describe('XPath expression coverage', () => {
       { type: 'xs:double', value: 2 },
       { type: 'xs:double', value: 3 },
     ]);
+    expect([...evaluate(parseXPath('(1, 2, 3)[1.0e0]'), context)]).toMatchObject([
+      { type: 'xs:double', value: 1 },
+    ]);
     expect([...evaluate(parseXPath('3 to 1'), context)]).toEqual([]);
+    expect([...evaluate(parseXPath('7 idiv 2'), context)]).toMatchObject([
+      { type: 'xs:double', value: 3 },
+    ]);
   });
 
   it('raises a type error for non-integer range operands in the initial range slice', () => {
@@ -57,6 +63,11 @@ describe('XPath expression coverage', () => {
     expect([...evaluate(parseXPath('count((1, 2, 3))'), context)]).toMatchObject([
       { type: 'xs:double', value: 3 },
     ]);
+    expect([...evaluate(parseXPath('((1 to 6)[. mod 2 eq 0])'), context)]).toMatchObject([
+      { type: 'xs:double', value: 2 },
+      { type: 'xs:double', value: 4 },
+      { type: 'xs:double', value: 6 },
+    ]);
   });
 
   it('evaluates the initial if-then-else slice', () => {
@@ -74,6 +85,9 @@ describe('XPath expression coverage', () => {
     const context = createContext('<root><item>A</item><item>B</item></root>');
 
     expect([...evaluate(parseXPath('let $x := /root/item[2] return $x'), context)]).toMatchObject([
+      { xdmKind: 'node' },
+    ]);
+    expect([...evaluate(parseXPath('let $x := /root return $x/item[1]'), context)]).toMatchObject([
       { xdmKind: 'node' },
     ]);
     expect([...evaluate(parseXPath('let $x := 1, $y := $x + 1 return ($x, $y)'), context)]).toMatchObject([
@@ -120,14 +134,39 @@ describe('XPath expression coverage', () => {
   });
 
   it('uses position() and last() inside predicates', () => {
-    const context = createContext('<root><item>A</item><item>B</item><item>C</item></root>');
+    const context = createContext('<root><item name="A">A</item><item name="B">B</item><item name="C">C</item></root>');
 
     const second = [...evaluate(parseXPath('/root/item[position() = 2]'), context)] as XdmNode[];
     const final = [...evaluate(parseXPath('/root/item[position() = last()]'), context)] as XdmNode[];
+    const names = [...evaluate(parseXPath('/root/item[position() >= 2]/string(@name)'), context)];
 
     expect(second).toHaveLength(1);
     expect(second[0]?.node.textContent).toBe('B');
     expect(final).toHaveLength(1);
     expect(final[0]?.node.textContent).toBe('C');
+    expect(names).toMatchObject([
+      { type: 'xs:string', value: 'B' },
+      { type: 'xs:string', value: 'C' },
+    ]);
+  });
+
+  it('raises XPDY0002 when position() or last() is called without a focus', () => {
+    const context: DynamicContext = {
+      staticContext: {
+        namespaces: new Map(),
+        defaultElementNamespace: '',
+      },
+      contextItem: null,
+      contextPosition: 0,
+      contextSize: 0,
+      variables: new Map(),
+    };
+
+    expect(() => [...evaluate(parseXPath('position()'), context)]).toThrowError(
+      expect.objectContaining({ code: 'XPDY0002' }),
+    );
+    expect(() => [...evaluate(parseXPath('last()'), context)]).toThrowError(
+      expect.objectContaining({ code: 'XPDY0002' }),
+    );
   });
 });

@@ -59,6 +59,7 @@ export type TokenKind =
   | 'then'
   | 'to'
   | 'div'
+  | 'idiv'
   | 'mod';
 
 export interface SourceSpan {
@@ -86,6 +87,7 @@ const KEYWORD_KINDS = {
   ge: 'ge',
   gt: 'gt',
   if: 'if',
+  idiv: 'idiv',
   in: 'in',
   is: 'is',
   let: 'let',
@@ -381,6 +383,7 @@ function readNumber(state: LexerState): void {
   if (peekChar(state) === '.') {
     advanceChar(state);
     readDigits(state);
+    readExponentPart(state);
     return;
   }
 
@@ -389,6 +392,26 @@ function readNumber(state: LexerState): void {
     advanceChar(state);
     readDigits(state);
   }
+
+  readExponentPart(state);
+}
+
+function readExponentPart(state: LexerState): void {
+  const current = peekChar(state);
+  if (current !== 'e' && current !== 'E') {
+    return;
+  }
+
+  const signOffset = peekChar(state, 1) === '+' || peekChar(state, 1) === '-' ? 2 : 1;
+  if (!isDigit(peekChar(state, signOffset))) {
+    return;
+  }
+
+  advanceChar(state);
+  if (peekChar(state) === '+' || peekChar(state) === '-') {
+    advanceChar(state);
+  }
+  readDigits(state);
 }
 
 function readDigits(state: LexerState): void {

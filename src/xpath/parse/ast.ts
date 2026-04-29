@@ -3,6 +3,7 @@ import type { SourceSpan } from '../lex/lexer.js';
 export type XPathAst =
   | BinaryExpression
   | ContextItemExpression
+  | FilterExpression
   | ForExpression
   | FunctionCallExpression
   | IfExpression
@@ -34,6 +35,7 @@ export type XPathBinaryOperator =
   | '-'
   | '*'
   | 'div'
+  | 'idiv'
   | 'mod'
   | '='
   | '!='
@@ -67,12 +69,21 @@ export interface ContextItemExpression {
   readonly span: SourceSpan;
 }
 
+export interface FilterExpression {
+  readonly kind: 'filter';
+  readonly base: XPathAst;
+  readonly predicates: readonly XPathAst[];
+  readonly span: SourceSpan;
+}
+
 export interface FunctionCallExpression {
   readonly kind: 'functionCall';
   readonly callee: string;
   readonly arguments: readonly XPathAst[];
   readonly span: SourceSpan;
 }
+
+export type PathSegment = StepExpression | FunctionCallExpression;
 
 export interface IfExpression {
   readonly kind: 'if';
@@ -163,7 +174,8 @@ export interface WildcardTest {
 export interface PathExpression {
   readonly kind: 'path';
   readonly absolute: boolean;
-  readonly steps: readonly StepExpression[];
+  readonly base?: XPathAst;
+  readonly steps: readonly PathSegment[];
   readonly span: SourceSpan;
 }
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { XPathError } from '../../../src/errors/XPathError.js';
 import { parseXml } from '../../../src/xml/parse.js';
 import { createXdmNode, type XdmAtomicValue, type XdmNode } from '../../../src/xdm/types.js';
 import { evaluate } from '../../../src/xpath/eval/evaluator.js';
@@ -170,9 +171,29 @@ describe('XPath built-in function coverage', () => {
     expect([...evaluate(parseXPath('substring(/root/item[2], 2, 5)'), context)]).toMatchObject([
       { type: 'xs:string', value: 'ixedC' },
     ]);
+    expect([...evaluate(parseXPath('substring("12345", 0, 3)'), context)]).toMatchObject([
+      { type: 'xs:string', value: '12' },
+    ]);
+    expect([...evaluate(parseXPath('substring("12345", 1.5, 2.6)'), context)]).toMatchObject([
+      { type: 'xs:string', value: '234' },
+    ]);
+    expect([...evaluate(parseXPath('substring("A😀B", 2, 1)'), context)]).toMatchObject([
+      { type: 'xs:string', value: '😀' },
+    ]);
+    expect([...evaluate(parseXPath('codepoints-to-string((65, 10, 66))'), context)]).toMatchObject([
+      { type: 'xs:string', value: 'A\nB' },
+    ]);
     expect([...evaluate(parseXPath('string-join(/root/item, "|")'), context)]).toMatchObject([
       { type: 'xs:string', value: '  A  B  |MixedCase' },
     ]);
+  });
+
+  it('raises FOCH0001 for invalid XML codepoints', () => {
+    const context = createContext('<root/>');
+
+    expect(() => [...evaluate(parseXPath('codepoints-to-string(0)'), context)]).toThrowError(
+      expect.objectContaining({ code: 'FOCH0001' } satisfies Partial<XPathError>),
+    );
   });
 
   it('evaluates numeric aggregation built-ins', () => {

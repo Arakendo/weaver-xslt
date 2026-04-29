@@ -33,6 +33,7 @@ describe('XPath MVP+1 slice coverage', () => {
       ['5 - 3', { type: 'xs:double', value: 2 }],
       ['4 * 2', { type: 'xs:double', value: 8 }],
       ['9 div 3', { type: 'xs:double', value: 3 }],
+      ['7 idiv 2', { type: 'xs:double', value: 3 }],
       ['10 mod 4', { type: 'xs:double', value: 2 }],
       ['2 = 2', { type: 'xs:boolean', value: true }],
       ['2 != 3', { type: 'xs:boolean', value: true }],

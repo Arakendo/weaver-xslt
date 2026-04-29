@@ -10,12 +10,14 @@ import { XPathError } from '../../errors/XPathError.js';
 import { tokenize, type SourceSpan, type Token, type TokenKind } from '../lex/lexer.js';
 import type {
   ForExpression,
+  FilterExpression,
   FunctionCallExpression,
   IfExpression,
   KindTest,
   LetExpression,
   NameTest,
   NumberLiteral,
+  PathSegment,
   PathExpression,
   QuantifiedExpression,
   SequenceExpression,
@@ -132,7 +134,7 @@ class Parser {
   }
 
   private parseMultiplicativeExpression(): XPathAst {
-    return this.parseBinaryChain(this.parseUnaryExpression.bind(this), ['star', 'div', 'mod']);
+    return this.parseBinaryChain(this.parseUnaryExpression.bind(this), ['star', 'div', 'idiv', 'mod']);
   }
 
   private parseBinaryChain(parseOperand: () => XPathAst, operatorKinds: readonly TokenKind[]): XPathAst {
@@ -158,7 +160,7 @@ class Parser {
   private parseUnaryExpression(): XPathAst {
     const minus = this.match('minus');
     if (minus === undefined) {
-      return this.parsePrimaryExpression();
+      return this.parsePostfixExpression();
     }
 
     const operand = this.parseUnaryExpression();
@@ -270,7 +272,27 @@ class Parser {
     };
   }
 
-  private parsePrimaryExpression(): XPathAst {
+  private parsePostfixExpression(): XPathAst {
+    let expression = isInitialPathExpressionStart(this.current(), this.peek())
+      ? this.parsePathExpression()
+      : this.parseSimplePrimaryExpression();
+
+    while (true) {
+      if (this.current().kind === 'leftBracket') {
+        expression = this.parseFilterExpression(expression);
+        continue;
+      }
+
+      if (this.current().kind === 'slash' || this.current().kind === 'slashSlash') {
+        expression = this.parseRelativePathExpression(expression);
+        continue;
+      }
+
+      return expression;
+    }
+  }
+
+  private parseSimplePrimaryExpression(): XPathAst {
     const token = this.current();
 
     switch (token.kind) {
@@ -288,18 +310,8 @@ class Parser {
       case 'leftParen':
         return this.parseSequenceExpression();
       case 'dot':
-        if (this.peek().kind !== 'slash' && this.peek().kind !== 'slashSlash') {
-          this.index += 1;
-          return { kind: 'contextItem', span: token.span };
-        }
-        return this.parsePathExpression();
-      case 'dotDot':
-        return this.parsePathExpression();
-      case 'slash':
-      case 'slashSlash':
-      case 'at':
-      case 'star':
-        return this.parsePathExpression();
+        this.index += 1;
+        return { kind: 'contextItem', span: token.span };
       default:
         throw createParseError(`Unexpected token ${JSON.stringify(token.value)}.`, token.span);
     }
@@ -381,23 +393,23 @@ class Parser {
 
   private parsePathExpression(): PathExpression {
     const startToken = this.current();
-    const steps: StepExpression[] = [];
+    const steps: PathSegment[] = [];
     let absolute = false;
 
     if (this.match('slashSlash') !== undefined) {
       absolute = true;
       steps.push(createSyntheticDescendantOrSelfStep(startToken.span));
-      if (!isStepStart(this.current())) {
-        throw createParseError('Expected a step expression after //.', this.current().span);
+      if (!isPathSegmentStart(this.current(), this.peek())) {
+        throw createParseError('Expected a path segment after //.', this.current().span);
       }
-      steps.push(this.parseStepExpression());
+      steps.push(this.parsePathSegment());
     } else if (this.match('slash') !== undefined) {
       absolute = true;
-      if (isStepStart(this.current())) {
-        steps.push(this.parseStepExpression());
+      if (isPathSegmentStart(this.current(), this.peek())) {
+        steps.push(this.parsePathSegment());
       }
     } else {
-      steps.push(this.parseStepExpression());
+      steps.push(this.parsePathSegment());
     }
 
     while (true) {
@@ -410,11 +422,11 @@ class Parser {
         steps.push(createSyntheticDescendantOrSelfStep(slashToken.span));
       }
 
-      if (!isStepStart(this.current())) {
-        throw createParseError('Expected a step expression after /.', slashToken.span);
+      if (!isPathSegmentStart(this.current(), this.peek())) {
+        throw createParseError('Expected a path segment after /.', slashToken.span);
       }
 
-      steps.push(this.parseStepExpression());
+      steps.push(this.parsePathSegment());
     }
 
     const endSpan = steps[steps.length - 1]?.span ?? startToken.span;
@@ -423,6 +435,56 @@ class Parser {
       absolute,
       steps,
       span: mergeSpans(startToken.span, endSpan),
+    };
+  }
+
+  private parseRelativePathExpression(base: XPathAst): PathExpression {
+    const startSpan = base.span;
+    const steps: PathSegment[] = [];
+
+    while (true) {
+      const slashToken = this.match('slashSlash') ?? this.match('slash');
+      if (slashToken === undefined) {
+        break;
+      }
+
+      if (slashToken.kind === 'slashSlash') {
+        steps.push(createSyntheticDescendantOrSelfStep(slashToken.span));
+      }
+
+      if (!isPathSegmentStart(this.current(), this.peek())) {
+        throw createParseError('Expected a path segment after /.', slashToken.span);
+      }
+
+      steps.push(this.parsePathSegment());
+    }
+
+    const endSpan = steps[steps.length - 1]?.span ?? base.span;
+    return {
+      kind: 'path',
+      absolute: false,
+      base,
+      steps,
+      span: mergeSpans(startSpan, endSpan),
+    };
+  }
+
+  private parseFilterExpression(base: XPathAst): FilterExpression {
+    const predicates: XPathAst[] = [];
+    let span = base.span;
+
+    while (this.match('leftBracket') !== undefined) {
+      const predicate = this.parseExpression();
+      const rightBracket = this.expect('rightBracket', 'Expected ] to close the predicate.');
+      predicates.push(predicate);
+      span = mergeSpans(base.span, rightBracket.span);
+    }
+
+    return {
+      kind: 'filter',
+      base,
+      predicates,
+      span,
     };
   }
 
@@ -511,6 +573,14 @@ class Parser {
       span: mergeSpans(token.span, rightParen.span),
     };
   }
+
+  private parsePathSegment(): PathSegment {
+    if (this.current().kind === 'name' && this.peek().kind === 'leftParen' && this.current().value !== 'node' && this.current().value !== 'text') {
+      return this.parseFunctionCallExpression();
+    }
+
+    return this.parseStepExpression();
+  }
 }
 
 function createSyntheticDescendantOrSelfStep(span: SourceSpan): StepExpression {
@@ -556,6 +626,8 @@ function tokenKindToBinaryOperator(kind: TokenKind): XPathBinaryOperator {
       return '*';
     case 'div':
       return 'div';
+    case 'idiv':
+      return 'idiv';
     case 'mod':
       return 'mod';
     case 'equals':
@@ -607,6 +679,22 @@ function unescapeStringLiteral(lexeme: string): string {
 
 function isStepStart(token: Token): boolean {
   return token.kind === 'dot' || token.kind === 'dotDot' || token.kind === 'at' || token.kind === 'name' || token.kind === 'star';
+}
+
+function isPathSegmentStart(token: Token, next: Token): boolean {
+  return isStepStart(token) || (token.kind === 'name' && next.kind === 'leftParen');
+}
+
+function isInitialPathExpressionStart(token: Token, next: Token): boolean {
+  if (token.kind === 'slash' || token.kind === 'slashSlash' || token.kind === 'at' || token.kind === 'star' || token.kind === 'dotDot') {
+    return true;
+  }
+
+  if (token.kind === 'name') {
+    return next.kind !== 'leftParen' || token.value === 'node' || token.value === 'text';
+  }
+
+  return false;
 }
 
 function createParseError(message: string, span: SourceSpan): XPathError {

@@ -7,7 +7,7 @@
 
 import type { Node } from '@xmldom/xmldom';
 
-import { FOAR0001, XPDY0002, XPST0008, XPST0017, XPTY0004 } from '../../errors/codes.js';
+import { FOAR0001, FOCH0001, XPDY0002, XPST0008, XPST0017, XPTY0004, XPTY0019 } from '../../errors/codes.js';
 import { XPathError } from '../../errors/XPathError.js';
 import type { ErrorDetails } from '../../errors/XdmError.js';
 import { createSequence, materialize } from '../../xdm/sequence.js';
@@ -23,8 +23,8 @@ import {
   type XdmSequence,
 } from '../../xdm/types.js';
 import type { DynamicContext } from './context.js';
-import { compileRegex } from './regex.js';
-import type { PathExpression, StepExpression, XPathAst, XPathBinaryOperator } from '../parse/ast.js';
+import { compileRegex, compileRegexRejectingZeroLengthMatches, translateReplacementString } from './regex.js';
+import type { FilterExpression, FunctionCallExpression, PathExpression, PathSegment, StepExpression, XPathAst, XPathBinaryOperator } from '../parse/ast.js';
 
 type SpanLike = {
   readonly line: number;
@@ -45,6 +45,8 @@ function evaluateExpression(ast: XPathAst, context: DynamicContext): XdmItem[] {
       return evaluateBinaryExpression(ast.operator, ast.left, ast.right, context, ast.span);
     case 'contextItem':
       return [requireContextItem(context, ast.span)];
+    case 'filter':
+      return evaluateFilterExpression(ast, context);
     case 'for':
       return evaluateForExpression(ast.bindings, ast.returnExpr, context);
     case 'functionCall':
@@ -89,9 +91,11 @@ function evaluateFunctionCall(
   switch (normalized) {
     case 'fn:position':
       requireArity(normalized, args, 0, span);
+      requireContextItem(context, span);
       return [createXdmNumber(context.contextPosition)];
     case 'fn:last':
       requireArity(normalized, args, 0, span);
+      requireContextItem(context, span);
       return [createXdmNumber(context.contextSize)];
     case 'fn:count':
       requireArity(normalized, args, 1, span);
@@ -121,13 +125,16 @@ function evaluateFunctionCall(
         throwArityError(normalized, args.length, '2..3', span);
       }
       const source = itemToStringValue(evaluateSingletonStringishArg(args[0]!, context, span, normalized));
-      const start = Math.round(requireSingleNumber(evaluateExpression(args[1]!, context), span));
-      const zeroBasedStart = Math.max(start - 1, 0);
+      const start = xpathRound(requireSingleNumber(evaluateExpression(args[1]!, context), span));
       if (args.length === 2) {
-        return [createXdmString(source.slice(zeroBasedStart))];
+        return [createXdmString(xpathSubstring(source, start))];
       }
-      const length = Math.max(Math.round(requireSingleNumber(evaluateExpression(args[2]!, context), span)), 0);
-      return [createXdmString(source.slice(zeroBasedStart, zeroBasedStart + length))];
+      const length = xpathRound(requireSingleNumber(evaluateExpression(args[2]!, context), span));
+      return [createXdmString(xpathSubstring(source, start, length))];
+    }
+    case 'fn:codepoints-to-string': {
+      requireArity(normalized, args, 1, span);
+      return [createXdmString(codepointsToString(evaluateExpression(args[0]!, context), span))];
     }
     case 'fn:concat': {
       if (args.length < 2) {
@@ -162,7 +169,12 @@ function evaluateFunctionCall(
       const flags = args.length === 4
         ? itemToStringValue(evaluateSingletonStringishArg(args[3]!, context, span, normalized))
         : '';
-      return [createXdmString(input.replace(compileRegex(pattern, flags, span, true), replacement))];
+      return [createXdmString(
+        input.replace(
+          compileRegexRejectingZeroLengthMatches(pattern, flags, span),
+          translateReplacementString(replacement, span),
+        ),
+      )];
     }
     case 'fn:tokenize': {
       if (args.length !== 2 && args.length !== 3) {
@@ -173,7 +185,7 @@ function evaluateFunctionCall(
       const flags = args.length === 3
         ? itemToStringValue(evaluateSingletonStringishArg(args[2]!, context, span, normalized))
         : '';
-      return input.split(compileRegex(pattern, flags, span, true)).map(createXdmString);
+      return xpathTokenize(input, compileRegexRejectingZeroLengthMatches(pattern, flags, span)).map(createXdmString);
     }
     case 'fn:normalize-space': {
       const item = evaluateOptionalSingletonItemArg(normalized, args, context, span);
@@ -353,10 +365,10 @@ function evaluateBinaryExpression(
     return [createXdmBoolean(effectiveBooleanValue(evaluateExpression(rightAst, context), rightAst.span))];
   }
 
-  if (operator === '+' || operator === '-' || operator === '*' || operator === 'div' || operator === 'mod') {
+  if (operator === '+' || operator === '-' || operator === '*' || operator === 'div' || operator === 'idiv' || operator === 'mod') {
     const left = requireSingleNumber(evaluateExpression(leftAst, context), leftAst.span);
     const right = requireSingleNumber(evaluateExpression(rightAst, context), rightAst.span);
-    if ((operator === 'div' || operator === 'mod') && right === 0) {
+    if ((operator === 'div' || operator === 'idiv' || operator === 'mod') && right === 0) {
       throw createXPathError(FOAR0001, 'Division by zero.', span);
     }
 
@@ -369,6 +381,8 @@ function evaluateBinaryExpression(
         return [createXdmNumber(left * right)];
       case 'div':
         return [createXdmNumber(left / right)];
+      case 'idiv':
+        return [createXdmNumber(Math.trunc(left / right))];
       case 'mod':
         return [createXdmNumber(left % right)];
     }
@@ -554,17 +568,78 @@ function compareValue(
   return [createXdmBoolean(compareValueOperands(operator, leftValue, rightValue, span))];
 }
 
-function evaluatePath(ast: PathExpression, context: DynamicContext): XdmNode[] {
-  let nodes = ast.absolute
+function evaluateFilterExpression(ast: FilterExpression, context: DynamicContext): XdmItem[] {
+  let items = evaluateExpression(ast.base, context);
+
+  for (const predicate of ast.predicates) {
+    const size = items.length;
+    items = items.filter((item, index) => {
+      const predicateResult = evaluateExpression(predicate, {
+        ...context,
+        contextItem: item,
+        contextPosition: index + 1,
+        contextSize: size,
+      });
+      return predicateMatches(predicateResult, index + 1, predicate.span);
+    });
+  }
+
+  return items;
+}
+
+function evaluatePath(ast: PathExpression, context: DynamicContext): XdmItem[] {
+  let items: XdmItem[] = ast.absolute
     ? [getRootNode(requireContextNode(context, ast.span))]
-    : [requireContextNode(context, ast.span)];
+    : ast.base === undefined
+      ? [requireContextNode(context, ast.span)]
+      : evaluateExpression(ast.base, context);
 
   if (ast.absolute && ast.steps.length === 0) {
-    return nodes;
+    return items;
   }
 
   for (const step of ast.steps) {
-    nodes = applyStep(step, nodes, context);
+    items = applyPathSegment(step, items, context);
+  }
+
+  return items;
+}
+
+function applyPathSegment(segment: PathSegment, input: readonly XdmItem[], context: DynamicContext): XdmItem[] {
+  if (segment.kind === 'step') {
+    return applyStep(segment, requireNodeSequence(input, segment.span), context);
+  }
+
+  return applyFunctionPathSegment(segment, requireNodeSequence(input, segment.span), context);
+}
+
+function applyFunctionPathSegment(
+  segment: FunctionCallExpression,
+  input: readonly XdmNode[],
+  context: DynamicContext,
+): XdmItem[] {
+  const size = input.length;
+  return input.flatMap((item, index) =>
+    evaluateExpression(segment, {
+      ...context,
+      contextItem: item,
+      contextPosition: index + 1,
+      contextSize: size,
+    }),
+  );
+}
+
+function requireNodeSequence(items: readonly XdmItem[], span: SpanLike): XdmNode[] {
+  const nodes: XdmNode[] = [];
+
+  for (const item of items) {
+    if (!isXdmNode(item)) {
+      throw createXPathError(XPTY0019, 'Path expressions require node inputs.', span, {
+        expectedType: 'node()*',
+        actualType: describeItemsType(items),
+      });
+    }
+    nodes.push(item);
   }
 
   return nodes;
@@ -1033,6 +1108,76 @@ function itemToStringValue(item: XdmItem | undefined): string {
   }
 
   return String(atomic.value);
+}
+
+function xpathTokenize(input: string, regex: RegExp): string[] {
+  if (input.length === 0) {
+    return [];
+  }
+
+  const tokens: string[] = [];
+  regex.lastIndex = 0;
+
+  let nextStart = 0;
+  let match = regex.exec(input);
+  while (match !== null) {
+    tokens.push(input.slice(nextStart, match.index));
+    nextStart = match.index + match[0].length;
+    match = regex.exec(input);
+  }
+
+  tokens.push(input.slice(nextStart));
+  return tokens;
+}
+
+function xpathSubstring(source: string, roundedStart: number, roundedLength?: number): string {
+  if (Number.isNaN(roundedStart) || (roundedLength !== undefined && Number.isNaN(roundedLength))) {
+    return '';
+  }
+
+  const characters = Array.from(source);
+  const endThreshold = roundedLength === undefined ? undefined : roundedStart + roundedLength;
+  return characters.filter((_, index) => {
+    const position = index + 1;
+    return position >= roundedStart && (endThreshold === undefined || position < endThreshold);
+  }).join('');
+}
+
+function xpathRound(value: number): number {
+  return Math.round(value);
+}
+
+function codepointsToString(items: readonly XdmItem[], span: SpanLike): string {
+  let result = '';
+
+  for (const item of items) {
+    if (item.xdmKind !== 'atomic' || (item as XdmAtomicValue).type !== 'xs:double') {
+      throw createXPathError(XPTY0004, 'Function fn:codepoints-to-string requires numeric codepoint arguments.', span, {
+        expectedType: 'xs:integer*',
+        actualType: describeItemsType([item]),
+      });
+    }
+
+    const codepoint = (item as XdmAtomicValue).value as number;
+    if (!Number.isInteger(codepoint) || !isValidXmlCodepoint(codepoint)) {
+      throw createXPathError(FOCH0001, 'Function fn:codepoints-to-string received an invalid XML character codepoint.', span, {
+        codepoint,
+      });
+    }
+
+    result += String.fromCodePoint(codepoint);
+  }
+
+  return result;
+}
+
+function isValidXmlCodepoint(codepoint: number): boolean {
+  return codepoint === 0x9
+    || codepoint === 0xA
+    || codepoint === 0xD
+    || (codepoint >= 0x20 && codepoint <= 0xD7FF)
+    || (codepoint >= 0xE000 && codepoint <= 0xFFFD)
+    || (codepoint >= 0x10000 && codepoint <= 0x10FFFF);
 }
 
 function itemToNumberValue(item: XdmItem | undefined): number {

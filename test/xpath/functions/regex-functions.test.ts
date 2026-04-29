@@ -1511,13 +1511,50 @@ describe('XPath regex functions', () => {
     }
 
     expect(thrown).toBeInstanceOf(XPathError);
-    expect(thrown).toMatchObject({ code: 'FOCA0002' });
+    expect(thrown).toMatchObject({ code: 'FORX0001' });
+  });
+
+  it('raises XPath regex errors for invalid replacement strings and zero-length tokenize patterns', () => {
+    const context = createContext('<root/>');
+
+    expect(() => [...evaluate(parseXPath('replace("abracadabra", "bra", "\\")'), context)]).toThrowError(
+      expect.objectContaining({ code: 'FORX0004' }),
+    );
+    expect(() => [...evaluate(parseXPath('replace("abracadabra", "bra", "$y")'), context)]).toThrowError(
+      expect.objectContaining({ code: 'FORX0004' }),
+    );
+    expect(() => [...evaluate(parseXPath('replace("abracadabra", ".*?", "$1")'), context)]).toThrowError(
+      expect.objectContaining({ code: 'FORX0003' }),
+    );
+    expect(() => [...evaluate(parseXPath('tokenize("abba", ".?")'), context)]).toThrowError(
+      expect.objectContaining({ code: 'FORX0003' }),
+    );
+  });
+
+  it('uses XPath tokenize semantics for empty input and separator capture groups', () => {
+    const context = createContext('<root/>');
+
+    expect([...evaluate(parseXPath('tokenize("", "\\s+")'), context)]).toEqual([]);
+    expect([...evaluate(parseXPath('string-join(tokenize("abracadabra", "(ab)|(a)"), "#")'), context)]).toMatchObject([
+      { type: 'xs:string', value: '#r#c#d#r#' },
+    ]);
   });
 
   it('supports XPath x-flag regex comments in the initial translator slice', () => {
     const context = createContext('<root/>');
 
     expect([...evaluate(parseXPath('matches("abc", "a # skip\n b c", "x")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: true },
+    ]);
+  });
+
+  it('uses XPath multiline anchor semantics instead of JavaScript m-mode directly', () => {
+    const context = createContext('<root/>');
+
+    expect([...evaluate(parseXPath('matches(concat("abcd", codepoints-to-string(10), "defg", codepoints-to-string(10)), "^$", "m")'), context)]).toMatchObject([
+      { type: 'xs:boolean', value: false },
+    ]);
+    expect([...evaluate(parseXPath('matches(concat("abcd", codepoints-to-string(10), codepoints-to-string(10), "defg"), "^$", "m")'), context)]).toMatchObject([
       { type: 'xs:boolean', value: true },
     ]);
   });
