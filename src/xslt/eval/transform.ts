@@ -7,6 +7,7 @@
 
 import type { Node } from '@xmldom/xmldom';
 
+import { XPTY0004 } from '../../errors/codes.js';
 import { XdmError, XsltError, type ErrorFrame, type RelatedLocation } from '../../errors/index.js';
 import type { PathExpression, StepExpression } from '../../xpath/parse/ast.js';
 import type { TransformOptions, TransformResult } from '../../processor/types.js';
@@ -63,13 +64,14 @@ function applyTemplatesToItems(
   items: readonly XdmItem[],
   ir: StylesheetIR,
   staticContext: DynamicContext['staticContext'],
+  location?: TemplateRule['location'],
 ): string {
-  return items.map((item, index) => {
-    const nodeItem = asXdmNode(item);
-    if (nodeItem === undefined) {
-      throw new Error('xsl:apply-templates currently supports node sequences only in the current MVP+3 slice.');
-    }
+  if (items.some((item) => asXdmNode(item) === undefined)) {
+    throw createApplyTemplatesNodeSequenceError(items, location);
+  }
 
+  return items.map((item, index) => {
+    const nodeItem = item as XdmNode;
     const context = createContext(nodeItem, staticContext, index + 1, items.length);
     return applyTemplateToNode(nodeItem.node, ir, context);
   }).join('');
@@ -258,7 +260,7 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
         const items = instruction.select === undefined
           ? getChildNodeItems(context.contextItem)
           : [...evaluate(instruction.select, context)];
-        return applyTemplatesToItems(items, ir, context.staticContext);
+        return applyTemplatesToItems(items, ir, context.staticContext, instruction.location);
       } catch (error) {
         const frame = {
           kind: 'instruction',
@@ -351,6 +353,57 @@ function createTemplateFrame(template: TemplateRule): ErrorFrame {
     label: '<anonymous>',
     ...(template.location === undefined ? {} : { location: template.location }),
   };
+}
+
+function createApplyTemplatesNodeSequenceError(
+  items: readonly XdmItem[],
+  location?: TemplateRule['location'],
+): XsltError {
+  return new XsltError(
+    XPTY0004,
+    'xsl:apply-templates requires a sequence of nodes.',
+    location,
+    {
+      expectedType: 'node()*',
+      actualType: describeItemsType(items),
+    },
+    {
+      suggestions: [{
+        kind: 'fix',
+        label: 'use a node-selecting expression for xsl:apply-templates',
+        confidence: 1,
+      }],
+    },
+  );
+}
+
+function describeItemsType(items: readonly XdmItem[]): string {
+  if (items.length === 0) {
+    return 'empty-sequence()';
+  }
+
+  if (items.length === 1) {
+    return describeItemType(items[0]!);
+  }
+
+  const uniqueTypes = [...new Set(items.map((item) => describeItemType(item)))];
+  return `sequence(${items.length}) of ${uniqueTypes.join(' | ')}`;
+}
+
+function describeItemType(item: XdmItem): string {
+  if (item.xdmKind === 'node') {
+    return 'node()';
+  }
+
+  if (item.xdmKind === 'map') {
+    return 'map(*)';
+  }
+
+  if (item.xdmKind === 'array') {
+    return 'array(*)';
+  }
+
+  return (item as XdmAtomicValue).type;
 }
 
 function withPrependedFrame(error: unknown, frame: ErrorFrame, related?: RelatedLocation): unknown {

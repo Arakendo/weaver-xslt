@@ -13,6 +13,113 @@ function captureError(action: () => void): unknown {
 }
 
 describe('XSLT diagnostics', () => {
+  it('converts named-only templates into static diagnostics', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:template name="main">',
+      '    <out/>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+    const error = captureError(() => {
+      new XsltProcessor(stylesheet).transform('<root/>');
+    });
+    const report = diagnosticReportFromError(error);
+
+    assertValidDiagnostic(report);
+    expect(report).toMatchObject({
+      code: 'XTSE0010',
+      phase: 'compile',
+      category: 'analysis',
+      message: 'Named templates are not yet implemented in the current MVP+3 slice.',
+      suggestions: [{
+        kind: 'fix',
+        label: 'use match="/" or another supported match pattern instead of a named-only template',
+        confidence: 1,
+      }],
+    });
+
+    expect(formatDiagnostic(report, stylesheet)).toBe([
+      'error[XTSE0010]: Named templates are not yet implemented in the current MVP+3 slice.',
+      '--> <stylesheet>:2:23',
+      '2 |   <xsl:template name="main">',
+      '  |                       ^^^^',
+      '  help: use match="/" or another supported match pattern instead of a named-only template',
+    ].join('\n'));
+  });
+
+  it('converts unsupported top-level literal result elements into static diagnostics', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <out/>',
+      '  <xsl:template match="/">',
+      '    <ok/>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+    const error = captureError(() => {
+      new XsltProcessor(stylesheet).transform('<root/>');
+    });
+    const report = diagnosticReportFromError(error);
+
+    assertValidDiagnostic(report);
+    expect(report).toMatchObject({
+      code: 'XTSE0010',
+      phase: 'compile',
+      category: 'analysis',
+      message: 'Unsupported top-level stylesheet element out in current MVP+3 slice.',
+      suggestions: [{
+        kind: 'fix',
+        label: 'move result elements inside xsl:template bodies in the current MVP+3 slice',
+        confidence: 1,
+      }],
+    });
+
+    expect(formatDiagnostic(report, stylesheet)).toBe([
+      'error[XTSE0010]: Unsupported top-level stylesheet element out in current MVP+3 slice.',
+      '--> <stylesheet>:2:3',
+      '2 |   <out/>',
+      '  |   ^',
+      '  help: move result elements inside xsl:template bodies in the current MVP+3 slice',
+    ].join('\n'));
+  });
+
+  it('converts unsupported top-level XSLT declarations into static diagnostics', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:output method="xml"/>',
+      '  <xsl:template match="/">',
+      '    <out/>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+    const error = captureError(() => {
+      new XsltProcessor(stylesheet).transform('<root/>');
+    });
+    const report = diagnosticReportFromError(error);
+
+    assertValidDiagnostic(report);
+    expect(report).toMatchObject({
+      code: 'XTSE0010',
+      phase: 'compile',
+      category: 'analysis',
+      message: 'Unsupported top-level XSLT declaration xsl:output in current MVP+3 slice.',
+      suggestions: [{
+        kind: 'fix',
+        label: 'remove unsupported top-level declaration xsl:output in the current MVP+3 slice',
+        confidence: 1,
+      }],
+    });
+
+    expect(formatDiagnostic(report, stylesheet)).toBe([
+      'error[XTSE0010]: Unsupported top-level XSLT declaration xsl:output in current MVP+3 slice.',
+      '--> <stylesheet>:2:3',
+      '2 |   <xsl:output method="xml"/>',
+      '  |   ^',
+      '  help: remove unsupported top-level declaration xsl:output in the current MVP+3 slice',
+    ].join('\n'));
+  });
+
   it('uses the version attribute span when the stylesheet version is empty', () => {
     const stylesheet = '<xsl:stylesheet version="" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"></xsl:stylesheet>';
     const error = captureError(() => {
@@ -546,6 +653,112 @@ describe('XSLT diagnostics', () => {
       '  containing instruction (<stylesheet>:3:32)',
       '  = expectedType: xs:double or xs:integer',
       '  = actualType: xs:string',
+    ].join('\n'));
+  });
+
+  it('converts non-node xsl:apply-templates selections into runtime diagnostics', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:template match="/">',
+      '    <out><xsl:apply-templates select="1"/></out>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+    const error = captureError(() => {
+      new XsltProcessor(stylesheet).transform('<root/>');
+    });
+    const report = diagnosticReportFromError(error);
+
+    assertValidDiagnostic(report);
+    expect(report).toMatchObject({
+      code: 'XPTY0004',
+      phase: 'runtime',
+      category: 'type',
+      message: 'xsl:apply-templates requires a sequence of nodes.',
+      primary: {
+        lineStart: 3,
+        columnStart: 39,
+        lineEnd: 3,
+        columnEnd: 40,
+      },
+      details: [
+        { key: 'expectedType', value: 'node()*' },
+        { key: 'actualType', value: 'xs:double' },
+      ],
+      suggestions: [{
+        kind: 'fix',
+        label: 'use a node-selecting expression for xsl:apply-templates',
+        confidence: 1,
+      }],
+    });
+    expect(report.frames).toEqual([
+      {
+        kind: 'template',
+        label: 'match="/"',
+        span: {
+          uri: '<stylesheet>',
+          offsetStart: 103,
+          offsetEnd: 104,
+          lineStart: 2,
+          columnStart: 24,
+          lineEnd: 2,
+          columnEnd: 25,
+        },
+      },
+      {
+        kind: 'instruction',
+        label: 'xsl:apply-templates select="1"',
+        span: {
+          uri: '<stylesheet>',
+          offsetStart: 145,
+          offsetEnd: 146,
+          lineStart: 3,
+          columnStart: 39,
+          lineEnd: 3,
+          columnEnd: 40,
+        },
+      },
+    ]);
+    expect(report.related).toEqual([
+      {
+        label: 'enclosing template',
+        span: {
+          uri: '<stylesheet>',
+          offsetStart: 103,
+          offsetEnd: 104,
+          lineStart: 2,
+          columnStart: 24,
+          lineEnd: 2,
+          columnEnd: 25,
+        },
+      },
+      {
+        label: 'caller instruction',
+        span: {
+          uri: '<stylesheet>',
+          offsetStart: 145,
+          offsetEnd: 146,
+          lineStart: 3,
+          columnStart: 39,
+          lineEnd: 3,
+          columnEnd: 40,
+        },
+      },
+    ]);
+
+    expect(formatDiagnostic(report, stylesheet)).toBe([
+      'error[XPTY0004]: xsl:apply-templates requires a sequence of nodes.',
+      '--> <stylesheet>:3:39',
+      '3 |     <out><xsl:apply-templates select="1"/></out>',
+      '  |                                       ^',
+      '  in template match="/" (<stylesheet>:2:24)',
+      '  in instruction xsl:apply-templates select="1" (<stylesheet>:3:39)',
+      'related:',
+      '  enclosing template (<stylesheet>:2:24)',
+      '  caller instruction (<stylesheet>:3:39)',
+      '  = expectedType: node()*',
+      '  = actualType: xs:double',
+      '  help: use a node-selecting expression for xsl:apply-templates',
     ].join('\n'));
   });
 

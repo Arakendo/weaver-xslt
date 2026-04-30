@@ -64,8 +64,8 @@ export function compileStylesheet(stylesheetXml: string): StylesheetIR {
   }
 
   const templates = childElements(root)
-    .filter((child) => isXsltElement(child, 'template'))
-    .map((template) => compileTemplateRule(template, stylesheetXml));
+    .map((child) => compileTopLevelDeclaration(child, stylesheetXml))
+    .filter((template): template is TemplateRule => template !== undefined);
 
   if (templates.length === 0) {
     throw createXsltStaticError(
@@ -87,6 +87,38 @@ export function compileStylesheet(stylesheetXml: string): StylesheetIR {
   };
 }
 
+function compileTopLevelDeclaration(element: Element, stylesheetXml: string): TemplateRule | undefined {
+  if (isXsltElement(element, 'template')) {
+    return compileTemplateRule(element, stylesheetXml);
+  }
+
+  if (element.namespaceURI === XSLT_NAMESPACE) {
+    throw createXsltStaticError(
+      `Unsupported top-level XSLT declaration ${element.nodeName} in current MVP+3 slice.`,
+      getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+      {
+        suggestions: [{
+          kind: 'fix',
+          label: `remove unsupported top-level declaration ${element.nodeName} in the current MVP+3 slice`,
+          confidence: 1,
+        }],
+      },
+    );
+  }
+
+  throw createXsltStaticError(
+    `Unsupported top-level stylesheet element ${element.nodeName} in current MVP+3 slice.`,
+    getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+    {
+      suggestions: [{
+        kind: 'fix',
+        label: 'move result elements inside xsl:template bodies in the current MVP+3 slice',
+        confidence: 1,
+      }],
+    },
+  );
+}
+
 function compileTemplateRule(templateElement: Element, stylesheetXml: string): TemplateRule {
   const matchText = templateElement.getAttribute('match') ?? undefined;
   const name = templateElement.getAttribute('name') ?? undefined;
@@ -101,6 +133,21 @@ function compileTemplateRule(templateElement: Element, stylesheetXml: string): T
         suggestions: [{
           kind: 'fix',
           label: 'add match="..." or name="..." to xsl:template',
+          confidence: 1,
+        }],
+      },
+    );
+  }
+
+  if (matchText === undefined && name !== undefined) {
+    throw createXsltStaticError(
+      'Named templates are not yet implemented in the current MVP+3 slice.',
+      getAttributeValueSourceLocation(stylesheetXml, templateElement, 'name', STYLESHEET_SOURCE_NAME)
+        ?? getNodeSourceLocation(stylesheetXml, templateElement, STYLESHEET_SOURCE_NAME),
+      {
+        suggestions: [{
+          kind: 'fix',
+          label: 'use match="/" or another supported match pattern instead of a named-only template',
           confidence: 1,
         }],
       },
