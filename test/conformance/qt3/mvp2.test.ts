@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import type { Qt3CaseExclusion, Qt3SliceCase } from './harness.js';
 import {
+  getQt3CaseExclusion,
   isPotentiallySupportedXPathCase,
   loadQt3CatalogSetFiles,
   loadQt3SliceCases,
@@ -76,6 +78,12 @@ const MVP2_QT3_SET_FILES = [
 ] as const;
 
 const maybeRunBroaderBaseline = process.env.QT3_BROAD_BASELINE === '1' ? it : it.skip;
+const shouldLogQt3Exclusions = process.env.QT3_EXCLUSION_DEBUG === '1';
+
+type Qt3ExcludedCase = {
+  readonly testCase: Qt3SliceCase;
+  readonly exclusion: Qt3CaseExclusion;
+};
 
 function getQt3HeartbeatIntervalMs(): number {
   const rawSeconds = Number(process.env.QT3_HEARTBEAT_SECONDS ?? '30');
@@ -84,6 +92,51 @@ function getQt3HeartbeatIntervalMs(): number {
   }
 
   return rawSeconds * 1000;
+}
+
+function partitionQt3CasesBySupport(testCases: readonly Qt3SliceCase[]): {
+  readonly runnableCases: Qt3SliceCase[];
+  readonly excludedCases: Qt3ExcludedCase[];
+} {
+  const runnableCases: Qt3SliceCase[] = [];
+  const excludedCases: Qt3ExcludedCase[] = [];
+
+  for (const testCase of testCases) {
+    const exclusion = getQt3CaseExclusion(testCase);
+    if (exclusion === undefined) {
+      runnableCases.push(testCase);
+      continue;
+    }
+
+    excludedCases.push({ testCase, exclusion });
+  }
+
+  return { runnableCases, excludedCases };
+}
+
+function logQt3Exclusions(excludedCases: readonly Qt3ExcludedCase[]): void {
+  if (!shouldLogQt3Exclusions || excludedCases.length === 0) {
+    return;
+  }
+
+  const counts = new Map<Qt3CaseExclusion['reason'], number>();
+  for (const { exclusion } of excludedCases) {
+    counts.set(exclusion.reason, (counts.get(exclusion.reason) ?? 0) + 1);
+  }
+
+  // eslint-disable-next-line no-console
+  console.log(`  QT3 exclusions: ${excludedCases.length} cases filtered by the MVP+2 gate`);
+
+  for (const [reason, count] of [...counts.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))) {
+    // eslint-disable-next-line no-console
+    console.log(`    ${reason}: ${count}`);
+  }
+
+  for (const { testCase, exclusion } of excludedCases.slice(0, 20)) {
+    const detail = exclusion.detail === undefined ? '' : ` (${exclusion.detail})`;
+    // eslint-disable-next-line no-console
+    console.log(`    excluded: ${testCase.setFile} :: ${testCase.caseName} -> ${exclusion.reason}${detail}`);
+  }
 }
 
 describe('W3C conformance — QT3 MVP+2 slice', () => {
@@ -113,7 +166,7 @@ describe('W3C conformance — QT3 MVP+2 slice', () => {
 
   maybeRunBroaderBaseline('measures a broader QT3 baseline through the current MVP+2 support gate', () => {
     const discoveredCases = loadQt3SliceCases(loadQt3CatalogSetFiles());
-    const runnableCases = discoveredCases.filter(isPotentiallySupportedXPathCase);
+    const { runnableCases, excludedCases } = partitionQt3CasesBySupport(discoveredCases);
     const report = runQt3Slice(runnableCases, {
       heartbeat: {
         label: 'QT3 MVP+2 broader baseline',
@@ -122,6 +175,8 @@ describe('W3C conformance — QT3 MVP+2 slice', () => {
     });
     const passRate = report.included === 0 ? 0 : (report.passed / report.included) * 100;
     const includedSetFiles = new Set(runnableCases.map((testCase) => testCase.setFile));
+
+    logQt3Exclusions(excludedCases);
 
     // eslint-disable-next-line no-console
     console.log(

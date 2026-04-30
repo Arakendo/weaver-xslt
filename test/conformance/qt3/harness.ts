@@ -101,6 +101,21 @@ export type Qt3SliceRunOptions = {
   readonly heartbeat?: Qt3SliceRunHeartbeat;
 };
 
+export type Qt3CaseExclusionReason =
+  | 'unsupported-environment'
+  | 'unsupported-spec-dependency'
+  | 'unsupported-xsd-version'
+  | 'unsupported-xml-version'
+  | 'unsupported-feature'
+  | 'unsupported-schema-constructor'
+  | 'syntax-not-in-scope'
+  | 'unsupported-function';
+
+export type Qt3CaseExclusion = {
+  readonly reason: Qt3CaseExclusionReason;
+  readonly detail?: string;
+};
+
 const documentCache = new Map<string, Document>();
 const catalogRoot = requireDocumentElement(readXml('catalog.xml'), 'catalog.xml');
 const globalEnvironmentIndex = loadEnvironmentIndex(catalogRoot, '.');
@@ -129,7 +144,7 @@ const SUPPORTED_MVP2_FUNCTIONS = new Set([
   'head',
   'last',
   'local-name',
-  'local-name-from-qname',
+  'local-name-from-QName',
   'lower-case',
   'matches',
   'max',
@@ -158,7 +173,7 @@ const SUPPORTED_MVP2_FUNCTIONS = new Set([
   'trace',
   'true',
   'upper-case',
-  'qname',
+  'QName',
 ]);
 const NON_FUNCTION_CALL_TOKENS = new Set([
   'and',
@@ -339,34 +354,54 @@ function defaultQt3HeartbeatLogger(message: string): void {
 }
 
 export function isPotentiallySupportedXPathCase(testCase: Qt3SliceCase): boolean {
+  return getQt3CaseExclusion(testCase) === undefined;
+}
+
+export function getQt3CaseExclusion(testCase: Qt3SliceCase): Qt3CaseExclusion | undefined {
   if (testCase.hasUnsupportedEnvironment) {
-    return false;
+    return { reason: 'unsupported-environment' };
   }
 
   for (const dependency of testCase.dependencies) {
     if (dependency.type === 'spec' && !supportsXPath31SpecDependency(dependency.value)) {
-      return false;
+      return {
+        reason: 'unsupported-spec-dependency',
+        detail: dependency.value,
+      };
     }
 
     if (dependency.type === 'xsd-version' && dependency.value !== '1.0') {
-      return false;
+      return {
+        reason: 'unsupported-xsd-version',
+        detail: dependency.value,
+      };
     }
 
     if (dependency.type === 'xml-version' && dependency.value !== '1.0') {
-      return false;
+      return {
+        reason: 'unsupported-xml-version',
+        detail: dependency.value,
+      };
     }
 
     if (dependency.type === 'feature' && /schemaValidation|staticTyping|higherOrderFunctions|moduleImport/i.test(dependency.value)) {
-      return false;
+      return {
+        reason: 'unsupported-feature',
+        detail: dependency.value,
+      };
     }
   }
 
-  if (!isPotentiallySupportedXPathExpression(testCase.expression)) {
-    return false;
+  const expressionExclusion = getXPathExpressionExclusion(testCase.expression);
+  if (expressionExclusion !== undefined) {
+    return expressionExclusion;
   }
 
-  return testCase.assertion.kind !== 'assert-eq'
-    || isPotentiallySupportedXPathExpression(testCase.assertion.expectedExpression);
+  if (testCase.assertion.kind !== 'assert-eq') {
+    return undefined;
+  }
+
+  return getXPathExpressionExclusion(testCase.assertion.expectedExpression, 'assert-eq expected expression');
 }
 
 function supportsXPath31SpecDependency(value: string): boolean {
@@ -709,54 +744,103 @@ function summarizeFailureClusters(
   });
 }
 
-function isPotentiallySupportedXPathExpression(expression: string): boolean {
+function getXPathExpressionExclusion(
+  expression: string,
+  detailContext?: string,
+): Qt3CaseExclusion | undefined {
   if (/\bdeclare\b|\bimport\b/i.test(expression)) {
-    return false;
+    return {
+      reason: 'syntax-not-in-scope',
+      detail: formatExclusionDetail(detailContext, 'declarations and imports are out of scope'),
+    };
   }
 
   if (/\bcurrent-(?:date|time|dateTime)\s*\(|\bimplicit-timezone\s*\(/i.test(expression)) {
-    return false;
+    return {
+      reason: 'unsupported-function',
+      detail: formatExclusionDetail(detailContext, 'time-dependent functions'),
+    };
   }
 
   if (/collation\/|html-ascii-case-insensitive/i.test(expression)) {
-    return false;
+    return {
+      reason: 'syntax-not-in-scope',
+      detail: formatExclusionDetail(detailContext, 'collation-dependent behavior'),
+    };
   }
 
   if (/\bxs:[A-Za-z_][\w.-]*\s*\(/.test(expression)) {
-    return false;
+    return {
+      reason: 'unsupported-schema-constructor',
+      detail: formatExclusionDetail(detailContext, 'schema constructor functions'),
+    };
   }
 
   if (/\bwhere\b|\border by\b|\bgroup by\b|\bstable order by\b/i.test(expression)) {
-    return false;
+    return {
+      reason: 'syntax-not-in-scope',
+      detail: formatExclusionDetail(detailContext, 'FLWOR clauses beyond MVP+2 scope'),
+    };
   }
 
   if (/\btypeswitch\b|\bswitch\b|\btry\b|\bcatch\b|\bvalidate\b|\bcopy\b|\bmodify\b/i.test(expression)) {
-    return false;
+    return {
+      reason: 'syntax-not-in-scope',
+      detail: formatExclusionDetail(detailContext, 'control-flow or update syntax beyond MVP+2 scope'),
+    };
   }
 
   if (/=>|#\d+|\bfunction\s*\(/.test(expression)) {
-    return false;
+    return {
+      reason: 'syntax-not-in-scope',
+      detail: formatExclusionDetail(detailContext, 'higher-order function syntax'),
+    };
   }
 
   if (/\binstance of\b|\btreat as\b|\bcastable as\b|\bcast as\b/i.test(expression)) {
-    return false;
+    return {
+      reason: 'syntax-not-in-scope',
+      detail: formatExclusionDetail(detailContext, 'type operators beyond MVP+2 scope'),
+    };
   }
 
   if (/\$[A-Za-z_][\w.-]*\s+as\s+/i.test(expression)) {
-    return false;
+    return {
+      reason: 'syntax-not-in-scope',
+      detail: formatExclusionDetail(detailContext, 'typed variable declarations'),
+    };
   }
 
   if (/<[A-Za-z!/]|\{[^}]*\}/.test(expression)) {
-    return false;
+    return {
+      reason: 'syntax-not-in-scope',
+      detail: formatExclusionDetail(detailContext, 'XML constructors'),
+    };
   }
 
+  const unsupportedFunction = findUnsupportedMvp2FunctionCall(expression);
+  if (unsupportedFunction !== undefined) {
+    return {
+      reason: 'unsupported-function',
+      detail: formatExclusionDetail(detailContext, unsupportedFunction),
+    };
+  }
+
+  return undefined;
+}
+
+function formatExclusionDetail(detailContext: string | undefined, detail: string): string {
+  return detailContext === undefined ? detail : `${detailContext}: ${detail}`;
+}
+
+function findUnsupportedMvp2FunctionCall(expression: string): string | undefined {
   for (const callee of collectFunctionCallCandidates(expression)) {
     if (!isSupportedMvp2FunctionCall(callee)) {
-      return false;
+      return callee;
     }
   }
 
-  return true;
+  return undefined;
 }
 
 function collectFunctionCallCandidates(expression: string): string[] {
@@ -774,20 +858,18 @@ function collectFunctionCallCandidates(expression: string): string[] {
 }
 
 function isSupportedMvp2FunctionCall(callee: string): boolean {
-  const normalized = callee.toLowerCase();
-
-  if (NON_FUNCTION_CALL_TOKENS.has(normalized)) {
+  if (NON_FUNCTION_CALL_TOKENS.has(callee)) {
     return true;
   }
 
-  const separatorIndex = normalized.indexOf(':');
+  const separatorIndex = callee.indexOf(':');
   if (separatorIndex >= 0) {
-    const prefix = normalized.slice(0, separatorIndex);
-    const localName = normalized.slice(separatorIndex + 1);
+    const prefix = callee.slice(0, separatorIndex);
+    const localName = callee.slice(separatorIndex + 1);
     return prefix === 'fn' && SUPPORTED_MVP2_FUNCTIONS.has(localName);
   }
 
-  return SUPPORTED_MVP2_FUNCTIONS.has(normalized);
+  return SUPPORTED_MVP2_FUNCTIONS.has(callee);
 }
 
 function stripXPathStringLiterals(expression: string): string {

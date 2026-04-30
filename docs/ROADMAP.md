@@ -191,12 +191,13 @@ sequence/atomization rules are right, or everything downstream is cursed
   materially depends on in this slice (`XPTY0004`, `XPST0017`, etc.)
 
 **Completed notes:**
-- The curated MVP+2 QT3 slice currently reports `2489/2489` passing under the supported-case gate.
-- The broader MVP+2 baseline currently reports `3634/4452` passing (`81.6%`) across 199 included test sets, comfortably clearing the roadmap's 20% bar.
+- The curated MVP+2 QT3 slice currently reports `2487/2487` passing under the supported-case gate.
+- The broader MVP+2 baseline currently reports `3632/4450` passing (`81.6%`) across 199 included test sets, comfortably clearing the roadmap's 20% bar.
 - The tightened support gate intentionally excludes four curated cases that depend on out-of-scope helper/library surface rather than MVP+2 core semantics:
   `ForExpr026` (`for $file (//Folder)[1]/File return $file/FileName`),
   `K-NodeRootFunc-2` (`generate-id()` under `root()`), and
   `K-SubstringFunc-1`/`K-SubstringFunc-2` (`sub-string(...)` typo spellings).
+- The QT3 gate now reports structured exclusion reasons, keeps `fn:*` matching case-sensitive to mirror the runtime surface, and exposes optional exclusion snapshots through `QT3_EXCLUSION_DEBUG=1`; see `docs/QT3_GATE.md`.
 
 ---
 

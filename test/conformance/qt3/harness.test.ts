@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Qt3SliceCase } from './harness.js';
-import { isPotentiallySupportedXPathCase, loadQt3CatalogSetFiles, loadQt3SliceCases, runQt3Slice } from './harness.js';
+import {
+  getQt3CaseExclusion,
+  isPotentiallySupportedXPathCase,
+  loadQt3CatalogSetFiles,
+  loadQt3SliceCases,
+  runQt3Slice,
+} from './harness.js';
 
 function createCase(
   dependencies: Qt3SliceCase['dependencies'],
@@ -60,12 +66,52 @@ describe('QT3 harness dependency filtering', () => {
     expect(isPotentiallySupportedXPathCase(createCase([], 'format-number(12.5, "0.0")'))).toBe(false);
   });
 
+  it('tracks structured exclusion reasons for filtered cases', () => {
+    expect(getQt3CaseExclusion(createCase([
+      { type: 'feature', value: 'higherOrderFunctions' },
+    ]))).toEqual({
+      reason: 'unsupported-feature',
+      detail: 'higherOrderFunctions',
+    });
+
+    expect(getQt3CaseExclusion(createCase([], 'xs:date("2024-01-01")'))).toEqual({
+      reason: 'unsupported-schema-constructor',
+      detail: 'schema constructor functions',
+    });
+
+    expect(getQt3CaseExclusion(createCase([], 'format-number(12.5, "0.0")'))).toEqual({
+      reason: 'unsupported-function',
+      detail: 'format-number',
+    });
+
+    expect(getQt3CaseExclusion(createCase([], '1', {
+      kind: 'assert-eq',
+      expectedExpression: 'format-number(12.5, "0.0")',
+    }))).toEqual({
+      reason: 'unsupported-function',
+      detail: 'assert-eq expected expression: format-number',
+    });
+  });
+
   it('keeps supported MVP+2 function calls in scope', () => {
     expect(isPotentiallySupportedXPathCase(createCase([], 'count((1, 2, 3))'))).toBe(true);
     expect(isPotentiallySupportedXPathCase(createCase([], '/root/item[text()]'))).toBe(true);
     expect(isPotentiallySupportedXPathCase(createCase([], '1', { kind: 'assert-eq', expectedExpression: 'string(count((1, 2)))' }))).toBe(true);
     expect(isPotentiallySupportedXPathCase(createCase([], 'exactly-one((1))'))).toBe(true);
     expect(isPotentiallySupportedXPathCase(createCase([], 'replace("a(b)", "a", "x")'))).toBe(true);
+  });
+
+  it('matches QName function casing against the runtime surface', () => {
+    expect(getQt3CaseExclusion(createCase([], 'QName("", "name")'))).toBeUndefined();
+    expect(getQt3CaseExclusion(createCase([], 'fn:QName("", "name")'))).toBeUndefined();
+    expect(getQt3CaseExclusion(createCase([], 'qname("", "name")'))).toEqual({
+      reason: 'unsupported-function',
+      detail: 'qname',
+    });
+    expect(getQt3CaseExclusion(createCase([], 'fn:qname("", "name")'))).toEqual({
+      reason: 'unsupported-function',
+      detail: 'fn:qname',
+    });
   });
 
   it('documents the intentional curated exclusions from the tightened MVP+2 gate', () => {
