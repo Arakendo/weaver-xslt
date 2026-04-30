@@ -90,6 +90,17 @@ export type Qt3SliceRunReport = {
   readonly clusters: readonly Qt3FailureCluster[];
 };
 
+export type Qt3SliceRunHeartbeat = {
+  readonly label: string;
+  readonly everyMs: number;
+  readonly logger?: (message: string) => void;
+  readonly now?: () => number;
+};
+
+export type Qt3SliceRunOptions = {
+  readonly heartbeat?: Qt3SliceRunHeartbeat;
+};
+
 const documentCache = new Map<string, Document>();
 const catalogRoot = requireDocumentElement(readXml('catalog.xml'), 'catalog.xml');
 const globalEnvironmentIndex = loadEnvironmentIndex(catalogRoot, '.');
@@ -244,23 +255,47 @@ export function loadQt3SliceCases(setFiles: readonly string[]): Qt3SliceCase[] {
   return cases;
 }
 
-export function runQt3Slice(testCases: readonly Qt3SliceCase[]): Qt3SliceRunReport {
+export function runQt3Slice(testCases: readonly Qt3SliceCase[], options: Qt3SliceRunOptions = {}): Qt3SliceRunReport {
   const failures: Qt3SliceFailure[] = [];
+  const heartbeat = options.heartbeat;
+  const heartbeatIntervalMs = heartbeat === undefined ? 0 : Math.max(heartbeat.everyMs, 1);
+  const now = heartbeat?.now ?? Date.now;
+  const heartbeatLogger = heartbeat?.logger ?? defaultQt3HeartbeatLogger;
+  const startedAt = heartbeat === undefined ? 0 : now();
+  let nextHeartbeatAt = heartbeat === undefined ? Number.POSITIVE_INFINITY : startedAt + heartbeatIntervalMs;
   let passed = 0;
 
-  for (const testCase of testCases) {
+  for (const [index, testCase] of testCases.entries()) {
     const outcome = executeQt3Case(testCase);
     if (outcome === undefined) {
       passed += 1;
-      continue;
+    } else {
+      failures.push({
+        setFile: testCase.setFile,
+        setName: testCase.setName,
+        caseName: testCase.caseName,
+        message: outcome,
+      });
     }
 
-    failures.push({
-      setFile: testCase.setFile,
-      setName: testCase.setName,
-      caseName: testCase.caseName,
-      message: outcome,
-    });
+    if (heartbeat !== undefined) {
+      const currentTime = now();
+      if (currentTime >= nextHeartbeatAt && index + 1 < testCases.length) {
+        emitQt3Heartbeat({
+          label: heartbeat.label,
+          processed: index + 1,
+          total: testCases.length,
+          passed,
+          failed: failures.length,
+          elapsedMs: currentTime - startedAt,
+          logger: heartbeatLogger,
+        });
+
+        while (currentTime >= nextHeartbeatAt) {
+          nextHeartbeatAt += heartbeatIntervalMs;
+        }
+      }
+    }
   }
 
   return {
@@ -271,6 +306,36 @@ export function runQt3Slice(testCases: readonly Qt3SliceCase[]): Qt3SliceRunRepo
     failures,
     clusters: summarizeFailureClusters(testCases, failures),
   };
+}
+
+function emitQt3Heartbeat(input: {
+  readonly label: string;
+  readonly processed: number;
+  readonly total: number;
+  readonly passed: number;
+  readonly failed: number;
+  readonly elapsedMs: number;
+  readonly logger: (message: string) => void;
+}): void {
+  input.logger(
+    `  heartbeat ${input.label}: ${input.processed}/${input.total} cases, ${input.passed} passed, ${input.failed} failed, ${formatHeartbeatElapsed(input.elapsedMs)} elapsed`,
+  );
+}
+
+function formatHeartbeatElapsed(elapsedMs: number): string {
+  if (elapsedMs < 60_000) {
+    return `${(elapsedMs / 1000).toFixed(1)}s`;
+  }
+
+  const totalSeconds = Math.floor(elapsedMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${seconds}s`;
+}
+
+function defaultQt3HeartbeatLogger(message: string): void {
+  // eslint-disable-next-line no-console
+  console.log(message);
 }
 
 export function isPotentiallySupportedXPathCase(testCase: Qt3SliceCase): boolean {

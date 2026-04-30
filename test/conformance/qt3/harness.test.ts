@@ -90,4 +90,31 @@ describe('QT3 harness dependency filtering', () => {
     expect(testCases[0]?.environment?.sources[0]?.file).toMatch(/fn[\\/]normalize-space[\\/]textWithSpaces\.xml$/);
     expect(runQt3Slice(testCases).failed).toBe(0);
   });
+
+  it('emits optional heartbeats during long QT3 runs', () => {
+    const logged: string[] = [];
+    let currentTime = 0;
+    const testCases = [
+      createCase([], 'true()'),
+      createCase([], 'true()'),
+      createCase([], 'true()'),
+    ];
+
+    const report = runQt3Slice(testCases, {
+      heartbeat: {
+        label: 'synthetic QT3 run',
+        everyMs: 15,
+        logger: (message) => logged.push(message),
+        now: () => {
+          currentTime += 10;
+          return currentTime;
+        },
+      },
+    });
+
+    expect(report.failed).toBe(0);
+    expect(logged).toHaveLength(1);
+    expect(logged[0]).toContain('synthetic QT3 run');
+    expect(logged[0]).toContain('2/3 cases');
+  });
 });

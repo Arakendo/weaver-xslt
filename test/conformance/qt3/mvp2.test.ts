@@ -77,6 +77,15 @@ const MVP2_QT3_SET_FILES = [
 
 const maybeRunBroaderBaseline = process.env.QT3_BROAD_BASELINE === '1' ? it : it.skip;
 
+function getQt3HeartbeatIntervalMs(): number {
+  const rawSeconds = Number(process.env.QT3_HEARTBEAT_SECONDS ?? '30');
+  if (!Number.isFinite(rawSeconds) || rawSeconds <= 0) {
+    return 30_000;
+  }
+
+  return rawSeconds * 1000;
+}
+
 describe('W3C conformance — QT3 MVP+2 slice', () => {
   it('executes a broader filtered QT3 slice and reports the top failing clusters', () => {
     const discoveredCases = loadQt3SliceCases(MVP2_QT3_SET_FILES);
@@ -105,7 +114,12 @@ describe('W3C conformance — QT3 MVP+2 slice', () => {
   maybeRunBroaderBaseline('measures a broader QT3 baseline through the current MVP+2 support gate', () => {
     const discoveredCases = loadQt3SliceCases(loadQt3CatalogSetFiles());
     const runnableCases = discoveredCases.filter(isPotentiallySupportedXPathCase);
-    const report = runQt3Slice(runnableCases);
+    const report = runQt3Slice(runnableCases, {
+      heartbeat: {
+        label: 'QT3 MVP+2 broader baseline',
+        everyMs: getQt3HeartbeatIntervalMs(),
+      },
+    });
     const passRate = report.included === 0 ? 0 : (report.passed / report.included) * 100;
     const includedSetFiles = new Set(runnableCases.map((testCase) => testCase.setFile));
 
