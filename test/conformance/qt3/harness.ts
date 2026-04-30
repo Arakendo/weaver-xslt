@@ -91,7 +91,15 @@ export type Qt3SliceRunReport = {
 };
 
 const documentCache = new Map<string, Document>();
-const globalEnvironmentIndex = loadEnvironmentIndex(requireDocumentElement(readXml('catalog.xml'), 'catalog.xml'), '.');
+const catalogRoot = requireDocumentElement(readXml('catalog.xml'), 'catalog.xml');
+const globalEnvironmentIndex = loadEnvironmentIndex(catalogRoot, '.');
+const catalogSetFiles = directChildElements(catalogRoot, 'test-set')
+  .map((testSet) => testSet.getAttribute('file'))
+  .filter((file): file is string => file !== null && file.length > 0);
+
+export function loadQt3CatalogSetFiles(): string[] {
+  return [...catalogSetFiles];
+}
 
 export function loadQt3SliceCases(setFiles: readonly string[]): Qt3SliceCase[] {
   const cases: Qt3SliceCase[] = [];

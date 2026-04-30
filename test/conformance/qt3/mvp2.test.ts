@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   isPotentiallySupportedXPathCase,
+  loadQt3CatalogSetFiles,
   loadQt3SliceCases,
   runQt3Slice,
 } from './harness.js';
@@ -74,6 +75,8 @@ const MVP2_QT3_SET_FILES = [
   'fn/upper-case.xml',
 ] as const;
 
+const maybeRunBroaderBaseline = process.env.QT3_BROAD_BASELINE === '1' ? it : it.skip;
+
 describe('W3C conformance — QT3 MVP+2 slice', () => {
   it('executes a broader filtered QT3 slice and reports the top failing clusters', () => {
     const discoveredCases = loadQt3SliceCases(MVP2_QT3_SET_FILES);
@@ -94,6 +97,31 @@ describe('W3C conformance — QT3 MVP+2 slice', () => {
     }
 
     expect(discoveredCases.length).toBeGreaterThan(0);
+    expect(report.included).toBeGreaterThan(0);
+    expect(report.passed + report.failed).toBe(report.included);
+    expect(report.passed).toBeGreaterThan(0);
+  });
+
+  maybeRunBroaderBaseline('measures a broader QT3 baseline through the current MVP+2 support gate', () => {
+    const discoveredCases = loadQt3SliceCases(loadQt3CatalogSetFiles());
+    const runnableCases = discoveredCases.filter(isPotentiallySupportedXPathCase);
+    const report = runQt3Slice(runnableCases);
+    const passRate = report.included === 0 ? 0 : (report.passed / report.included) * 100;
+    const discoveredSetFiles = new Set(discoveredCases.map((testCase) => testCase.setFile));
+
+    // eslint-disable-next-line no-console
+    console.log(
+      `  QT3 MVP+2 broader baseline: ${report.passed}/${report.included} passed (${passRate.toFixed(1)}%) from ${discoveredCases.length} discovered supported-assertion cases across ${discoveredSetFiles.size} test sets`,
+    );
+
+    for (const cluster of report.clusters.slice(0, 10)) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `    ${cluster.setFile}: ${cluster.failures}/${cluster.total} failed; sample ${cluster.sampleCase} — ${cluster.sampleMessage}`,
+      );
+    }
+
+    expect(discoveredSetFiles.size).toBeGreaterThan(MVP2_QT3_SET_FILES.length);
     expect(report.included).toBeGreaterThan(0);
     expect(report.passed + report.failed).toBe(report.included);
     expect(report.passed).toBeGreaterThan(0);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Qt3SliceCase } from './harness.js';
-import { isPotentiallySupportedXPathCase, loadQt3SliceCases, runQt3Slice } from './harness.js';
+import { isPotentiallySupportedXPathCase, loadQt3CatalogSetFiles, loadQt3SliceCases, runQt3Slice } from './harness.js';
 
 function createCase(dependencies: Qt3SliceCase['dependencies']): Qt3SliceCase {
   return {
@@ -16,6 +16,14 @@ function createCase(dependencies: Qt3SliceCase['dependencies']): Qt3SliceCase {
 }
 
 describe('QT3 harness dependency filtering', () => {
+  it('enumerates test-set files from the QT3 catalog', () => {
+    const setFiles = loadQt3CatalogSetFiles();
+
+    expect(setFiles).toContain('fn/abs.xml');
+    expect(setFiles).toContain('prod/Predicate.xml');
+    expect(setFiles.length).toBeGreaterThan(100);
+  });
+
   it('excludes spec dependencies that do not apply to XPath 3.1', () => {
     expect(isPotentiallySupportedXPathCase(createCase([
       { type: 'spec', value: 'XP20 XP30 XQ10 XQ30' },
