@@ -3,13 +3,17 @@ import { describe, expect, it } from 'vitest';
 import type { Qt3SliceCase } from './harness.js';
 import { isPotentiallySupportedXPathCase, loadQt3CatalogSetFiles, loadQt3SliceCases, runQt3Slice } from './harness.js';
 
-function createCase(dependencies: Qt3SliceCase['dependencies']): Qt3SliceCase {
+function createCase(
+  dependencies: Qt3SliceCase['dependencies'],
+  expression = '1',
+  assertion: Qt3SliceCase['assertion'] = { kind: 'assert-true' },
+): Qt3SliceCase {
   return {
     setFile: 'prod/Predicate.xml',
     setName: 'prod-Predicate',
     caseName: 'synthetic',
-    expression: '1',
-    assertion: { kind: 'assert-true' },
+    expression,
+    assertion,
     dependencies,
     hasUnsupportedEnvironment: false,
   };
@@ -49,6 +53,19 @@ describe('QT3 harness dependency filtering', () => {
     expect(isPotentiallySupportedXPathCase(createCase([
       { type: 'xml-version', value: '1.1' },
     ]))).toBe(false);
+  });
+
+  it('excludes function calls outside the MVP+2 roadmap surface', () => {
+    expect(isPotentiallySupportedXPathCase(createCase([], 'function-lookup(xs:QName("fn:count"), 1)'))).toBe(false);
+    expect(isPotentiallySupportedXPathCase(createCase([], 'format-number(12.5, "0.0")'))).toBe(false);
+  });
+
+  it('keeps supported MVP+2 function calls in scope', () => {
+    expect(isPotentiallySupportedXPathCase(createCase([], 'count((1, 2, 3))'))).toBe(true);
+    expect(isPotentiallySupportedXPathCase(createCase([], '/root/item[text()]'))).toBe(true);
+    expect(isPotentiallySupportedXPathCase(createCase([], '1', { kind: 'assert-eq', expectedExpression: 'string(count((1, 2)))' }))).toBe(true);
+    expect(isPotentiallySupportedXPathCase(createCase([], 'exactly-one((1))'))).toBe(true);
+    expect(isPotentiallySupportedXPathCase(createCase([], 'replace("a(b)", "a", "x")'))).toBe(true);
   });
 
   it('loads inline anonymous test-case environments', () => {

@@ -96,6 +96,100 @@ const globalEnvironmentIndex = loadEnvironmentIndex(catalogRoot, '.');
 const catalogSetFiles = directChildElements(catalogRoot, 'test-set')
   .map((testSet) => testSet.getAttribute('file'))
   .filter((file): file is string => file !== null && file.length > 0);
+const SUPPORTED_MVP2_FUNCTIONS = new Set([
+  'abs',
+  'avg',
+  'boolean',
+  'ceiling',
+  'codepoints-to-string',
+  'concat',
+  'contains',
+  'count',
+  'data',
+  'deep-equal',
+  'distinct-values',
+  'empty',
+  'ends-with',
+  'error',
+  'exactly-one',
+  'exists',
+  'false',
+  'floor',
+  'head',
+  'last',
+  'local-name',
+  'local-name-from-qname',
+  'lower-case',
+  'matches',
+  'max',
+  'min',
+  'name',
+  'node-name',
+  'normalize-space',
+  'not',
+  'number',
+  'position',
+  'replace',
+  'remove',
+  'reverse',
+  'root',
+  'round',
+  'starts-with',
+  'string',
+  'string-join',
+  'string-length',
+  'string-to-codepoints',
+  'subsequence',
+  'substring',
+  'sum',
+  'tail',
+  'tokenize',
+  'trace',
+  'true',
+  'upper-case',
+  'qname',
+]);
+const NON_FUNCTION_CALL_TOKENS = new Set([
+  'and',
+  'array',
+  'attribute',
+  'comment',
+  'document-node',
+  'element',
+  'empty-sequence',
+  'else',
+  'eq',
+  'every',
+  'except',
+  'for',
+  'function',
+  'ge',
+  'gt',
+  'if',
+  'in',
+  'intersect',
+  'item',
+  'is',
+  'le',
+  'let',
+  'lt',
+  'map',
+  'namespace-node',
+  'ne',
+  'node',
+  'or',
+  'processing-instruction',
+  'return',
+  'satisfies',
+  'schema-attribute',
+  'schema-element',
+  'some',
+  'text',
+  'then',
+  'to',
+  'union',
+]);
+const FUNCTION_CALL_PATTERN = /(^|[^A-Za-z0-9_.:-])((?:[A-Za-z_][\w.-]*:)?[A-Za-z_][\w.-]*)\s*\(/g;
 
 export function loadQt3CatalogSetFiles(): string[] {
   return [...catalogSetFiles];
@@ -591,7 +685,82 @@ function isPotentiallySupportedXPathExpression(expression: string): boolean {
     return false;
   }
 
+  for (const callee of collectFunctionCallCandidates(expression)) {
+    if (!isSupportedMvp2FunctionCall(callee)) {
+      return false;
+    }
+  }
+
   return true;
+}
+
+function collectFunctionCallCandidates(expression: string): string[] {
+  const candidates: string[] = [];
+  const sanitizedExpression = stripXPathStringLiterals(expression);
+
+  for (const match of sanitizedExpression.matchAll(FUNCTION_CALL_PATTERN)) {
+    const callee = match[2];
+    if (callee !== undefined) {
+      candidates.push(callee);
+    }
+  }
+
+  return candidates;
+}
+
+function isSupportedMvp2FunctionCall(callee: string): boolean {
+  const normalized = callee.toLowerCase();
+
+  if (NON_FUNCTION_CALL_TOKENS.has(normalized)) {
+    return true;
+  }
+
+  const separatorIndex = normalized.indexOf(':');
+  if (separatorIndex >= 0) {
+    const prefix = normalized.slice(0, separatorIndex);
+    const localName = normalized.slice(separatorIndex + 1);
+    return prefix === 'fn' && SUPPORTED_MVP2_FUNCTIONS.has(localName);
+  }
+
+  return SUPPORTED_MVP2_FUNCTIONS.has(normalized);
+}
+
+function stripXPathStringLiterals(expression: string): string {
+  let sanitized = '';
+  let quote: '"' | "'" | null = null;
+
+  for (let index = 0; index < expression.length; index += 1) {
+    const character = expression[index];
+    if (character === undefined) {
+      break;
+    }
+
+    if (quote === null) {
+      if (character === '"' || character === "'") {
+        quote = character;
+        sanitized += ' ';
+        continue;
+      }
+
+      sanitized += character;
+      continue;
+    }
+
+    if (character === quote) {
+      const nextCharacter = expression[index + 1];
+      if (nextCharacter === quote) {
+        sanitized += '  ';
+        index += 1;
+        continue;
+      }
+
+      quote = null;
+    }
+
+    sanitized += ' ';
+  }
+
+  return sanitized;
 }
 
 function directChildElements(parent: Node, expectedLocalName?: string): Element[] {
