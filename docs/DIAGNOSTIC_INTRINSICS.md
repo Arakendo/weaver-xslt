@@ -1,212 +1,216 @@
-# Extension Functions — staged scope and boundary rules
+# Diagnostic Intrinsics — observability hooks for compiled XSLT
 
-> How Weaver should think about non-standard function surface without turning
-> the engine into accidental XSLT++.
+> How Weaver should expose traceability, diagnostics, and runtime explanation
+> without inventing a second transformation language.
 
-This document exists because "just add a helper function" is one of the easiest
-ways to smuggle late-tier semantics, hidden I/O, or product-specific behavior
-into the core surface.
+This document exists because the natural pressure to add "just one useful
+helper" quickly turns into non-standard transformation semantics, product-local
+mini libraries, and long-tail support burden.
+
+Weaver's sharper boundary is narrower: `wx:*` is not a general helper-function
+surface. It is a compiler-recognized diagnostics and traceability surface over
+standard XSLT/XPath semantics.
 
 It complements [ARCHITECTURE.md](./ARCHITECTURE.md),
 [DIFFERENTIATORS.md](./DIFFERENTIATORS.md), [XPATH.md](./XPATH.md),
 [ERRORS.md](./ERRORS.md), and [SEMANTIC_BOUNDARIES.md](./SEMANTIC_BOUNDARIES.md).
 
+## What this document covers
+
+This document covers `wx:*` intrinsics embedded in stylesheets and XPath
+expressions.
+
+It does **not** redefine the later product story for typed host-provided
+extension bindings such as `app:formatCurrency(...)` described in
+[ARCHITECTURE.md](./ARCHITECTURE.md). Those are integration features. This
+document is about compiler-recognized observability hooks inside Weaver's own
+surface.
+
 ## Goals
 
-- Make non-standard function surface explicit and clearly out-of-spec.
-- Prioritize helpers that improve diagnostics and ergonomics without hiding
-  semantics.
-- Keep roadmap tiers intact instead of backdooring M7 features into earlier
-  increments.
-- Keep host-boundary and I/O rules consistent with the rest of the engine.
+- Make Weaver's non-standard surface explicit and narrowly scoped.
+- Lean into traceability as a product differentiator instead of general helper
+  functions.
+- Expose diagnostics, assertions, and runtime explanation without adding new
+  transformation semantics.
+- Keep source-to-generated-TypeScript-to-runtime traceability explicit.
 
 ## Non-goals
 
 - Extending the `fn:` namespace.
-- Building a second path language out of helper functions.
-- Hiding resource access behind convenient helper names.
-- Shipping domain-specific packs before the base extension-function model is
-  stable.
+- Building a convenience standard library for ordinary transformation work.
+- Creating alternate transformation semantics that standard XSLT/XPath cannot
+  express.
+- Hiding resource access or host policy behind function-like syntax.
+- Making provenance claims the runtime cannot actually support.
 
 ## Namespace rule
 
-Extension functions must live in a clearly non-spec namespace.
+Diagnostic intrinsics must live in a clearly non-spec namespace.
 
-Suggested generic namespace:
+Suggested namespace:
 
 ```xml
 xmlns:wx="urn:weaver"
 ```
 
-Domain packs, if they exist later, should use their own namespace rather than
-accumulating everything under one generic prefix.
+Do not put diagnostic intrinsics in `fn:`.
 
-Examples:
+## Product boundary
 
-```xml
-xmlns:wx="urn:weaver"
-xmlns:s1="urn:weaver:s1000d"
-```
+The rule is simple:
 
-Do not put extension functions in `fn:`.
+1. Intrinsics may observe or report.
+2. Intrinsics may assert and fail with structured diagnostics.
+3. Intrinsics must not become alternate transformation semantics.
 
-## Core rules
+That means `wx:*` is allowed to expose visibility into standard evaluation, not
+to provide Weaver-flavored replacements for normal XPath/XSLT operations.
 
-### 1. Pure helpers first
+Good direction:
 
-Near-term candidates should be pure functions over existing XDM values.
-
-Good examples:
-
+- `wx:trace($label, $value)`
 - `wx:type-of($value)`
-- `wx:first-or($sequence, $fallback)`
-- `wx:empty-to($sequence, $fallback)`
-- `wx:class-list($items)`
 - `wx:path($node)`
-
-### 2. No hidden I/O
-
-Do not introduce helpers like `wx:load()` that quietly read resources. URI
-resolution, resource loading, and host policy remain separate boundaries.
-
-Pure URI computation helpers may be acceptable later if they stay consistent
-with [URI_RESOLUTION.md](./URI_RESOLUTION.md).
-
-### 3. Diagnostics should stay structured
-
-If Weaver adds assertion or diagnostic helpers, they should integrate with the
-structured diagnostic model rather than invent ad hoc text-only side effects.
-
-Potential examples:
-
+- `wx:warn($message, $details?)`
 - `wx:fail($code, $message, $details?)`
 - `wx:expect-one($seq, $message)`
-- `wx:expect-non-empty($seq, $message)`
-- `wx:expect-type($value, $type, $message)`
 
-These are attractive because they align with the diagnostics-first product
-direction, but they should land only when their runtime and reporting behavior
-is explicit.
+Bad direction:
 
-### 4. Do not collapse roadmap tiers
+- `wx:first-or()`
+- `wx:class-list()`
+- `wx:group-by()`
+- `wx:index-by()`
+- domain-pack helpers such as `s1:filter-applic()` in core
 
-Helpers that require maps, arrays, or higher-order functions belong no earlier
-than the roadmap tier where those semantics exist as stable primitives.
+Those may be useful, but they create Weaver-specific transformation surface.
+That is a different product decision and not the one this document endorses.
 
-That means helpers like these are explicitly deferred until the M7 class of
-features exists:
+## Why this boundary fits Weaver
 
-- `wx:group-by($seq, $key-fn)`
-- `wx:index-by($seq, $key-fn)`
-- `wx:unique-by($seq, $key-fn)`
-- graph helpers that depend on function-valued edge definitions
+Weaver's core pitch is not "XSLT plus helper functions." It is:
 
-If a helper is only elegant because it assumes later-tier semantics, it is a
-later-tier helper.
+- standard XSLT/XPath semantics
+- compiled to readable TypeScript
+- with first-class diagnostics and traceability across source, generated code,
+  and runtime
 
-## Staged candidates
+That is sharper, easier to explain, and less likely to metastasize into a side
+language.
 
-### Stage A — near-term ergonomic helpers
+## Traceability layer
 
-These fit the current direction best because they do not require maps, arrays,
-or higher-order functions and they do not weaken existing boundaries.
+Diagnostic intrinsics only make sense if they are backed by a real traceability
+layer in the compiler and runtime.
 
-Recommended first batch:
+At minimum, Weaver should aim to preserve these links:
 
-- `wx:type-of($value)`
-- `wx:first-or($sequence, $fallback)`
-- `wx:empty-to($sequence, $fallback)`
-- `wx:class-list($items)`
-- `wx:path($node)`
+- stylesheet instruction or XPath subexpression
+- generated TypeScript region or helper site
+- runtime diagnostic frame or evaluation context
 
-Why these first:
+This layer should make it possible to explain not only that something failed,
+but where it came from in source and how it reached the current runtime point.
 
-- they are easy to explain
-- they are useful in everyday stylesheets
-- they improve readability without hiding semantics
-- they do not require new data-model commitments
+## Allowed intrinsic categories
 
-### Stage B — diagnostic and assertion helpers
+### 1. Observation intrinsics
 
-These become attractive once runtime diagnostic plumbing is stable enough to
-make their behavior explicit and testable.
+These expose information about the current value or node without changing the
+meaning of the transformation.
 
 Candidates:
 
-- `wx:fail($code, $message, $details?)`
+- `wx:trace($label, $value)`
+- `wx:type-of($value)`
+- `wx:path($node)`
+- `wx:explain($value)`
+
+These should be backed by actual runtime knowledge, not guessed prose.
+
+### 2. Assertion intrinsics
+
+These validate expectations and raise structured diagnostics when violated.
+
+Candidates:
+
 - `wx:expect-one($seq, $message)`
 - `wx:expect-non-empty($seq, $message)`
 - `wx:expect-type($value, $type, $message)`
+
+These are acceptable because they do not add new transformation capability;
+they turn implicit assumptions into explicit, diagnosable checks.
+
+### 3. Reporting intrinsics
+
+These emit warnings, notes, or failures with structured detail payloads.
+
+Candidates:
+
+- `wx:warn($message, $details?)`
 - `wx:warn-at($node, $message, $details?)`
+- `wx:fail($code, $message, $details?)`
 
-Requirements before landing them:
+These should integrate directly with the structured diagnostic model in
+[ERRORS.md](./ERRORS.md), not invent text-only side channels.
 
-- structured diagnostic integration
-- deterministic runtime behavior
-- clear testing strategy for emitted codes/details
+## Disallowed categories
 
-### Stage C — map/array and higher-order helpers
+The following are out of scope for `wx:*` diagnostic intrinsics:
 
-These are explicitly deferred until the corresponding base semantics are in
-scope.
+- convenience/data-shaping helpers such as `wx:first-or()` or
+  `wx:class-list()`
+- collection and grouping helpers
+- map/array helper libraries
+- graph helper libraries
+- domain-specific packs in the core namespace
+- hidden I/O or host-policy shortcuts
+
+These are exactly the kinds of additions that create a Weaver-flavored side
+language instead of a traceability surface.
+
+## Provenance rule
+
+No provenance claim without runtime metadata backing it.
+
+This is a hard rule.
 
 Examples:
 
-- `wx:get($map, $key, $fallback)`
-- `wx:pick($map, $keys)`
-- `wx:group-by($seq, $key-fn)`
-- `wx:index-by($seq, $key-fn)`
-- `wx:sort-by($seq, $key-fn)`
+- `wx:path($node)` is acceptable if the runtime can identify the node path.
+- `wx:type-of($value)` is acceptable if the runtime can describe the actual
+  item or sequence shape.
+- `wx:origin($value)` is acceptable only if the runtime truly tracks origin.
+- `wx:derived-from($value)` is forbidden until Weaver can prove that relation
+  with real metadata rather than inference or wishful thinking.
 
-These may be valuable later, but they should not be used to pull M7 semantics
-forward piecemeal.
+We should not do epistemic fraud in the name of better debugging.
 
-### Stage D — graph helpers
+## Compilation model
 
-Graph helpers are plausible, but only after higher-order functions and related
-data structures are stable. Until then they are backlog material, not near-term
-product scope.
+Diagnostic intrinsics should be compiler-recognized.
 
-If they ever land, keep them disciplined:
+That means:
 
-- treat graphs as derived views over existing XML/map data
-- do not invent a separate graph data model in core
-- do not invent graph DSL strings
-- do not go beyond a small utility surface unless real use demands it
+- syntax may still look like XPath function calls
+- the compiler gives them explicit treatment
+- generated TypeScript routes them through well-defined runtime hooks
+- diagnostics emitted by those hooks preserve source and runtime context
 
-Plausible later candidates:
-
-- `wx:neighbors()`
-- `wx:walk-unique()`
-- `wx:reachable()`
-- `wx:has-cycle()`
-- `wx:topo-sort()`
-
-## Domain-specific packs
-
-Domain-specific helpers, such as S1000D-oriented functions, should not land in
-the generic `wx:` namespace by default.
-
-If they exist later:
-
-- keep them in a separate domain namespace
-- keep them out of the core engine until the extension mechanism is stable
-- avoid turning one customer/problem domain into assumed global product policy
-
-That means S1000D helpers are a later domain package discussion, not a near-term
-core-function decision.
+They should not be treated as arbitrary library calls with fuzzy semantics.
 
 ## Testing guidance
 
-Every extension function that lands should have:
+Every diagnostic intrinsic that lands should have:
 
 - focused behavioral tests
-- diagnostic tests when failures are part of the contract
-- documentation that states whether it is pure, diagnostic, or host-sensitive
-- explicit namespace examples
+- tests for structured diagnostic details when failure/reporting is involved
+- source-location and frame tests where traceability is part of the contract
+- documentation that states what runtime metadata the intrinsic depends on
 
 ## Working rule
 
-Extension functions should make Weaver clearer, not more magical. If a helper
-obscures semantics, hides I/O, or quietly drags in a later feature tier, it is
-not ready.
+Weaver intrinsics should expose abnormal visibility over normal semantics. If a
+proposed intrinsic starts acting like a convenience library or alternate
+transformation language, it belongs outside this surface.
