@@ -7,9 +7,11 @@
 
 import type { Attr, Element, Node } from '@xmldom/xmldom';
 
+import { XTSE0010 } from '../../errors/codes.js';
+import { XsltError } from '../../errors/index.js';
 import type { PathExpression, StepExpression, XPathAst } from '../../xpath/parse/ast.js';
 import { parseXPath } from '../../xpath/parse/parser.js';
-import { getNodeSourceLocation, parseXml } from '../../xml/parse.js';
+import { getAttributeValueSourceLocation, getNodeSourceLocation, parseXml } from '../../xml/parse.js';
 import type { AttributeInstruction, Instruction, StylesheetIR, TemplateRule } from './ir.js';
 
 const XSLT_NAMESPACE = 'http://www.w3.org/1999/XSL/Transform';
@@ -25,11 +27,14 @@ export function compileStylesheet(stylesheetXml: string): StylesheetIR {
   const root = stylesheetDocument.documentElement;
 
   if (root === null) {
-    throw new Error('Stylesheet has no document element.');
+    throw createXsltStaticError('Stylesheet has no document element.');
   }
 
   if (!isXsltElement(root, 'stylesheet') && !isXsltElement(root, 'transform')) {
-    throw new Error('Stylesheet document element must be xsl:stylesheet or xsl:transform.');
+    throw createXsltStaticError(
+      'Stylesheet document element must be xsl:stylesheet or xsl:transform.',
+      getNodeSourceLocation(stylesheetXml, root, STYLESHEET_SOURCE_NAME),
+    );
   }
 
   const templates = childElements(root)
@@ -37,7 +42,10 @@ export function compileStylesheet(stylesheetXml: string): StylesheetIR {
     .map((template) => compileTemplateRule(template, stylesheetXml));
 
   if (templates.length === 0) {
-    throw new Error('Stylesheet must declare at least one xsl:template.');
+    throw createXsltStaticError(
+      'Stylesheet must declare at least one xsl:template.',
+      getNodeSourceLocation(stylesheetXml, root, STYLESHEET_SOURCE_NAME),
+    );
   }
 
   return {
@@ -53,15 +61,28 @@ function compileTemplateRule(templateElement: Element, stylesheetXml: string): T
   const priority = priorityText === null ? undefined : Number(priorityText);
 
   if (matchText === undefined && name === undefined) {
-    throw new Error('xsl:template must declare either match or name.');
+    throw createXsltStaticError(
+      'xsl:template must declare either match or name.',
+      getNodeSourceLocation(stylesheetXml, templateElement, STYLESHEET_SOURCE_NAME),
+    );
   }
 
   const match = matchText === undefined ? undefined : parseXPath(matchText);
   if (match !== undefined && !isSupportedTemplateMatch(match)) {
-    throw new Error(`Unsupported template match pattern ${JSON.stringify(matchText)} in current MVP+3 slice.`);
+    throw createXsltStaticError(
+      `Unsupported template match pattern ${JSON.stringify(matchText)} in current MVP+3 slice.`,
+      getAttributeValueSourceLocation(stylesheetXml, templateElement, 'match', STYLESHEET_SOURCE_NAME)
+        ?? getNodeSourceLocation(stylesheetXml, templateElement, STYLESHEET_SOURCE_NAME),
+    );
   }
 
-  const location = getNodeSourceLocation(stylesheetXml, templateElement, STYLESHEET_SOURCE_NAME);
+  const location = matchText !== undefined
+    ? getAttributeValueSourceLocation(stylesheetXml, templateElement, 'match', STYLESHEET_SOURCE_NAME)
+      ?? getNodeSourceLocation(stylesheetXml, templateElement, STYLESHEET_SOURCE_NAME)
+    : name !== undefined
+      ? getAttributeValueSourceLocation(stylesheetXml, templateElement, 'name', STYLESHEET_SOURCE_NAME)
+        ?? getNodeSourceLocation(stylesheetXml, templateElement, STYLESHEET_SOURCE_NAME)
+      : getNodeSourceLocation(stylesheetXml, templateElement, STYLESHEET_SOURCE_NAME);
   const body = compileInstructions(templateElement.childNodes, stylesheetXml);
 
   return {
@@ -112,9 +133,16 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
   if (isXsltElement(element, 'apply-templates')) {
     const select = element.getAttribute('select') ?? undefined;
     const mode = element.getAttribute('mode');
-    const location = getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
+    const location = select === undefined
+      ? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME)
+      : getAttributeValueSourceLocation(stylesheetXml, element, 'select', STYLESHEET_SOURCE_NAME)
+        ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
     if (mode !== null) {
-      throw new Error('xsl:apply-templates mode is not yet implemented in the current MVP+3 slice.');
+      throw createXsltStaticError(
+        'xsl:apply-templates mode is not yet implemented in the current MVP+3 slice.',
+        getAttributeValueSourceLocation(stylesheetXml, element, 'mode', STYLESHEET_SOURCE_NAME)
+          ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+      );
     }
 
     return {
@@ -127,10 +155,15 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
 
   if (isXsltElement(element, 'value-of')) {
     const select = element.getAttribute('select');
-    const location = getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
     if (select === null || select.length === 0) {
-      throw new Error('xsl:value-of requires a select attribute.');
+      throw createXsltStaticError(
+        'xsl:value-of requires a select attribute.',
+        getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+      );
     }
+
+    const location = getAttributeValueSourceLocation(stylesheetXml, element, 'select', STYLESHEET_SOURCE_NAME)
+      ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
 
     const separator = element.getAttribute('separator') ?? undefined;
     return {
@@ -150,7 +183,10 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
   }
 
   if (element.namespaceURI === XSLT_NAMESPACE) {
-    throw new Error(`Unsupported XSLT instruction ${element.nodeName} in current MVP+3 slice.`);
+    throw createXsltStaticError(
+      `Unsupported XSLT instruction ${element.nodeName} in current MVP+3 slice.`,
+      getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+    );
   }
 
   return {
@@ -231,4 +267,8 @@ function isSupportedTemplateStep(step: StepExpression): boolean {
     || step.nodeTest.kind === 'wildcardTest'
     || (step.nodeTest.kind === 'kindTest' && step.nodeTest.name === 'node')
     || (step.nodeTest.kind === 'kindTest' && step.nodeTest.name === 'text');
+}
+
+function createXsltStaticError(message: string, location?: TemplateRule['location']): XsltError {
+  return new XsltError(XTSE0010, message, location);
 }

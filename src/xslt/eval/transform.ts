@@ -7,7 +7,7 @@
 
 import type { Node } from '@xmldom/xmldom';
 
-import { XdmError, XsltError, type ErrorFrame } from '../../errors/index.js';
+import { XdmError, XsltError, type ErrorFrame, type RelatedLocation } from '../../errors/index.js';
 import type { PathExpression, StepExpression } from '../../xpath/parse/ast.js';
 import type { TransformOptions, TransformResult } from '../../processor/types.js';
 import { parseXml } from '../../xml/parse.js';
@@ -81,7 +81,11 @@ function applyTemplateToNode(node: Node, ir: StylesheetIR, context: DynamicConte
     try {
       return renderInstructions(template.body, ir, context);
     } catch (error) {
-      throw withPrependedFrame(error, createTemplateFrame(template));
+      throw withPrependedFrame(
+        error,
+        createTemplateFrame(template),
+        createRelatedLocation('enclosing template', template.location),
+      );
     }
   }
 
@@ -237,11 +241,16 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
         const separator = instruction.separator ?? ' ';
         return escapeText(items.map(itemToStringValue).join(separator));
       } catch (error) {
-        throw withPrependedFrame(error, {
+        const frame = {
           kind: 'instruction',
           label: `xsl:value-of select="${instruction.selectText}"`,
           ...(instruction.location === undefined ? {} : { location: instruction.location }),
-        });
+        } satisfies ErrorFrame;
+        throw withPrependedFrame(
+          error,
+          frame,
+          createRelatedLocation('containing instruction', instruction.location),
+        );
       }
     }
     case 'applyTemplates': {
@@ -251,13 +260,18 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
           : [...evaluate(instruction.select, context)];
         return applyTemplatesToItems(items, ir, context.staticContext);
       } catch (error) {
-        throw withPrependedFrame(error, {
+        const frame = {
           kind: 'instruction',
           label: instruction.selectText === undefined
             ? 'xsl:apply-templates'
             : `xsl:apply-templates select="${instruction.selectText}"`,
           ...(instruction.location === undefined ? {} : { location: instruction.location }),
-        });
+        } satisfies ErrorFrame;
+        throw withPrependedFrame(
+          error,
+          frame,
+          createRelatedLocation('caller instruction', instruction.location),
+        );
       }
     }
   }
@@ -339,7 +353,7 @@ function createTemplateFrame(template: TemplateRule): ErrorFrame {
   };
 }
 
-function withPrependedFrame(error: unknown, frame: ErrorFrame): unknown {
+function withPrependedFrame(error: unknown, frame: ErrorFrame, related?: RelatedLocation): unknown {
   if (!(error instanceof XdmError)) {
     return error;
   }
@@ -350,12 +364,16 @@ function withPrependedFrame(error: unknown, frame: ErrorFrame): unknown {
     error.location,
     error.details,
     {
-      related: error.related,
+      related: related === undefined ? error.related : [related, ...error.related],
       frames: [frame, ...error.frames],
       suggestions: error.suggestions,
       causes: error.causes.length === 0 ? [error] : error.causes,
     },
   );
+}
+
+function createRelatedLocation(label: string, location: TemplateRule['location']): RelatedLocation | undefined {
+  return location === undefined ? undefined : { label, location };
 }
 
 function escapeText(value: string): string {

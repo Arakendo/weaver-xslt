@@ -84,7 +84,7 @@ export function diagnosticReportFromError(error: unknown): DiagnosticReport {
     severity: 'error',
     category: classifyCategory(error.code),
     message: error.detailMessage,
-    related: toRelatedSpans(error.related),
+    related: toRelatedSpans(error.related, error.frames),
     frames: error.frames.map((frame) => toDiagnosticFrame(frame)),
     details: toDiagnosticDetails(error.details),
     suggestions: toDiagnosticSuggestions(error.suggestions),
@@ -202,11 +202,26 @@ function toDiagnosticDetails(details: XdmError['details']): readonly DiagnosticD
   return Object.entries(details).map(([key, value]) => ({ key, value }));
 }
 
-function toRelatedSpans(related: readonly RelatedLocation[]): readonly RelatedSpan[] {
-  return related.flatMap((entry) => {
+function toRelatedSpans(
+  related: readonly RelatedLocation[],
+  frames: XdmError['frames'],
+): readonly RelatedSpan[] {
+  const explicit = related.flatMap((entry) => {
     const span = toSourceSpan(entry.location);
     return span === undefined ? [] : [{ label: entry.label, span }];
   });
+
+  const derived = frames.flatMap((frame) => {
+    const span = toSourceSpan(frame.location);
+    return span === undefined
+      ? []
+      : [{
+          label: `${frame.kind} ${frame.label}`,
+          span,
+        }];
+  });
+
+  return dedupeRelatedSpans([...explicit, ...derived]);
 }
 
 function toDiagnosticSuggestions(suggestions: readonly ErrorSuggestion[]): readonly DiagnosticSuggestion[] {
@@ -230,6 +245,30 @@ function toDiagnosticFrame(frame: XdmError['frames'][number]): DiagnosticFrame {
         label: frame.label,
         span,
       };
+}
+
+function dedupeRelatedSpans(related: readonly RelatedSpan[]): readonly RelatedSpan[] {
+  const seen = new Set<string>();
+  const deduped: RelatedSpan[] = [];
+
+  for (const entry of related) {
+    const key = [
+      entry.span.uri ?? '',
+      entry.span.offsetStart,
+      entry.span.offsetEnd,
+      entry.span.lineStart,
+      entry.span.columnStart,
+    ].join('|');
+
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    deduped.push(entry);
+  }
+
+  return deduped;
 }
 
 function assertRequiredDetails(report: DiagnosticReport, detailKeys: ReadonlySet<string>): void {

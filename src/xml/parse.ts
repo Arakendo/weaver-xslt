@@ -1,4 +1,4 @@
-import { DOMParser, type Document, type Node } from '@xmldom/xmldom';
+import { DOMParser, type Attr, type Document, type Element, type Node } from '@xmldom/xmldom';
 
 import type { SourceLocation } from '../errors/index.js';
 
@@ -51,6 +51,50 @@ export function getNodeSourceLocation(source: string, node: Node, sourceName = '
   };
 }
 
+export function getAttributeValueSourceLocation(
+  source: string,
+  element: Element,
+  attributeName: string,
+  sourceName = '<xml>',
+): SourceLocation | undefined {
+  const attribute = element.getAttributeNode(attributeName);
+  if (attribute === null) {
+    return undefined;
+  }
+
+  const line = normalizeLineNumber(attribute.lineNumber);
+  const column = attribute.columnNumber;
+  if (line === undefined || column === undefined) {
+    return undefined;
+  }
+
+  const lineStartOffsets = computeLineStartOffsets(source);
+  const lineStartOffset = lineStartOffsets[line - 1];
+  if (lineStartOffset === undefined) {
+    return undefined;
+  }
+
+  const lineText = getLineText(source, lineStartOffsets, line);
+  if (lineText === undefined) {
+    return undefined;
+  }
+
+  const valueRange = findAttributeValueRange(lineText, attribute);
+  if (valueRange === undefined) {
+    return getNodeSourceLocation(source, attribute, sourceName);
+  }
+
+  return {
+    source: sourceName,
+    line,
+    column: valueRange.startColumn,
+    offset: lineStartOffset + valueRange.startOffset,
+    endLine: line,
+    endColumn: valueRange.endColumn,
+    endOffset: lineStartOffset + valueRange.endOffset,
+  };
+}
+
 function stripXmlDeclarationProcessingInstruction(document: Document): void {
   const toRemove: Node[] = [];
 
@@ -85,6 +129,53 @@ function computeLineStartOffsets(source: string): number[] {
   }
 
   return offsets;
+}
+
+function getLineText(source: string, lineStartOffsets: readonly number[], line: number): string | undefined {
+  const lineStartOffset = lineStartOffsets[line - 1];
+  if (lineStartOffset === undefined) {
+    return undefined;
+  }
+
+  const nextLineOffset = lineStartOffsets[line] ?? source.length;
+  let lineEndOffset = nextLineOffset;
+  if (lineEndOffset > lineStartOffset && source[lineEndOffset - 1] === '\n') {
+    lineEndOffset -= 1;
+  }
+  if (lineEndOffset > lineStartOffset && source[lineEndOffset - 1] === '\r') {
+    lineEndOffset -= 1;
+  }
+
+  return source.slice(lineStartOffset, lineEndOffset);
+}
+
+function findAttributeValueRange(
+  lineText: string,
+  attribute: Attr,
+): { startOffset: number; endOffset: number; startColumn: number; endColumn: number } | undefined {
+  const assignmentIndex = lineText.indexOf(`${attribute.name}=`);
+  if (assignmentIndex === -1) {
+    return undefined;
+  }
+
+  const quoteIndex = assignmentIndex + attribute.name.length + 1;
+  const quoteCharacter = lineText[quoteIndex];
+  if (quoteCharacter !== '"' && quoteCharacter !== '\'') {
+    return undefined;
+  }
+
+  const valueStartOffset = quoteIndex + 1;
+  const valueEndOffset = lineText.indexOf(quoteCharacter, valueStartOffset);
+  if (valueEndOffset === -1) {
+    return undefined;
+  }
+
+  return {
+    startOffset: valueStartOffset,
+    endOffset: valueEndOffset,
+    startColumn: valueStartOffset + 1,
+    endColumn: valueEndOffset + 1,
+  };
 }
 
 function normalizeLineNumber(lineNumber: number | undefined): number | undefined {
