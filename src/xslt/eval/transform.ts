@@ -7,7 +7,7 @@
 
 import type { Node } from '@xmldom/xmldom';
 
-import { XTDE0040, XTSE0010, XPTY0004 } from '../../errors/codes.js';
+import { XTDE0040, XTDE0050, XTDE0640, XTDE0700, XTSE0010, XPTY0004 } from '../../errors/codes.js';
 import { XdmError, XsltError, type ErrorFrame, type RelatedLocation } from '../../errors/index.js';
 import type { PathExpression, StepExpression } from '../../xpath/parse/ast.js';
 import type { TransformOptions, TransformResult } from '../../processor/types.js';
@@ -15,7 +15,7 @@ import { parseXml } from '../../xml/parse.js';
 import { createXdmNode, type XdmAtomicValue, type XdmItem, type XdmNode } from '../../xdm/types.js';
 import { evaluate, evaluateEffectiveBooleanValue } from '../../xpath/eval/evaluator.js';
 import type { DynamicContext } from '../../xpath/eval/context.js';
-import type { GlobalVariable, Instruction, StylesheetIR, TemplateParam, TemplateRule, WithParam } from '../compile/ir.js';
+import type { GlobalBinding, Instruction, StylesheetIR, TemplateParam, TemplateRule, WithParam } from '../compile/ir.js';
 
 const PREDEFINED_NAMESPACE_PREFIXES = new Map<string, string>([
   ['array', 'http://www.w3.org/2005/xpath-functions/array'],
@@ -25,6 +25,10 @@ const PREDEFINED_NAMESPACE_PREFIXES = new Map<string, string>([
   ['xml', 'http://www.w3.org/XML/1998/namespace'],
   ['xs', 'http://www.w3.org/2001/XMLSchema'],
 ]);
+
+type DeferredVariableBinding = {
+  readonly evaluate: () => unknown;
+};
 
 export function runTransform(
   ir: StylesheetIR,
@@ -49,7 +53,13 @@ export function runTransform(
 
   const sourceDocument = parseXml(sourceXml);
   const staticContext = createStaticContext(ir, options);
-  const globalVariables = evaluateGlobalVariables(ir.globalVariables, staticContext, createXdmNode(sourceDocument));
+  const globalVariables = evaluateGlobalBindings(
+    ir,
+    ir.globalBindings,
+    staticContext,
+    createXdmNode(sourceDocument),
+    options.parameters,
+  );
 
   if (options.initialTemplate !== undefined) {
     const initialContext = createContext(createXdmNode(sourceDocument), staticContext, 1, 1, globalVariables);
@@ -139,7 +149,8 @@ function findNamedTemplate(name: string, templates: readonly TemplateRule[]): Te
 }
 
 function renderInitialTemplate(name: string, ir: StylesheetIR, context: DynamicContext): string {
-  const template = findNamedTemplate(name, ir.templates);
+  const normalizedName = normalizeTemplateName(name, context.staticContext);
+  const template = findNamedTemplate(normalizedName, ir.templates);
   if (template === undefined) {
     throw new XsltError(
       XTSE0010,
@@ -167,6 +178,46 @@ function renderInitialTemplate(name: string, ir: StylesheetIR, context: DynamicC
       createRelatedLocation('initial template', template.location),
     );
   }
+}
+
+function normalizeTemplateName(name: string, staticContext: DynamicContext['staticContext']): string {
+  if (name.startsWith('{')) {
+    return name;
+  }
+
+  const eqName = tryNormalizeEqName(name);
+  if (eqName !== undefined) {
+    return eqName;
+  }
+
+  const separator = name.indexOf(':');
+  if (separator < 0) {
+    return name;
+  }
+
+  const prefix = name.slice(0, separator);
+  const localName = name.slice(separator + 1);
+  const namespaceUri = staticContext.namespaces.get(prefix) ?? PREDEFINED_NAMESPACE_PREFIXES.get(prefix);
+  return namespaceUri === undefined ? name : `{${namespaceUri}}${localName}`;
+}
+
+function tryNormalizeEqName(name: string): string | undefined {
+  if (!name.startsWith('Q{')) {
+    return undefined;
+  }
+
+  const endBrace = name.indexOf('}');
+  if (endBrace < 0) {
+    return undefined;
+  }
+
+  const namespaceUri = name.slice(2, endBrace);
+  const localName = name.slice(endBrace + 1);
+  if (localName.length === 0) {
+    return undefined;
+  }
+
+  return namespaceUri.length === 0 ? localName : `{${namespaceUri}}${localName}`;
 }
 
 function findBestMatchingTemplate(
@@ -339,7 +390,7 @@ function renderInstructions(instructions: readonly Instruction[], ir: Stylesheet
 
   for (const instruction of instructions) {
     if (instruction.kind === 'variable') {
-      currentContext = bindVariableInstruction(instruction, currentContext);
+      currentContext = bindVariableInstruction(instruction, ir, currentContext);
       continue;
     }
 
@@ -497,10 +548,11 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
 
 function bindVariableInstruction(
   instruction: Extract<Instruction, { readonly kind: 'variable' }>,
+  ir: StylesheetIR,
   context: DynamicContext,
 ): DynamicContext {
   try {
-    const value = instruction.select === undefined ? [] : [...evaluate(instruction.select, context)];
+    const value = evaluateBindingValue(instruction, ir, context);
     const variables = new Map(context.variables);
     variables.set(instruction.name, value);
     variables.set(`{}${instruction.name}`, value);
@@ -530,7 +582,7 @@ function renderTemplate(
   ir: StylesheetIR,
   context: DynamicContext,
 ): string {
-  const variables = bindTemplateParams(template.params, withParams, context);
+  const variables = bindTemplateParams(template.params, withParams, ir, context);
   return renderInstructions(template.body, ir, {
     ...context,
     variables,
@@ -540,6 +592,7 @@ function renderTemplate(
 function bindTemplateParams(
   params: readonly TemplateParam[],
   withParams: readonly WithParam[],
+  ir: StylesheetIR,
   context: DynamicContext,
 ): ReadonlyMap<string, unknown> {
   if (params.length === 0 && withParams.length === 0) {
@@ -548,17 +601,19 @@ function bindTemplateParams(
 
   const provided = new Map<string, unknown>();
   for (const withParam of withParams) {
-    provided.set(withParam.name, evaluateParamValue(withParam, context));
+    provided.set(withParam.name, evaluateBindingValue(withParam, ir, context));
   }
 
   const variables = new Map(context.variables);
   for (const param of params) {
     const value = provided.has(param.name)
       ? provided.get(param.name)
-      : evaluateParamValue(param, {
-          ...context,
-          variables,
-        });
+      : param.required
+        ? throwMissingTemplateParam(param)
+        : evaluateBindingValue(param, ir, {
+            ...context,
+            variables,
+          });
     variables.set(param.name, value);
     variables.set(`{}${param.name}`, value);
   }
@@ -566,11 +621,55 @@ function bindTemplateParams(
   return variables;
 }
 
-function evaluateParamValue(
-  param: Pick<TemplateParam, 'select'> | Pick<WithParam, 'select'>,
+function evaluateBindingValue(
+  binding: Pick<TemplateParam, 'select' | 'body'>
+    | Pick<WithParam, 'select' | 'body'>
+    | Pick<Extract<Instruction, { readonly kind: 'variable' }>, 'select' | 'body'>
+    | Pick<GlobalBinding, 'select' | 'body'>,
+  ir: StylesheetIR,
   context: DynamicContext,
 ): unknown {
-  return param.select === undefined ? [] : [...evaluate(param.select, context)];
+  if (binding.select !== undefined) {
+    return [...evaluate(binding.select, context)];
+  }
+
+  if (binding.body === undefined) {
+    return [];
+  }
+
+  return evaluateTemporaryTree(binding.body, ir, context);
+}
+
+function evaluateTemporaryTree(
+  body: readonly Instruction[],
+  ir: StylesheetIR,
+  context: DynamicContext,
+): readonly XdmItem[] {
+  const serialized = renderInstructions(body, ir, context);
+  const temporaryDocument = parseXml(`<temporary-root>${serialized}</temporary-root>`);
+  const fragment = temporaryDocument.createDocumentFragment();
+  const wrapper = temporaryDocument.documentElement;
+
+  if (wrapper === null) {
+    return [createXdmNode(fragment)];
+  }
+
+  while (wrapper.firstChild !== null) {
+    fragment.appendChild(wrapper.firstChild);
+  }
+
+  return [createXdmNode(fragment)];
+}
+
+function throwMissingTemplateParam(param: Pick<TemplateParam, 'name' | 'location'>): never {
+  throw new XsltError(
+    XTDE0700,
+    `Required template parameter $${param.name} was not supplied.`,
+    param.location,
+    {
+      parameterName: param.name,
+    },
+  );
 }
 
 function getChildNodeItems(item: unknown): XdmItem[] {
@@ -620,35 +719,103 @@ function itemToStringValue(item: XdmItem): string {
   return String((item as XdmAtomicValue).value);
 }
 
-function evaluateGlobalVariables(
-  variables: readonly GlobalVariable[],
+function evaluateGlobalBindings(
+  ir: StylesheetIR,
+  bindings: readonly GlobalBinding[],
   staticContext: DynamicContext['staticContext'],
   contextItem: XdmItem,
+  parameters: TransformOptions['parameters'],
 ): ReadonlyMap<string, unknown> {
-  if (variables.length === 0) {
+  if (bindings.length === 0 && parameters === undefined) {
+    return new Map();
+  }
+
+  const resolvedParameters = normalizeExternalParameters(parameters, staticContext);
+  const runtimeBindings = new Map<string, unknown>();
+  for (const binding of bindings) {
+    let state: 'pending' | 'evaluating' | 'done' = 'pending';
+    let cachedValue: unknown;
+    const deferredBinding: DeferredVariableBinding = {
+      evaluate: () => {
+        if (state === 'done') {
+          return cachedValue;
+        }
+
+        if (state === 'evaluating') {
+          throw new XsltError(
+            XTDE0640,
+            `Circular top-level ${binding.kind} dependency involving $${binding.name}.`,
+            binding.location,
+            { variableName: binding.name },
+          );
+        }
+
+        state = 'evaluating';
+        try {
+          if (binding.kind === 'param' && resolvedParameters.has(binding.name)) {
+            cachedValue = resolvedParameters.get(binding.name);
+          } else if (binding.kind === 'param' && binding.required) {
+            throw new XsltError(
+              XTDE0050,
+              `Required stylesheet parameter $${binding.name} was not supplied.`,
+              binding.location,
+              {
+                parameterName: binding.name,
+              },
+            );
+          } else {
+            const context = createContext(contextItem, staticContext, 1, 1, runtimeBindings);
+            cachedValue = evaluateBindingValue(binding, ir, context);
+          }
+          state = 'done';
+          runtimeBindings.set(binding.name, cachedValue);
+          runtimeBindings.set(`{}${binding.name}`, cachedValue);
+          return cachedValue;
+        } catch (error) {
+          state = 'pending';
+          const frame = {
+            kind: 'instruction',
+            label: binding.selectText === undefined
+              ? `xsl:${binding.kind} name="${binding.name}"`
+              : `xsl:${binding.kind} name="${binding.name}" select="${binding.selectText}"`,
+            ...(binding.location === undefined ? {} : { location: binding.location }),
+          } satisfies ErrorFrame;
+          throw withPrependedFrame(
+            error,
+            frame,
+            createRelatedLocation(`top-level ${binding.kind}`, binding.location),
+          );
+        }
+      },
+    };
+    runtimeBindings.set(binding.name, deferredBinding);
+    runtimeBindings.set(`{}${binding.name}`, deferredBinding);
+  }
+
+  for (const binding of bindings) {
+    const deferredBinding = runtimeBindings.get(binding.name) as DeferredVariableBinding | unknown;
+    if (typeof deferredBinding === 'object' && deferredBinding !== null && 'evaluate' in deferredBinding) {
+      (deferredBinding as DeferredVariableBinding).evaluate();
+    }
+  }
+
+  return runtimeBindings;
+}
+
+function normalizeExternalParameters(
+  parameters: TransformOptions['parameters'],
+  staticContext: DynamicContext['staticContext'],
+): ReadonlyMap<string, unknown> {
+  if (parameters === undefined) {
     return new Map();
   }
 
   const bindings = new Map<string, unknown>();
-  for (const variable of variables) {
-    const context = createContext(contextItem, staticContext, 1, 1, bindings);
-    try {
-      const value = variable.select === undefined ? [] : [...evaluate(variable.select, context)];
-      bindings.set(variable.name, value);
-      bindings.set(`{}${variable.name}`, value);
-    } catch (error) {
-      const frame = {
-        kind: 'instruction',
-        label: variable.selectText === undefined
-          ? `xsl:variable name="${variable.name}"`
-          : `xsl:variable name="${variable.name}" select="${variable.selectText}"`,
-        ...(variable.location === undefined ? {} : { location: variable.location }),
-      } satisfies ErrorFrame;
-      throw withPrependedFrame(
-        error,
-        frame,
-        createRelatedLocation('top-level variable', variable.location),
-      );
+  for (const [name, value] of Object.entries(parameters)) {
+    const normalizedName = normalizeTemplateName(name, staticContext);
+    bindings.set(normalizedName, value);
+    if (!normalizedName.startsWith('{')) {
+      bindings.set(`{}${normalizedName}`, value);
     }
   }
 

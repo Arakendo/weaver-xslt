@@ -224,6 +224,39 @@ describe('@arakendo/xslt scaffold', () => {
     });
   });
 
+  it('matches named templates by expanded QName rather than lexical prefix', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/root">
+          <out xmlns:foo="urn:test">
+            <xsl:call-template name="foo:emit"/>
+          </out>
+        </xsl:template>
+        <xsl:template xmlns:bar="urn:test" name="bar:emit">
+          <xsl:text>ok</xsl:text>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root/>')).toEqual({
+      output: '<out xmlns:foo="urn:test">ok</out>',
+    });
+  });
+
+  it('accepts Clark notation for initialTemplate names', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:t="urn:test">
+        <xsl:template name="t:main">
+          <out>ok</out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root/>', { initialTemplate: '{urn:test}main' })).toEqual({
+      output: '<out xmlns:t="urn:test">ok</out>',
+    });
+  });
+
   it('binds xsl:with-param values and xsl:param defaults for named templates', () => {
     const proc = new XsltProcessor(`
       <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -271,6 +304,52 @@ describe('@arakendo/xslt scaffold', () => {
     });
   });
 
+  it('binds local xsl:variable sequence constructors as temporary trees', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/root">
+          <out>
+            <xsl:variable name="tree">
+              <label><xsl:value-of select="name()"/></label>
+            </xsl:variable>
+            <xsl:value-of select="$tree/label"/>
+          </out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root/>')).toEqual({
+      output: '<out>root</out>',
+    });
+  });
+
+  it('binds xsl:param and xsl:with-param sequence constructors as temporary trees', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/root">
+          <out>
+            <xsl:call-template name="emit"/>
+            <xsl:call-template name="emit">
+              <xsl:with-param name="tree">
+                <label>override</label>
+              </xsl:with-param>
+            </xsl:call-template>
+          </out>
+        </xsl:template>
+        <xsl:template name="emit">
+          <xsl:param name="tree">
+            <label>default</label>
+          </xsl:param>
+          <entry><xsl:value-of select="$tree/label"/></entry>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root/>')).toEqual({
+      output: '<out><entry>default</entry><entry>override</entry></out>',
+    });
+  });
+
   it('binds top-level xsl:variable values before template execution', () => {
     const proc = new XsltProcessor(`
       <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -283,6 +362,65 @@ describe('@arakendo/xslt scaffold', () => {
 
     expect(proc.transform('<root/>')).toEqual({
       output: '<out>hello</out>',
+    });
+  });
+
+  it('binds top-level xsl:param defaults and transform parameters before template execution', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:param name="greeting" select="'hello'"/>
+        <xsl:template match="/root">
+          <out><xsl:value-of select="$greeting"/></out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root/>')).toEqual({
+      output: '<out>hello</out>',
+    });
+
+    expect(proc.transform('<root/>', {
+      parameters: {
+        greeting: 'hi',
+      },
+    })).toEqual({
+      output: '<out>hi</out>',
+    });
+  });
+
+  it('binds top-level xsl:param and xsl:variable sequence constructors before template execution', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:param name="tree">
+          <label>default</label>
+        </xsl:param>
+        <xsl:variable name="outer">
+          <value><xsl:value-of select="$tree/label"/></value>
+        </xsl:variable>
+        <xsl:template match="/root">
+          <out><xsl:value-of select="$outer/value"/></out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root/>')).toEqual({
+      output: '<out>default</out>',
+    });
+  });
+
+  it('resolves forward references between top-level xsl:variable bindings', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:variable name="b" select="$a"/>
+        <xsl:variable name="a" select="/root/item"/>
+        <xsl:template match="/root">
+          <out><xsl:value-of select="$b"/></out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root><item>ok</item></root>')).toEqual({
+      output: '<out>ok</out>',
     });
   });
 });

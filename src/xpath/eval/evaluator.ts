@@ -1335,7 +1335,7 @@ function resolveVariableReference(name: string, context: DynamicContext, span: S
   if (value === undefined) {
     throw createXPathError(XPST0008, `Unknown variable $${name}.`, span);
   }
-  return coerceValueToItems(value, span);
+  return coerceValueToItems(resolveDeferredVariableValue(value), span);
 }
 
 function resolvePrefixedVariableReference(
@@ -1356,6 +1356,17 @@ function resolvePrefixedVariableReference(
   }
 
   return context.variables.get(`{${namespaceUri}}${localName}`) ?? context.variables.get(name);
+}
+
+function resolveDeferredVariableValue(value: unknown): unknown {
+  if (typeof value !== 'object' || value === null) {
+    return value;
+  }
+
+  const evaluate = (value as { evaluate?: unknown }).evaluate;
+  return typeof evaluate === 'function'
+    ? (evaluate as () => unknown)()
+    : value;
 }
 
 function coerceValueToItems(value: unknown, span: SpanLike): XdmItem[] {

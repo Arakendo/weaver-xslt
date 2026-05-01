@@ -181,6 +181,295 @@ describe('XSLT diagnostics', () => {
     ].join('\n'));
   });
 
+  it('converts required xsl:param declarations with select attributes into static diagnostics', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:template name="main">',
+      '    <xsl:param name="greeting" select="\'hello\'" required="yes"/>',
+      '    <out/>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+    const error = captureError(() => {
+      new XsltProcessor(stylesheet).transform('<root/>', { initialTemplate: 'main' });
+    });
+    const report = diagnosticReportFromError(error);
+
+    assertValidDiagnostic(report);
+    expect(report).toMatchObject({
+      code: 'XTSE0010',
+      phase: 'compile',
+      category: 'analysis',
+      message: 'xsl:param with required="yes" cannot also specify a select attribute.',
+      details: [{
+        key: 'paramName',
+        value: 'greeting',
+      }],
+      suggestions: [{
+        kind: 'fix',
+        label: 'remove required="yes" or remove select="..." from xsl:param',
+        confidence: 1,
+      }],
+    });
+
+    expect(formatDiagnostic(report, stylesheet)).toBe([
+      'error[XTSE0010]: xsl:param with required="yes" cannot also specify a select attribute.',
+      '--> <stylesheet>:3:59',
+      '3 |     <xsl:param name="greeting" select="\'hello\'" required="yes"/>',
+      '  |                                                           ^^^',
+      '  = paramName: greeting',
+      '  help: remove required="yes" or remove select="..." from xsl:param',
+    ].join('\n'));
+  });
+
+  it('converts required xsl:param declarations with content into static diagnostics', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:template name="main">',
+      '    <xsl:param name="greeting" required="yes">hello</xsl:param>',
+      '    <out/>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+    const error = captureError(() => {
+      new XsltProcessor(stylesheet).transform('<root/>', { initialTemplate: 'main' });
+    });
+    const report = diagnosticReportFromError(error);
+
+    assertValidDiagnostic(report);
+    expect(report).toMatchObject({
+      code: 'XTSE0010',
+      phase: 'compile',
+      category: 'analysis',
+      message: 'xsl:param with required="yes" cannot also specify a sequence constructor.',
+      details: [{
+        key: 'paramName',
+        value: 'greeting',
+      }],
+      suggestions: [{
+        kind: 'fix',
+        label: 'remove required="yes" or remove xsl:param content',
+        confidence: 1,
+      }],
+    });
+
+    expect(formatDiagnostic(report, stylesheet)).toBe([
+      'error[XTSE0010]: xsl:param with required="yes" cannot also specify a sequence constructor.',
+      '--> <stylesheet>:3:42',
+      '3 |     <xsl:param name="greeting" required="yes">hello</xsl:param>',
+      '  |                                          ^^^',
+      '  = paramName: greeting',
+      '  help: remove required="yes" or remove xsl:param content',
+    ].join('\n'));
+  });
+
+  it('converts xsl:param declarations with select attributes and content into static diagnostics', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:template name="main">',
+      '    <xsl:param name="greeting" select="\'hello\'">ignored</xsl:param>',
+      '    <out/>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+    const error = captureError(() => {
+      new XsltProcessor(stylesheet).transform('<root/>', { initialTemplate: 'main' });
+    });
+    const report = diagnosticReportFromError(error);
+
+    assertValidDiagnostic(report);
+    expect(report).toMatchObject({
+      code: 'XTSE0010',
+      phase: 'compile',
+      category: 'analysis',
+      message: 'xsl:param cannot specify both a select attribute and a sequence constructor.',
+      details: [{
+        key: 'paramName',
+        value: 'greeting',
+      }],
+      suggestions: [{
+        kind: 'fix',
+        label: 'remove select="..." or remove xsl:param content',
+        confidence: 1,
+      }],
+    });
+
+    expect(formatDiagnostic(report, stylesheet)).toBe([
+      'error[XTSE0010]: xsl:param cannot specify both a select attribute and a sequence constructor.',
+      '--> <stylesheet>:3:40',
+      '3 |     <xsl:param name="greeting" select="\'hello\'">ignored</xsl:param>',
+      '  |                                        ^^^^^^^',
+      '  = paramName: greeting',
+      '  help: remove select="..." or remove xsl:param content',
+    ].join('\n'));
+  });
+
+  it('converts top-level xsl:variable declarations with select attributes and content into static diagnostics', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:variable name="greeting" select="\'hello\'">ignored</xsl:variable>',
+      '  <xsl:template match="/">',
+      '    <out/>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+    const error = captureError(() => {
+      new XsltProcessor(stylesheet).transform('<root/>');
+    });
+    const report = diagnosticReportFromError(error);
+
+    assertValidDiagnostic(report);
+    expect(report).toMatchObject({
+      code: 'XTSE0010',
+      phase: 'compile',
+      category: 'analysis',
+      message: 'xsl:variable cannot specify both a select attribute and a sequence constructor.',
+      details: [{
+        key: 'variableName',
+        value: 'greeting',
+      }],
+      suggestions: [{
+        kind: 'fix',
+        label: 'remove select="..." or remove xsl:variable content',
+        confidence: 1,
+      }],
+    });
+
+    expect(formatDiagnostic(report, stylesheet)).toBe([
+      'error[XTSE0010]: xsl:variable cannot specify both a select attribute and a sequence constructor.',
+      '--> <stylesheet>:2:41',
+      '2 |   <xsl:variable name="greeting" select="\'hello\'">ignored</xsl:variable>',
+      '  |                                         ^^^^^^^',
+      '  = variableName: greeting',
+      '  help: remove select="..." or remove xsl:variable content',
+    ].join('\n'));
+  });
+
+  it('converts xsl:with-param instructions with select attributes and content into static diagnostics', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:template match="/">',
+      '    <xsl:call-template name="main">',
+      '      <xsl:with-param name="greeting" select="\'hello\'">ignored</xsl:with-param>',
+      '    </xsl:call-template>',
+      '  </xsl:template>',
+      '  <xsl:template name="main">',
+      '    <out/>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+    const error = captureError(() => {
+      new XsltProcessor(stylesheet).transform('<root/>');
+    });
+    const report = diagnosticReportFromError(error);
+
+    assertValidDiagnostic(report);
+    expect(report).toMatchObject({
+      code: 'XTSE0010',
+      phase: 'compile',
+      category: 'analysis',
+      message: 'xsl:with-param cannot specify both a select attribute and a sequence constructor.',
+      details: [{
+        key: 'paramName',
+        value: 'greeting',
+      }],
+      suggestions: [{
+        kind: 'fix',
+        label: 'remove select="..." or remove xsl:with-param content',
+        confidence: 1,
+      }],
+    });
+
+    expect(formatDiagnostic(report, stylesheet)).toBe([
+      'error[XTSE0010]: xsl:with-param cannot specify both a select attribute and a sequence constructor.',
+      '--> <stylesheet>:4:47',
+      '4 |       <xsl:with-param name="greeting" select="\'hello\'">ignored</xsl:with-param>',
+      '  |                                               ^^^^^^^',
+      '  = paramName: greeting',
+      '  help: remove select="..." or remove xsl:with-param content',
+    ].join('\n'));
+  });
+
+  it('converts missing required stylesheet parameters into runtime diagnostics', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:param name="greeting" required="yes"/>',
+      '  <xsl:template match="/">',
+      '    <out><xsl:value-of select="$greeting"/></out>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+    const error = captureError(() => {
+      new XsltProcessor(stylesheet).transform('<root/>');
+    });
+    const report = diagnosticReportFromError(error);
+
+    assertValidDiagnostic(report);
+    expect(report).toMatchObject({
+      code: 'XTDE0050',
+      phase: 'runtime',
+      category: 'execution',
+      message: 'Required stylesheet parameter $greeting was not supplied.',
+      details: [{
+        key: 'parameterName',
+        value: 'greeting',
+      }],
+    });
+
+    expect(formatDiagnostic(report, stylesheet)).toBe([
+      'error[XTDE0050]: Required stylesheet parameter $greeting was not supplied.',
+      '--> <stylesheet>:2:20',
+      '2 |   <xsl:param name="greeting" required="yes"/>',
+      '  |                    ^^^^^^^^',
+      '  in instruction xsl:param name="greeting" (<stylesheet>:2:20)',
+      'related:',
+      '  top-level param (<stylesheet>:2:20)',
+      '  = parameterName: greeting',
+    ].join('\n'));
+  });
+
+  it('converts missing required template parameters into runtime diagnostics', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:template name="main">',
+      '    <xsl:param name="greeting" required="yes"/>',
+      '    <out><xsl:value-of select="$greeting"/></out>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+    const error = captureError(() => {
+      new XsltProcessor(stylesheet).transform('<root/>', { initialTemplate: 'main' });
+    });
+    const report = diagnosticReportFromError(error);
+
+    assertValidDiagnostic(report);
+    expect(report).toMatchObject({
+      code: 'XTDE0700',
+      phase: 'runtime',
+      category: 'execution',
+      message: 'Required template parameter $greeting was not supplied.',
+      details: [{
+        key: 'parameterName',
+        value: 'greeting',
+      }],
+      frames: [{
+        kind: 'template',
+        label: 'name="main"',
+      }],
+    });
+
+    expect(formatDiagnostic(report, stylesheet)).toBe([
+      'error[XTDE0700]: Required template parameter $greeting was not supplied.',
+      '--> <stylesheet>:3:22',
+      '3 |     <xsl:param name="greeting" required="yes"/>',
+      '  |                      ^^^^^^^^',
+      '  in template name="main" (<stylesheet>:2:23)',
+      'related:',
+      '  initial template (<stylesheet>:2:23)',
+      '  = parameterName: greeting',
+    ].join('\n'));
+  });
+
   it('allows named-only templates when selected via initialTemplate', () => {
     const stylesheet = [
       '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',

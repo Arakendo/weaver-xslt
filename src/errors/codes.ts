@@ -44,7 +44,10 @@ export const XTSE0500 = 'XTSE0500'; // stylesheet module missing version
 
 // Dynamic XSLT errors
 export const XTDE0040 = 'XTDE0040'; // no match for initial mode
+export const XTDE0050 = 'XTDE0050'; // required global parameter not supplied
 export const XTDE0160 = 'XTDE0160'; // no match for apply-templates
+export const XTDE0640 = 'XTDE0640'; // circularity in global variables or parameters
+export const XTDE0700 = 'XTDE0700'; // required template parameter not supplied
 export const XTDE1360 = 'XTDE1360'; // current-group outside for-each-group
 
 // Serialization

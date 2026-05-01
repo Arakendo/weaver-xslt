@@ -12,7 +12,7 @@ import { XsltError, type ErrorContext, type ErrorSuggestion } from '../../errors
 import type { PathExpression, StepExpression, XPathAst } from '../../xpath/parse/ast.js';
 import { parseXPath } from '../../xpath/parse/parser.js';
 import { getAttributeValueSourceLocation, getElementNameSourceLocation, getNodeSourceLocation, parseXml } from '../../xml/parse.js';
-import type { AttributeInstruction, ChooseWhenBranch, GlobalVariable, Instruction, StylesheetIR, TemplateParam, TemplateRule, WithParam } from './ir.js';
+import type { AttributeInstruction, ChooseWhenBranch, GlobalBinding, GlobalParam, GlobalVariable, Instruction, StylesheetIR, TemplateParam, TemplateRule, WithParam } from './ir.js';
 
 const XSLT_NAMESPACE = 'http://www.w3.org/1999/XSL/Transform';
 const STYLESHEET_SOURCE_NAME = '<stylesheet>';
@@ -64,7 +64,7 @@ export function compileStylesheet(stylesheetXml: string): StylesheetIR {
   }
 
   const templates: TemplateRule[] = [];
-  const globalVariables: GlobalVariable[] = [];
+  const globalBindings: GlobalBinding[] = [];
   for (const child of childElements(root)) {
     const declaration = compileTopLevelDeclaration(child, stylesheetXml);
     if (declaration === undefined) {
@@ -76,7 +76,7 @@ export function compileStylesheet(stylesheetXml: string): StylesheetIR {
       continue;
     }
 
-    globalVariables.push(declaration);
+    globalBindings.push(declaration);
   }
   const { namespaces, defaultElementNamespace } = collectStylesheetStaticContext(root);
 
@@ -98,7 +98,7 @@ export function compileStylesheet(stylesheetXml: string): StylesheetIR {
     version: '3.0',
     namespaces,
     defaultElementNamespace,
-    globalVariables,
+    globalBindings,
     templates,
   };
 }
@@ -123,9 +123,13 @@ function collectStylesheetStaticContext(root: Element): Pick<StylesheetIR, 'name
   };
 }
 
-function compileTopLevelDeclaration(element: Element, stylesheetXml: string): TemplateRule | GlobalVariable | undefined {
+function compileTopLevelDeclaration(element: Element, stylesheetXml: string): TemplateRule | GlobalBinding | undefined {
   if (isXsltElement(element, 'template')) {
     return compileTemplateRule(element, stylesheetXml);
+  }
+
+  if (isXsltElement(element, 'param')) {
+    return compileTopLevelParam(element, stylesheetXml);
   }
 
   if (isXsltElement(element, 'variable')) {
@@ -196,8 +200,8 @@ function compileTopLevelDeclaration(element: Element, stylesheetXml: string): Te
 }
 
 function compileTopLevelVariable(element: Element, stylesheetXml: string): GlobalVariable {
-  const name = element.getAttribute('name');
-  if (name === null || name.length === 0) {
+  const rawName = element.getAttribute('name');
+  if (rawName === null || rawName.length === 0) {
     throw createXsltStaticError(
       'xsl:variable requires a name attribute.',
       getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
@@ -213,41 +217,47 @@ function compileTopLevelVariable(element: Element, stylesheetXml: string): Globa
   }
 
   const select = element.getAttribute('select') ?? undefined;
-  if (select === undefined && hasMeaningfulTemplateContent(element)) {
-    throw createXsltStaticError(
-      'Top-level xsl:variable sequence-constructor values are not yet implemented in the current MVP+3 slice.',
-      getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
-      {
-        variableName: name,
-      },
-      {
-        suggestions: [{
-          kind: 'fix',
-          label: 'replace top-level xsl:variable content with select="..." in the current MVP+3 slice',
-          confidence: 1,
-        }],
-      },
-    );
-  }
+  assertNoSelectAndContent(
+    element,
+    stylesheetXml,
+    select,
+    'xsl:variable',
+    'variableName',
+    rawName,
+  );
+  const body = select === undefined && hasMeaningfulTemplateContent(element)
+    ? compileInstructions(element.childNodes, stylesheetXml)
+    : undefined;
 
   const location = getAttributeValueSourceLocation(stylesheetXml, element, 'name', STYLESHEET_SOURCE_NAME)
     ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
+  const name = normalizeXsltQName(rawName, element, stylesheetXml, 'name', 'xsl:variable');
 
   return {
+    kind: 'variable',
     name,
     ...(select === undefined ? {} : { select: parseXPath(select) }),
     ...(select === undefined ? {} : { selectText: select }),
+    ...(body === undefined ? {} : { body }),
     ...(location === undefined ? {} : { location }),
+  };
+}
+
+function compileTopLevelParam(element: Element, stylesheetXml: string): GlobalParam {
+  const param = compileTemplateParam(element, stylesheetXml);
+  return {
+    kind: 'param',
+    ...param,
   };
 }
 
 function compileTemplateRule(templateElement: Element, stylesheetXml: string): TemplateRule {
   const matchText = templateElement.getAttribute('match') ?? undefined;
-  const name = templateElement.getAttribute('name') ?? undefined;
+  const rawName = templateElement.getAttribute('name') ?? undefined;
   const priorityText = templateElement.getAttribute('priority');
   const priority = priorityText === null ? undefined : Number(priorityText);
 
-  if (matchText === undefined && name === undefined) {
+  if (matchText === undefined && rawName === undefined) {
     throw createXsltStaticError(
       'xsl:template must declare either match or name.',
       getNodeSourceLocation(stylesheetXml, templateElement, STYLESHEET_SOURCE_NAME),
@@ -280,10 +290,13 @@ function compileTemplateRule(templateElement: Element, stylesheetXml: string): T
   const location = matchText !== undefined
     ? getAttributeValueSourceLocation(stylesheetXml, templateElement, 'match', STYLESHEET_SOURCE_NAME)
       ?? getNodeSourceLocation(stylesheetXml, templateElement, STYLESHEET_SOURCE_NAME)
-    : name !== undefined
+    : rawName !== undefined
       ? getAttributeValueSourceLocation(stylesheetXml, templateElement, 'name', STYLESHEET_SOURCE_NAME)
         ?? getNodeSourceLocation(stylesheetXml, templateElement, STYLESHEET_SOURCE_NAME)
       : getNodeSourceLocation(stylesheetXml, templateElement, STYLESHEET_SOURCE_NAME);
+  const name = rawName === undefined
+    ? undefined
+    : normalizeXsltQName(rawName, templateElement, stylesheetXml, 'name', 'xsl:template');
   const { params, body } = compileTemplateContent(templateElement, stylesheetXml);
 
   return {
@@ -339,8 +352,8 @@ function compileTemplateContent(templateElement: Element, stylesheetXml: string)
 }
 
 function compileTemplateParam(element: Element, stylesheetXml: string): TemplateParam {
-  const name = element.getAttribute('name');
-  if (name === null || name.length === 0) {
+  const rawName = element.getAttribute('name');
+  if (rawName === null || rawName.length === 0) {
     throw createXsltStaticError(
       'xsl:param requires a name attribute.',
       getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
@@ -356,37 +369,72 @@ function compileTemplateParam(element: Element, stylesheetXml: string): Template
   }
 
   const select = element.getAttribute('select') ?? undefined;
-  if (select === undefined && hasMeaningfulTemplateContent(element)) {
+  assertNoSelectAndContent(
+    element,
+    stylesheetXml,
+    select,
+    'xsl:param',
+    'paramName',
+    rawName,
+  );
+  const required = parseRequiredAttribute(element);
+  const requiredLocation = getAttributeValueSourceLocation(stylesheetXml, element, 'required', STYLESHEET_SOURCE_NAME)
+    ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
+  if (required && select !== undefined) {
     throw createXsltStaticError(
-      'xsl:param sequence-constructor defaults are not yet implemented in the current MVP+3 slice.',
-      getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+      'xsl:param with required="yes" cannot also specify a select attribute.',
+      requiredLocation,
       {
-        paramName: name,
+        paramName: rawName,
       },
       {
         suggestions: [{
           kind: 'fix',
-          label: 'replace xsl:param content with select="..." in the current MVP+3 slice',
+          label: 'remove required="yes" or remove select="..." from xsl:param',
           confidence: 1,
         }],
       },
     );
   }
 
+  if (required && hasMeaningfulTemplateContent(element)) {
+    throw createXsltStaticError(
+      'xsl:param with required="yes" cannot also specify a sequence constructor.',
+      requiredLocation,
+      {
+        paramName: rawName,
+      },
+      {
+        suggestions: [{
+          kind: 'fix',
+          label: 'remove required="yes" or remove xsl:param content',
+          confidence: 1,
+        }],
+      },
+    );
+  }
+
+  const body = select === undefined && hasMeaningfulTemplateContent(element)
+    ? compileInstructions(element.childNodes, stylesheetXml)
+    : undefined;
+
   const location = getAttributeValueSourceLocation(stylesheetXml, element, 'name', STYLESHEET_SOURCE_NAME)
     ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
+  const name = normalizeXsltQName(rawName, element, stylesheetXml, 'name', 'xsl:param');
 
   return {
     name,
+    ...(required ? { required: true } : {}),
     ...(select === undefined ? {} : { select: parseXPath(select) }),
     ...(select === undefined ? {} : { selectText: select }),
+    ...(body === undefined ? {} : { body }),
     ...(location === undefined ? {} : { location }),
   };
 }
 
 function compileWithParam(element: Element, stylesheetXml: string): WithParam {
-  const name = element.getAttribute('name');
-  if (name === null || name.length === 0) {
+  const rawName = element.getAttribute('name');
+  if (rawName === null || rawName.length === 0) {
     throw createXsltStaticError(
       'xsl:with-param requires a name attribute.',
       getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
@@ -402,30 +450,27 @@ function compileWithParam(element: Element, stylesheetXml: string): WithParam {
   }
 
   const select = element.getAttribute('select') ?? undefined;
-  if (select === undefined && hasMeaningfulTemplateContent(element)) {
-    throw createXsltStaticError(
-      'xsl:with-param sequence-constructor values are not yet implemented in the current MVP+3 slice.',
-      getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
-      {
-        paramName: name,
-      },
-      {
-        suggestions: [{
-          kind: 'fix',
-          label: 'replace xsl:with-param content with select="..." in the current MVP+3 slice',
-          confidence: 1,
-        }],
-      },
-    );
-  }
+  assertNoSelectAndContent(
+    element,
+    stylesheetXml,
+    select,
+    'xsl:with-param',
+    'paramName',
+    rawName,
+  );
+  const body = select === undefined && hasMeaningfulTemplateContent(element)
+    ? compileInstructions(element.childNodes, stylesheetXml)
+    : undefined;
 
   const location = getAttributeValueSourceLocation(stylesheetXml, element, 'name', STYLESHEET_SOURCE_NAME)
     ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
+  const name = normalizeXsltQName(rawName, element, stylesheetXml, 'name', 'xsl:with-param');
 
   return {
     name,
     ...(select === undefined ? {} : { select: parseXPath(select) }),
     ...(select === undefined ? {} : { selectText: select }),
+    ...(body === undefined ? {} : { body }),
     ...(location === undefined ? {} : { location }),
   };
 }
@@ -496,8 +541,8 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
   }
 
   if (isXsltElement(element, 'call-template')) {
-    const name = element.getAttribute('name');
-    if (name === null || name.length === 0) {
+    const rawName = element.getAttribute('name');
+    if (rawName === null || rawName.length === 0) {
       throw createXsltStaticError(
         'xsl:call-template requires a name attribute.',
         getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
@@ -527,6 +572,7 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
 
     const location = getAttributeValueSourceLocation(stylesheetXml, element, 'name', STYLESHEET_SOURCE_NAME)
       ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
+    const name = normalizeXsltQName(rawName, element, stylesheetXml, 'name', 'xsl:call-template');
 
     return {
       kind: 'callTemplate',
@@ -537,8 +583,8 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
   }
 
   if (isXsltElement(element, 'variable')) {
-    const name = element.getAttribute('name');
-    if (name === null || name.length === 0) {
+    const rawName = element.getAttribute('name');
+    if (rawName === null || rawName.length === 0) {
       throw createXsltStaticError(
         'xsl:variable requires a name attribute.',
         getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
@@ -554,31 +600,28 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
     }
 
     const select = element.getAttribute('select') ?? undefined;
-    if (select === undefined && hasMeaningfulTemplateContent(element)) {
-      throw createXsltStaticError(
-        'xsl:variable sequence-constructor values are not yet implemented in the current MVP+3 slice.',
-        getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
-        {
-          variableName: name,
-        },
-        {
-          suggestions: [{
-            kind: 'fix',
-            label: 'replace xsl:variable content with select="..." in the current MVP+3 slice',
-            confidence: 1,
-          }],
-        },
-      );
-    }
+    assertNoSelectAndContent(
+      element,
+      stylesheetXml,
+      select,
+      'xsl:variable',
+      'variableName',
+      rawName,
+    );
+    const body = select === undefined && hasMeaningfulTemplateContent(element)
+      ? compileInstructions(element.childNodes, stylesheetXml)
+      : undefined;
 
     const location = getAttributeValueSourceLocation(stylesheetXml, element, 'name', STYLESHEET_SOURCE_NAME)
       ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
+    const name = normalizeXsltQName(rawName, element, stylesheetXml, 'name', 'xsl:variable');
 
     return {
       kind: 'variable',
       name,
       ...(select === undefined ? {} : { select: parseXPath(select) }),
       ...(select === undefined ? {} : { selectText: select }),
+      ...(body === undefined ? {} : { body }),
       ...(location === undefined ? {} : { location }),
     };
   }
@@ -807,6 +850,8 @@ function compileAttributes(element: Element): AttributeInstruction[] {
 function collectInheritedNamespaceAttributes(element: Element): AttributeInstruction[] {
   const namespaceAttributes = new Map<string, string>();
   const ancestors: Element[] = [];
+  const excludedNamespaceNames = new Set<string>();
+  let excludeAllNamespaces = false;
 
   let current: Node | null = element.parentNode;
   while (current !== null) {
@@ -817,9 +862,31 @@ function collectInheritedNamespaceAttributes(element: Element): AttributeInstruc
   }
 
   for (const ancestor of ancestors) {
+    const excludedPrefixes = ancestor.getAttribute('exclude-result-prefixes');
+    if (excludedPrefixes !== null) {
+      for (const prefix of excludedPrefixes.trim().split(/\s+/)) {
+        if (prefix.length === 0) {
+          continue;
+        }
+
+        if (prefix === '#all') {
+          excludeAllNamespaces = true;
+          namespaceAttributes.clear();
+          continue;
+        }
+
+        excludedNamespaceNames.add(prefix === '#default' ? 'xmlns' : `xmlns:${prefix}`);
+        namespaceAttributes.delete(prefix === '#default' ? 'xmlns' : `xmlns:${prefix}`);
+      }
+    }
+
     for (let index = 0; index < ancestor.attributes.length; index += 1) {
       const attribute = ancestor.attributes.item(index) as Attr | null;
       if (attribute === null || !isNamespaceDeclaration(attribute) || attribute.value === XSLT_NAMESPACE) {
+        continue;
+      }
+
+      if (excludeAllNamespaces || excludedNamespaceNames.has(attribute.name)) {
         continue;
       }
 
@@ -861,6 +928,35 @@ function hasMeaningfulTemplateContent(element: Element): boolean {
   return false;
 }
 
+function assertNoSelectAndContent(
+  element: Element,
+  stylesheetXml: string,
+  select: string | undefined,
+  ownerName: 'xsl:param' | 'xsl:variable' | 'xsl:with-param',
+  detailKey: 'paramName' | 'variableName',
+  bindingName: string,
+): void {
+  if (select === undefined || !hasMeaningfulTemplateContent(element)) {
+    return;
+  }
+
+  throw createXsltStaticError(
+    `${ownerName} cannot specify both a select attribute and a sequence constructor.`,
+    getAttributeValueSourceLocation(stylesheetXml, element, 'select', STYLESHEET_SOURCE_NAME)
+      ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+    {
+      [detailKey]: bindingName,
+    },
+    {
+      suggestions: [{
+        kind: 'fix',
+        label: `remove select="..." or remove ${ownerName} content`,
+        confidence: 1,
+      }],
+    },
+  );
+}
+
 function isNamespaceDeclaration(attribute: Attr): boolean {
   return attribute.name === 'xmlns' || attribute.prefix === 'xmlns';
 }
@@ -876,6 +972,88 @@ function childElements(element: Element): Element[] {
   }
 
   return children;
+}
+
+function parseRequiredAttribute(element: Element): boolean {
+  const required = element.getAttribute('required');
+  if (required === null) {
+    return false;
+  }
+
+  const normalized = required.trim().toLowerCase();
+  return normalized === 'yes' || normalized === 'true' || normalized === '1';
+}
+
+function normalizeXsltQName(
+  name: string,
+  element: Element,
+  stylesheetXml: string,
+  attributeName: string,
+  ownerName: string,
+): string {
+  const eqName = tryNormalizeEqName(name);
+  if (eqName !== undefined) {
+    return eqName;
+  }
+
+  const separator = name.indexOf(':');
+  if (separator < 0) {
+    return name;
+  }
+
+  const prefix = name.slice(0, separator);
+  const localName = name.slice(separator + 1);
+  const namespaceUri = lookupNamespaceUri(element, prefix);
+  if (namespaceUri === undefined) {
+    throw createXsltStaticError(
+      `Unknown namespace prefix ${JSON.stringify(prefix)} in ${ownerName} ${attributeName}.`,
+      getAttributeValueSourceLocation(stylesheetXml, element, attributeName, STYLESHEET_SOURCE_NAME)
+        ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+      {
+        namespacePrefix: prefix,
+        qName: name,
+      },
+    );
+  }
+
+  return `{${namespaceUri}}${localName}`;
+}
+
+function tryNormalizeEqName(name: string): string | undefined {
+  if (!name.startsWith('Q{')) {
+    return undefined;
+  }
+
+  const endBrace = name.indexOf('}');
+  if (endBrace < 0) {
+    return undefined;
+  }
+
+  const namespaceUri = name.slice(2, endBrace);
+  const localName = name.slice(endBrace + 1);
+  if (localName.length === 0) {
+    return undefined;
+  }
+
+  return namespaceUri.length === 0 ? localName : `{${namespaceUri}}${localName}`;
+}
+
+function lookupNamespaceUri(element: Element, prefix: string): string | undefined {
+  for (let current: Node | null = element; current !== null; current = current.parentNode) {
+    if (current.nodeType !== current.ELEMENT_NODE) {
+      continue;
+    }
+
+    const currentElement = current as Element;
+    for (let index = 0; index < currentElement.attributes.length; index += 1) {
+      const attribute = currentElement.attributes.item(index) as Attr | null;
+      if (attribute?.prefix === 'xmlns' && attribute.localName === prefix) {
+        return attribute.value;
+      }
+    }
+  }
+
+  return undefined;
 }
 
 function isXsltElement(element: Element, localName: string): boolean {
