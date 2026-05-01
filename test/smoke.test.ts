@@ -270,4 +270,19 @@ describe('@arakendo/xslt scaffold', () => {
       output: '<out>root:<entry>1</entry><entry>2</entry></out>',
     });
   });
+
+  it('binds top-level xsl:variable values before template execution', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:variable name="greeting" select="'hello'"/>
+        <xsl:template match="/root">
+          <out><xsl:value-of select="$greeting"/></out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root/>')).toEqual({
+      output: '<out>hello</out>',
+    });
+  });
 });

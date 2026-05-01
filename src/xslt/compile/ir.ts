@@ -14,6 +14,7 @@ export interface StylesheetIR {
   readonly version: '3.0';
   readonly namespaces: Readonly<Record<string, string>>;
   readonly defaultElementNamespace: string;
+  readonly globalVariables: readonly GlobalVariable[];
   readonly templates: readonly TemplateRule[];
 }
 
@@ -30,6 +31,13 @@ export interface ChooseWhenBranch {
 }
 
 export interface TemplateParam {
+  readonly name: string;
+  readonly select?: XPathAst;
+  readonly selectText?: string;
+  readonly location?: SourceLocation;
+}
+
+export interface GlobalVariable {
   readonly name: string;
   readonly select?: XPathAst;
   readonly selectText?: string;

@@ -15,7 +15,7 @@ import { parseXml } from '../../xml/parse.js';
 import { createXdmNode, type XdmAtomicValue, type XdmItem, type XdmNode } from '../../xdm/types.js';
 import { evaluate, evaluateEffectiveBooleanValue } from '../../xpath/eval/evaluator.js';
 import type { DynamicContext } from '../../xpath/eval/context.js';
-import type { Instruction, StylesheetIR, TemplateParam, TemplateRule, WithParam } from '../compile/ir.js';
+import type { GlobalVariable, Instruction, StylesheetIR, TemplateParam, TemplateRule, WithParam } from '../compile/ir.js';
 
 const PREDEFINED_NAMESPACE_PREFIXES = new Map<string, string>([
   ['array', 'http://www.w3.org/2005/xpath-functions/array'],
@@ -49,9 +49,10 @@ export function runTransform(
 
   const sourceDocument = parseXml(sourceXml);
   const staticContext = createStaticContext(ir, options);
+  const globalVariables = evaluateGlobalVariables(ir.globalVariables, staticContext, createXdmNode(sourceDocument));
 
   if (options.initialTemplate !== undefined) {
-    const initialContext = createContext(createXdmNode(sourceDocument), staticContext, 1, 1);
+    const initialContext = createContext(createXdmNode(sourceDocument), staticContext, 1, 1, globalVariables);
     return {
       output: renderInitialTemplate(options.initialTemplate, ir, initialContext),
     };
@@ -62,6 +63,7 @@ export function runTransform(
       [createXdmNode(sourceDocument)],
       ir,
       staticContext,
+      globalVariables,
     ),
   };
 }
@@ -79,13 +81,14 @@ function createContext(
   staticContext: DynamicContext['staticContext'],
   position: number,
   size: number,
+  variables: ReadonlyMap<string, unknown> = new Map(),
 ): DynamicContext {
   return {
     staticContext,
     contextItem: item,
     contextPosition: position,
     contextSize: size,
-    variables: new Map(),
+    variables,
   };
 }
 
@@ -93,6 +96,7 @@ function applyTemplatesToItems(
   items: readonly XdmItem[],
   ir: StylesheetIR,
   staticContext: DynamicContext['staticContext'],
+  variables: ReadonlyMap<string, unknown> = new Map(),
   location?: TemplateRule['location'],
 ): string {
   if (items.some((item) => asXdmNode(item) === undefined)) {
@@ -101,7 +105,7 @@ function applyTemplatesToItems(
 
   return items.map((item, index) => {
     const nodeItem = item as XdmNode;
-    const context = createContext(nodeItem, staticContext, index + 1, items.length);
+    const context = createContext(nodeItem, staticContext, index + 1, items.length, variables);
     return applyTemplateToNode(nodeItem.node, ir, context);
   }).join('');
 }
@@ -120,7 +124,7 @@ function applyTemplateToNode(node: Node, ir: StylesheetIR, context: DynamicConte
     }
   }
 
-  return renderBuiltInTemplate(node, ir, context.staticContext);
+  return renderBuiltInTemplate(node, ir, context.staticContext, context.variables);
 }
 
 function findNamedTemplate(name: string, templates: readonly TemplateRule[]): TemplateRule | undefined {
@@ -472,7 +476,7 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
         const items = instruction.select === undefined
           ? getChildNodeItems(context.contextItem)
           : [...evaluate(instruction.select, context)];
-        return applyTemplatesToItems(items, ir, context.staticContext, instruction.location);
+        return applyTemplatesToItems(items, ir, context.staticContext, context.variables, instruction.location);
       } catch (error) {
         const frame = {
           kind: 'instruction',
@@ -590,9 +594,10 @@ function renderBuiltInTemplate(
   node: Node,
   ir: StylesheetIR,
   staticContext: DynamicContext['staticContext'],
+  variables: ReadonlyMap<string, unknown>,
 ): string {
   if (node.nodeType === node.DOCUMENT_NODE || node.nodeType === node.ELEMENT_NODE) {
-    return applyTemplatesToItems(getChildNodeItems(createXdmNode(node)), ir, staticContext);
+    return applyTemplatesToItems(getChildNodeItems(createXdmNode(node)), ir, staticContext, variables);
   }
 
   if (
@@ -613,6 +618,41 @@ function itemToStringValue(item: XdmItem): string {
   }
 
   return String((item as XdmAtomicValue).value);
+}
+
+function evaluateGlobalVariables(
+  variables: readonly GlobalVariable[],
+  staticContext: DynamicContext['staticContext'],
+  contextItem: XdmItem,
+): ReadonlyMap<string, unknown> {
+  if (variables.length === 0) {
+    return new Map();
+  }
+
+  const bindings = new Map<string, unknown>();
+  for (const variable of variables) {
+    const context = createContext(contextItem, staticContext, 1, 1, bindings);
+    try {
+      const value = variable.select === undefined ? [] : [...evaluate(variable.select, context)];
+      bindings.set(variable.name, value);
+      bindings.set(`{}${variable.name}`, value);
+    } catch (error) {
+      const frame = {
+        kind: 'instruction',
+        label: variable.selectText === undefined
+          ? `xsl:variable name="${variable.name}"`
+          : `xsl:variable name="${variable.name}" select="${variable.selectText}"`,
+        ...(variable.location === undefined ? {} : { location: variable.location }),
+      } satisfies ErrorFrame;
+      throw withPrependedFrame(
+        error,
+        frame,
+        createRelatedLocation('top-level variable', variable.location),
+      );
+    }
+  }
+
+  return bindings;
 }
 
 function asXdmNode(item: unknown): XdmNode | undefined {

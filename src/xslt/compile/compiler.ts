@@ -12,7 +12,7 @@ import { XsltError, type ErrorContext, type ErrorSuggestion } from '../../errors
 import type { PathExpression, StepExpression, XPathAst } from '../../xpath/parse/ast.js';
 import { parseXPath } from '../../xpath/parse/parser.js';
 import { getAttributeValueSourceLocation, getElementNameSourceLocation, getNodeSourceLocation, parseXml } from '../../xml/parse.js';
-import type { AttributeInstruction, ChooseWhenBranch, Instruction, StylesheetIR, TemplateParam, TemplateRule, WithParam } from './ir.js';
+import type { AttributeInstruction, ChooseWhenBranch, GlobalVariable, Instruction, StylesheetIR, TemplateParam, TemplateRule, WithParam } from './ir.js';
 
 const XSLT_NAMESPACE = 'http://www.w3.org/1999/XSL/Transform';
 const STYLESHEET_SOURCE_NAME = '<stylesheet>';
@@ -63,9 +63,21 @@ export function compileStylesheet(stylesheetXml: string): StylesheetIR {
     );
   }
 
-  const templates = childElements(root)
-    .map((child) => compileTopLevelDeclaration(child, stylesheetXml))
-    .filter((template): template is TemplateRule => template !== undefined);
+  const templates: TemplateRule[] = [];
+  const globalVariables: GlobalVariable[] = [];
+  for (const child of childElements(root)) {
+    const declaration = compileTopLevelDeclaration(child, stylesheetXml);
+    if (declaration === undefined) {
+      continue;
+    }
+
+    if ('body' in declaration && 'modes' in declaration) {
+      templates.push(declaration);
+      continue;
+    }
+
+    globalVariables.push(declaration);
+  }
   const { namespaces, defaultElementNamespace } = collectStylesheetStaticContext(root);
 
   if (templates.length === 0) {
@@ -86,6 +98,7 @@ export function compileStylesheet(stylesheetXml: string): StylesheetIR {
     version: '3.0',
     namespaces,
     defaultElementNamespace,
+    globalVariables,
     templates,
   };
 }
@@ -110,9 +123,13 @@ function collectStylesheetStaticContext(root: Element): Pick<StylesheetIR, 'name
   };
 }
 
-function compileTopLevelDeclaration(element: Element, stylesheetXml: string): TemplateRule | undefined {
+function compileTopLevelDeclaration(element: Element, stylesheetXml: string): TemplateRule | GlobalVariable | undefined {
   if (isXsltElement(element, 'template')) {
     return compileTemplateRule(element, stylesheetXml);
+  }
+
+  if (isXsltElement(element, 'variable')) {
+    return compileTopLevelVariable(element, stylesheetXml);
   }
 
   if (isXsltElement(element, 'strip-space')) {
@@ -176,6 +193,52 @@ function compileTopLevelDeclaration(element: Element, stylesheetXml: string): Te
       }],
     },
   );
+}
+
+function compileTopLevelVariable(element: Element, stylesheetXml: string): GlobalVariable {
+  const name = element.getAttribute('name');
+  if (name === null || name.length === 0) {
+    throw createXsltStaticError(
+      'xsl:variable requires a name attribute.',
+      getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+      {
+        suggestions: [{
+          kind: 'fix',
+          label: 'add a name="..." attribute to xsl:variable',
+          replacement: 'name="..."',
+          confidence: 1,
+        }],
+      },
+    );
+  }
+
+  const select = element.getAttribute('select') ?? undefined;
+  if (select === undefined && hasMeaningfulTemplateContent(element)) {
+    throw createXsltStaticError(
+      'Top-level xsl:variable sequence-constructor values are not yet implemented in the current MVP+3 slice.',
+      getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+      {
+        variableName: name,
+      },
+      {
+        suggestions: [{
+          kind: 'fix',
+          label: 'replace top-level xsl:variable content with select="..." in the current MVP+3 slice',
+          confidence: 1,
+        }],
+      },
+    );
+  }
+
+  const location = getAttributeValueSourceLocation(stylesheetXml, element, 'name', STYLESHEET_SOURCE_NAME)
+    ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
+
+  return {
+    name,
+    ...(select === undefined ? {} : { select: parseXPath(select) }),
+    ...(select === undefined ? {} : { selectText: select }),
+    ...(location === undefined ? {} : { location }),
+  };
 }
 
 function compileTemplateRule(templateElement: Element, stylesheetXml: string): TemplateRule {
