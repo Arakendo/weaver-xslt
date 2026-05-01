@@ -4,6 +4,7 @@ import { XTSE0090, XTSE0165, XTSE0630, XTSE0650, XTSE0660, XTSE0680, XTSE0690 } 
 import type { ErrorContext, ErrorSuggestion } from '../../errors/index.js';
 import { computeLevenshteinDistance } from '../diagnostics.js';
 import { getAttributeValueSourceLocation, getElementNameSourceLocation, getNodeSourceLocation } from '../../xml/parse.js';
+import { descendantElements, isTunnelParamElement, leadingTemplateParamElements, parseRequiredAttribute } from './compilerSupport.js';
 import type { GlobalBinding, GlobalParam, GlobalVariable, StylesheetIR, TemplateRule } from './ir.js';
 
 const SUPPORTED_XSLT_STYLESHEET_ATTRIBUTES = ['exclude-result-prefixes', 'version', 'xpath-default-namespace'] as const;
@@ -194,7 +195,7 @@ export function assertNoUnknownCalledTemplates(
       continue;
     }
 
-    for (const element of descendantElements(child, helpers)) {
+    for (const element of descendantElements(child)) {
       if (!helpers.isXsltElement(element, 'call-template')) {
         continue;
       }
@@ -245,7 +246,7 @@ export function assertNoInvalidCallTemplateParams(
       continue;
     }
 
-    for (const element of descendantElements(child, helpers)) {
+    for (const element of descendantElements(child)) {
       if (!helpers.isXsltElement(element, 'call-template')) {
         continue;
       }
@@ -764,7 +765,7 @@ function collectNamedTemplateSignatures(
     const nonTunnelParamDisplayNames = new Map<string, string>();
     const requiredNonTunnelParams: Array<{ readonly name: string }> = [];
 
-    for (const paramElement of leadingTemplateParamElements(child, helpers)) {
+    for (const paramElement of leadingTemplateParamElements(child)) {
       if (isTunnelParamElement(paramElement)) {
         continue;
       }
@@ -792,59 +793,6 @@ function collectNamedTemplateSignatures(
   return signatures;
 }
 
-function descendantElements(element: Element, helpers: StylesheetCompilerHelpers): Element[] {
-  const descendants: Element[] = [];
-
-  for (const child of helpers.childElements(element)) {
-    descendants.push(child);
-    descendants.push(...descendantElements(child, helpers));
-  }
-
-  return descendants;
-}
-
-function leadingTemplateParamElements(templateElement: Element, helpers: StylesheetCompilerHelpers): Element[] {
-  const params: Element[] = [];
-
-  for (let index = 0; index < templateElement.childNodes.length; index += 1) {
-    const node = templateElement.childNodes.item(index);
-    if (node === null) {
-      continue;
-    }
-
-    if (node.nodeType === node.TEXT_NODE || node.nodeType === node.CDATA_SECTION_NODE) {
-      if ((node.nodeValue ?? '').trim().length === 0) {
-        continue;
-      }
-
-      break;
-    }
-
-    if (node.nodeType !== node.ELEMENT_NODE) {
-      continue;
-    }
-
-    const element = node as Element;
-    if (!helpers.isXsltElement(element, 'param')) {
-      break;
-    }
-
-    params.push(element);
-  }
-
-  return params;
-}
-
-function isTunnelParamElement(element: Element): boolean {
-  const tunnel = element.getAttribute('tunnel');
-  if (tunnel === null) {
-    return false;
-  }
-
-  const normalized = tunnel.trim().toLowerCase();
-  return normalized === 'yes' || normalized === 'true' || normalized === '1';
-}
-
 function stripClarkNotation(name: string): string {
   if (!name.startsWith('{')) {
     return name;
@@ -866,16 +814,6 @@ function canValidateCallTemplateWithParam(element: Element, helpers: StylesheetC
 
   const select = element.getAttribute('select') ?? undefined;
   return select === undefined || !helpers.hasMeaningfulTemplateContent(element);
-}
-
-function parseRequiredAttribute(element: Element): boolean {
-  const required = element.getAttribute('required');
-  if (required === null) {
-    return false;
-  }
-
-  const normalized = required.trim().toLowerCase();
-  return normalized === 'yes' || normalized === 'true' || normalized === '1';
 }
 
 function createNamedTemplateReferenceSuggestion(

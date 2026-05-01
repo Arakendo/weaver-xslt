@@ -194,14 +194,55 @@ export function childElements(element: Element): Element[] {
   return children;
 }
 
-export function parseRequiredAttribute(element: Element): boolean {
-  const required = element.getAttribute('required');
-  if (required === null) {
-    return false;
+export function descendantElements(element: Element): Element[] {
+  const descendants: Element[] = [];
+
+  for (const child of childElements(element)) {
+    descendants.push(child);
+    descendants.push(...descendantElements(child));
   }
 
-  const normalized = required.trim().toLowerCase();
-  return normalized === 'yes' || normalized === 'true' || normalized === '1';
+  return descendants;
+}
+
+export function leadingTemplateParamElements(templateElement: Element): Element[] {
+  const params: Element[] = [];
+
+  for (let index = 0; index < templateElement.childNodes.length; index += 1) {
+    const node = templateElement.childNodes.item(index);
+    if (node === null) {
+      continue;
+    }
+
+    if (node.nodeType === node.TEXT_NODE || node.nodeType === node.CDATA_SECTION_NODE) {
+      if ((node.nodeValue ?? '').trim().length === 0) {
+        continue;
+      }
+
+      break;
+    }
+
+    if (node.nodeType !== node.ELEMENT_NODE) {
+      continue;
+    }
+
+    const element = node as Element;
+    if (!isXsltElement(element, 'param')) {
+      break;
+    }
+
+    params.push(element);
+  }
+
+  return params;
+}
+
+export function parseRequiredAttribute(element: Element): boolean {
+  return parseBooleanFlagAttribute(element, 'required');
+}
+
+export function isTunnelParamElement(element: Element): boolean {
+  return parseBooleanFlagAttribute(element, 'tunnel');
 }
 
 export function normalizeXsltQName(
@@ -358,6 +399,16 @@ function tryNormalizeEqName(name: string): string | undefined {
   }
 
   return namespaceUri.length === 0 ? localName : `{${namespaceUri}}${localName}`;
+}
+
+function parseBooleanFlagAttribute(element: Element, attributeName: string): boolean {
+  const rawValue = element.getAttribute(attributeName);
+  if (rawValue === null) {
+    return false;
+  }
+
+  const normalized = rawValue.trim().toLowerCase();
+  return normalized === 'yes' || normalized === 'true' || normalized === '1';
 }
 
 function lookupNamespaceUri(element: Element, prefix: string): string | undefined {
