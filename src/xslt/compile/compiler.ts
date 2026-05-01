@@ -66,6 +66,7 @@ export function compileStylesheet(stylesheetXml: string): StylesheetIR {
   const templates = childElements(root)
     .map((child) => compileTopLevelDeclaration(child, stylesheetXml))
     .filter((template): template is TemplateRule => template !== undefined);
+  const { namespaces, defaultElementNamespace } = collectStylesheetStaticContext(root);
 
   if (templates.length === 0) {
     throw createXsltStaticError(
@@ -83,7 +84,29 @@ export function compileStylesheet(stylesheetXml: string): StylesheetIR {
 
   return {
     version: '3.0',
+    namespaces,
+    defaultElementNamespace,
     templates,
+  };
+}
+
+function collectStylesheetStaticContext(root: Element): Pick<StylesheetIR, 'namespaces' | 'defaultElementNamespace'> {
+  const namespaces: Record<string, string> = {};
+
+  for (let index = 0; index < root.attributes.length; index += 1) {
+    const attribute = root.attributes.item(index) as Attr | null;
+    if (attribute === null) {
+      continue;
+    }
+
+    if (attribute.prefix === 'xmlns' && attribute.localName !== null && attribute.localName.length > 0) {
+      namespaces[attribute.localName] = attribute.value;
+    }
+  }
+
+  return {
+    namespaces,
+    defaultElementNamespace: root.getAttribute('xpath-default-namespace') ?? '',
   };
 }
 
@@ -342,7 +365,7 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
 }
 
 function compileAttributes(element: Element): AttributeInstruction[] {
-  const attributes: AttributeInstruction[] = [];
+  const attributes: AttributeInstruction[] = collectInheritedNamespaceAttributes(element);
 
   for (let index = 0; index < element.attributes.length; index += 1) {
     const attribute = element.attributes.item(index) as Attr | null;
@@ -357,6 +380,48 @@ function compileAttributes(element: Element): AttributeInstruction[] {
   }
 
   return attributes;
+}
+
+function collectInheritedNamespaceAttributes(element: Element): AttributeInstruction[] {
+  const namespaceAttributes = new Map<string, string>();
+  const ancestors: Element[] = [];
+
+  let current: Node | null = element.parentNode;
+  while (current !== null) {
+    if (current.nodeType === current.ELEMENT_NODE) {
+      ancestors.unshift(current as Element);
+    }
+    current = current.parentNode;
+  }
+
+  for (const ancestor of ancestors) {
+    for (let index = 0; index < ancestor.attributes.length; index += 1) {
+      const attribute = ancestor.attributes.item(index) as Attr | null;
+      if (attribute === null || !isNamespaceDeclaration(attribute) || attribute.value === XSLT_NAMESPACE) {
+        continue;
+      }
+
+      if (!namespaceAttributes.has(attribute.name)) {
+        namespaceAttributes.set(attribute.name, attribute.value);
+      }
+    }
+  }
+
+  const attributes: AttributeInstruction[] = [];
+
+  for (const [name, value] of namespaceAttributes) {
+    if (element.hasAttribute(name)) {
+      continue;
+    }
+
+    attributes.push({ name, value });
+  }
+
+  return attributes;
+}
+
+function isNamespaceDeclaration(attribute: Attr): boolean {
+  return attribute.name === 'xmlns' || attribute.prefix === 'xmlns';
 }
 
 function childElements(element: Element): Element[] {

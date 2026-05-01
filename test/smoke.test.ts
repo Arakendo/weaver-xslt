@@ -100,4 +100,23 @@ describe('@arakendo/xslt scaffold', () => {
       output: '<out>test</out>',
     });
   });
+
+  it('matches prefixed template names against default-namespaced source nodes', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet
+        version="3.0"
+        xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+        xmlns:ns1="urn:one"
+        xmlns:ns2="urn:two"
+      >
+        <xsl:template match="ns2:doc">
+          <out><xsl:value-of select="local-name(ns2:b)"/></out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<doc xmlns="urn:two" xmlns:ns1="urn:one"><ns1:a/><b/></doc>')).toEqual({
+      output: '<out xmlns:ns1="urn:one" xmlns:ns2="urn:two">b</out>',
+    });
+  });
 });

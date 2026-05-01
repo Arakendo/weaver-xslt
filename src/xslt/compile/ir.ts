@@ -12,6 +12,8 @@ import type { SourceLocation } from '../../errors/index.js';
 
 export interface StylesheetIR {
   readonly version: '3.0';
+  readonly namespaces: Readonly<Record<string, string>>;
+  readonly defaultElementNamespace: string;
   readonly templates: readonly TemplateRule[];
 }
 

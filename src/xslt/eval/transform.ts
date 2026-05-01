@@ -17,6 +17,15 @@ import { evaluate } from '../../xpath/eval/evaluator.js';
 import type { DynamicContext } from '../../xpath/eval/context.js';
 import type { Instruction, StylesheetIR, TemplateRule } from '../compile/ir.js';
 
+const PREDEFINED_NAMESPACE_PREFIXES = new Map<string, string>([
+  ['array', 'http://www.w3.org/2005/xpath-functions/array'],
+  ['fn', 'http://www.w3.org/2005/xpath-functions'],
+  ['map', 'http://www.w3.org/2005/xpath-functions/map'],
+  ['math', 'http://www.w3.org/2005/xpath-functions/math'],
+  ['xml', 'http://www.w3.org/XML/1998/namespace'],
+  ['xs', 'http://www.w3.org/2001/XMLSchema'],
+]);
+
 export function runTransform(
   ir: StylesheetIR,
   sourceXml: string,
@@ -60,15 +69,15 @@ export function runTransform(
     output: applyTemplatesToItems(
       [createXdmNode(sourceDocument)],
       ir,
-      createStaticContext(options),
+      createStaticContext(ir, options),
     ),
   };
 }
 
-function createStaticContext(options: TransformOptions): DynamicContext['staticContext'] {
+function createStaticContext(ir: StylesheetIR, options: TransformOptions): DynamicContext['staticContext'] {
   return {
-    namespaces: new Map(),
-    defaultElementNamespace: '',
+    namespaces: new Map(Object.entries(ir.namespaces)),
+    defaultElementNamespace: ir.defaultElementNamespace,
     ...(options.baseUri === undefined ? {} : { baseUri: options.baseUri }),
   };
 }
@@ -106,7 +115,7 @@ function applyTemplatesToItems(
 }
 
 function applyTemplateToNode(node: Node, ir: StylesheetIR, context: DynamicContext): string {
-  const template = findBestMatchingTemplate(node, ir.templates);
+  const template = findBestMatchingTemplate(node, ir.templates, context.staticContext);
   if (template !== undefined) {
     try {
       return renderInstructions(template.body, ir, context);
@@ -122,13 +131,17 @@ function applyTemplateToNode(node: Node, ir: StylesheetIR, context: DynamicConte
   return renderBuiltInTemplate(node, ir, context.staticContext);
 }
 
-function findBestMatchingTemplate(node: Node, templates: readonly TemplateRule[]): TemplateRule | undefined {
+function findBestMatchingTemplate(
+  node: Node,
+  templates: readonly TemplateRule[],
+  staticContext: DynamicContext['staticContext'],
+): TemplateRule | undefined {
   let bestTemplate: TemplateRule | undefined;
   let bestTemplateIndex = -1;
 
   for (let index = 0; index < templates.length; index += 1) {
     const candidate = templates[index]!;
-    if (!templateMatchesNode(candidate, node)) {
+    if (!templateMatchesNode(candidate, node, staticContext)) {
       continue;
     }
 
@@ -158,7 +171,7 @@ function isRootTemplateRule(template: TemplateRule): boolean {
   return match.absolute && match.base === undefined && match.steps.length === 0;
 }
 
-function templateMatchesNode(template: TemplateRule, node: Node): boolean {
+function templateMatchesNode(template: TemplateRule, node: Node, staticContext: DynamicContext['staticContext']): boolean {
   if (template.match === undefined || template.match.kind !== 'path') {
     return false;
   }
@@ -185,10 +198,10 @@ function templateMatchesNode(template: TemplateRule, node: Node): boolean {
     return false;
   }
 
-  return stepMatchesNode(step as StepExpression, node);
+  return stepMatchesNode(step as StepExpression, node, staticContext);
 }
 
-function stepMatchesNode(step: StepExpression, node: Node): boolean {
+function stepMatchesNode(step: StepExpression, node: Node, staticContext: DynamicContext['staticContext']): boolean {
   if (step.axis !== 'child' || step.predicates.length > 0) {
     return false;
   }
@@ -202,8 +215,7 @@ function stepMatchesNode(step: StepExpression, node: Node): boolean {
       return false;
     }
 
-    const elementName = (node as Node & { readonly localName?: string }).localName;
-    return node.nodeName === step.nodeTest.name || elementName === step.nodeTest.name;
+    return matchesQualifiedNodeName(step.nodeTest.name, node, staticContext);
   }
 
   if (step.nodeTest.kind !== 'kindTest') {
@@ -216,6 +228,25 @@ function stepMatchesNode(step: StepExpression, node: Node): boolean {
 
   return step.nodeTest.name === 'text'
     && (node.nodeType === node.TEXT_NODE || node.nodeType === node.CDATA_SECTION_NODE);
+}
+
+function matchesQualifiedNodeName(name: string, node: Node, staticContext: DynamicContext['staticContext']): boolean {
+  const separator = name.indexOf(':');
+  const localName = (node.localName ?? node.nodeName).includes(':')
+    ? (node.localName ?? node.nodeName)
+    : (node.localName ?? node.nodeName);
+
+  if (separator >= 0) {
+    const prefix = name.slice(0, separator);
+    const namespaceUri = staticContext.namespaces.get(prefix) ?? PREDEFINED_NAMESPACE_PREFIXES.get(prefix);
+    if (namespaceUri === undefined) {
+      return false;
+    }
+
+    return localName === name.slice(separator + 1) && (node.namespaceURI ?? '') === namespaceUri;
+  }
+
+  return localName === name && (node.namespaceURI ?? '') === staticContext.defaultElementNamespace;
 }
 
 function getTemplatePriority(template: TemplateRule): number {

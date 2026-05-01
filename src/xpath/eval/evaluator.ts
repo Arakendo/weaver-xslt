@@ -913,7 +913,7 @@ function requireNodeSequence(items: readonly XdmItem[], span: SpanLike): XdmNode
 
 function applyStep(step: StepExpression, input: readonly XdmNode[], context: DynamicContext): XdmNode[] {
   let selected = input.flatMap((item) => selectAxis(step, item.node));
-  selected = selected.filter((item) => matchesNodeTest(step, item.node));
+  selected = selected.filter((item) => matchesNodeTest(step, item.node, context));
 
   for (const predicate of step.predicates) {
     const size = selected.length;
@@ -962,7 +962,7 @@ function selectAxis(step: StepExpression, node: Node): XdmNode[] {
   }
 }
 
-function matchesNodeTest(step: StepExpression, node: Node): boolean {
+function matchesNodeTest(step: StepExpression, node: Node, context: DynamicContext): boolean {
   if (step.nodeTest.kind === 'wildcardTest') {
     if (step.axis === 'namespace') {
       if (step.nodeTest.prefix !== undefined) {
@@ -996,7 +996,25 @@ function matchesNodeTest(step: StepExpression, node: Node): boolean {
   if (!matchesPrincipalNodeKind(step, node)) {
     return false;
   }
-  return node.nodeName === step.nodeTest.name;
+  return matchesQualifiedNodeName(step.nodeTest.name, node, context, step.axis === 'attribute');
+}
+
+function matchesQualifiedNodeName(name: string, node: Node, context: DynamicContext, isAttributeAxis: boolean): boolean {
+  const separator = name.indexOf(':');
+  const localName = getNodeLocalName(node);
+
+  if (separator >= 0) {
+    const prefix = name.slice(0, separator);
+    const namespaceUri = context.staticContext.namespaces.get(prefix) ?? PREDEFINED_NAMESPACE_PREFIXES.get(prefix);
+    if (namespaceUri === undefined) {
+      return false;
+    }
+
+    return localName === name.slice(separator + 1) && (node.namespaceURI ?? '') === namespaceUri;
+  }
+
+  const expectedNamespace = isAttributeAxis ? '' : context.staticContext.defaultElementNamespace;
+  return localName === name && (node.namespaceURI ?? '') === expectedNamespace;
 }
 
 function matchesPrincipalNodeKind(step: StepExpression, node: Node): boolean {
