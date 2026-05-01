@@ -137,4 +137,23 @@ describe('@arakendo/xslt scaffold', () => {
       output: '<out>number string</out>',
     });
   });
+
+  it('renders the first matching xsl:when branch or xsl:otherwise', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/root"><out><xsl:apply-templates select="person"/></out></xsl:template>
+        <xsl:template match="person">
+          <xsl:choose>
+            <xsl:when test="sex='M'"><male/></xsl:when>
+            <xsl:when test="sex='F'"></xsl:when>
+            <xsl:otherwise><other/></xsl:otherwise>
+          </xsl:choose>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root><person><sex>M</sex></person><person><sex>F</sex></person><person><sex>X</sex></person></root>')).toEqual({
+      output: '<out><male></male><other></other></out>',
+    });
+  });
 });

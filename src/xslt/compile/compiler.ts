@@ -12,11 +12,11 @@ import { XsltError, type ErrorContext, type ErrorSuggestion } from '../../errors
 import type { PathExpression, StepExpression, XPathAst } from '../../xpath/parse/ast.js';
 import { parseXPath } from '../../xpath/parse/parser.js';
 import { getAttributeValueSourceLocation, getElementNameSourceLocation, getNodeSourceLocation, parseXml } from '../../xml/parse.js';
-import type { AttributeInstruction, Instruction, StylesheetIR, TemplateRule } from './ir.js';
+import type { AttributeInstruction, ChooseWhenBranch, Instruction, StylesheetIR, TemplateRule } from './ir.js';
 
 const XSLT_NAMESPACE = 'http://www.w3.org/1999/XSL/Transform';
 const STYLESHEET_SOURCE_NAME = '<stylesheet>';
-const SUPPORTED_XSLT_INSTRUCTION_NAMES = ['apply-templates', 'if', 'text', 'value-of'] as const;
+const SUPPORTED_XSLT_INSTRUCTION_NAMES = ['apply-templates', 'choose', 'if', 'otherwise', 'text', 'value-of', 'when'] as const;
 
 type NodeListLike = {
   readonly length: number;
@@ -113,6 +113,10 @@ function collectStylesheetStaticContext(root: Element): Pick<StylesheetIR, 'name
 function compileTopLevelDeclaration(element: Element, stylesheetXml: string): TemplateRule | undefined {
   if (isXsltElement(element, 'template')) {
     return compileTemplateRule(element, stylesheetXml);
+  }
+
+  if (isXsltElement(element, 'strip-space')) {
+    return undefined;
   }
 
   if (isXsltElement(element, 'include') || isXsltElement(element, 'import')) {
@@ -332,6 +336,86 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
       testText: test,
       body: compileInstructions(element.childNodes, stylesheetXml),
       ...(location === undefined ? {} : { location }),
+    };
+  }
+
+  if (isXsltElement(element, 'choose')) {
+    const whenBranches: ChooseWhenBranch[] = [];
+    let otherwiseBody: Instruction[] | undefined;
+    let otherwiseLocation: TemplateRule['location'] | undefined;
+    let seenOtherwise = false;
+
+    for (const child of childElements(element)) {
+      if (isXsltElement(child, 'when')) {
+        if (seenOtherwise) {
+          throw createXsltStaticError(
+            'xsl:when cannot appear after xsl:otherwise within xsl:choose.',
+            getElementNameSourceLocation(stylesheetXml, child, STYLESHEET_SOURCE_NAME)
+              ?? getNodeSourceLocation(stylesheetXml, child, STYLESHEET_SOURCE_NAME),
+          );
+        }
+
+        const test = child.getAttribute('test');
+        if (test === null || test.length === 0) {
+          throw createXsltStaticError(
+            'xsl:when requires a test attribute.',
+            getNodeSourceLocation(stylesheetXml, child, STYLESHEET_SOURCE_NAME),
+            {
+              suggestions: [{
+                kind: 'fix',
+                label: 'add a test="..." attribute to xsl:when',
+                replacement: 'test="..."',
+                confidence: 1,
+              }],
+            },
+          );
+        }
+
+        const location = getAttributeValueSourceLocation(stylesheetXml, child, 'test', STYLESHEET_SOURCE_NAME)
+          ?? getNodeSourceLocation(stylesheetXml, child, STYLESHEET_SOURCE_NAME);
+        whenBranches.push({
+          test: parseXPath(test),
+          testText: test,
+          body: compileInstructions(child.childNodes, stylesheetXml),
+          ...(location === undefined ? {} : { location }),
+        });
+        continue;
+      }
+
+      if (isXsltElement(child, 'otherwise')) {
+        if (seenOtherwise) {
+          throw createXsltStaticError(
+            'xsl:choose cannot contain more than one xsl:otherwise.',
+            getElementNameSourceLocation(stylesheetXml, child, STYLESHEET_SOURCE_NAME)
+              ?? getNodeSourceLocation(stylesheetXml, child, STYLESHEET_SOURCE_NAME),
+          );
+        }
+
+        seenOtherwise = true;
+        otherwiseBody = compileInstructions(child.childNodes, stylesheetXml);
+        otherwiseLocation = getNodeSourceLocation(stylesheetXml, child, STYLESHEET_SOURCE_NAME);
+        continue;
+      }
+
+      throw createXsltStaticError(
+        `xsl:choose only supports xsl:when and xsl:otherwise children; found ${child.nodeName}.`,
+        getElementNameSourceLocation(stylesheetXml, child, STYLESHEET_SOURCE_NAME)
+          ?? getNodeSourceLocation(stylesheetXml, child, STYLESHEET_SOURCE_NAME),
+      );
+    }
+
+    if (whenBranches.length === 0) {
+      throw createXsltStaticError(
+        'xsl:choose requires at least one xsl:when child.',
+        getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+      );
+    }
+
+    return {
+      kind: 'choose',
+      whenBranches,
+      ...(otherwiseBody === undefined ? {} : { otherwiseBody }),
+      ...(otherwiseLocation === undefined ? {} : { otherwiseLocation }),
     };
   }
 

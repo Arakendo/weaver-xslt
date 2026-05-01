@@ -326,6 +326,30 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
         );
       }
     }
+    case 'choose': {
+      for (const branch of instruction.whenBranches) {
+        try {
+          if (evaluateEffectiveBooleanValue(branch.test, context)) {
+            return renderInstructions(branch.body, ir, context);
+          }
+        } catch (error) {
+          const frame = {
+            kind: 'instruction',
+            label: `xsl:when test="${branch.testText}"`,
+            ...(branch.location === undefined ? {} : { location: branch.location }),
+          } satisfies ErrorFrame;
+          throw withPrependedFrame(
+            error,
+            frame,
+            createRelatedLocation('containing instruction', branch.location),
+          );
+        }
+      }
+
+      return instruction.otherwiseBody === undefined
+        ? ''
+        : renderInstructions(instruction.otherwiseBody, ir, context);
+    }
     case 'valueOf': {
       try {
         const items = [...evaluate(instruction.select, context)];

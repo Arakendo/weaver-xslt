@@ -22,6 +22,13 @@ export interface AttributeInstruction {
   readonly value: string;
 }
 
+export interface ChooseWhenBranch {
+  readonly test: XPathAst;
+  readonly testText: string;
+  readonly body: readonly Instruction[];
+  readonly location?: SourceLocation;
+}
+
 export interface TemplateRule {
   /** Match pattern, pre-parsed. Undefined for named-only templates. */
   readonly match?: XPathAst;
@@ -56,6 +63,12 @@ export type Instruction =
       readonly testText: string;
       readonly body: readonly Instruction[];
       readonly location?: SourceLocation;
+    }
+  | {
+      readonly kind: 'choose';
+      readonly whenBranches: readonly ChooseWhenBranch[];
+      readonly otherwiseBody?: readonly Instruction[];
+      readonly otherwiseLocation?: SourceLocation;
     }
   | {
       readonly kind: 'valueOf';
