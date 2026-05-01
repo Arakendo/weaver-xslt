@@ -28,6 +28,14 @@ const MVP3_XSLT30_CASES: readonly Xslt30SliceCase[] = [
     caseName: 'template-006',
   },
   {
+    setFile: 'tests/insn/choose/_choose-test-set.xml',
+    caseName: 'choose-0601',
+  },
+  {
+    setFile: 'tests/insn/choose/_choose-test-set.xml',
+    caseName: 'choose-0602',
+  },
+  {
     setFile: 'tests/type/string/_string-test-set.xml',
     caseName: 'string-022',
   },

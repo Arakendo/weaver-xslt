@@ -119,4 +119,22 @@ describe('@arakendo/xslt scaffold', () => {
       output: '<out xmlns:ns1="urn:one" xmlns:ns2="urn:two">b</out>',
     });
   });
+
+  it('renders xsl:if bodies only when the test expression is true', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/">
+          <out>
+            <xsl:if test="2 = 2"><xsl:text>number </xsl:text></xsl:if>
+            <xsl:if test="'a' = 'a'"><xsl:text>string</xsl:text></xsl:if>
+            <xsl:if test="0 = 1"><xsl:text>nope</xsl:text></xsl:if>
+          </out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root/>')).toEqual({
+      output: '<out>number string</out>',
+    });
+  });
 });

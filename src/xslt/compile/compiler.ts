@@ -16,7 +16,7 @@ import type { AttributeInstruction, Instruction, StylesheetIR, TemplateRule } fr
 
 const XSLT_NAMESPACE = 'http://www.w3.org/1999/XSL/Transform';
 const STYLESHEET_SOURCE_NAME = '<stylesheet>';
-const SUPPORTED_XSLT_INSTRUCTION_NAMES = ['apply-templates', 'text', 'value-of'] as const;
+const SUPPORTED_XSLT_INSTRUCTION_NAMES = ['apply-templates', 'if', 'text', 'value-of'] as const;
 
 type NodeListLike = {
   readonly length: number;
@@ -303,6 +303,35 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
       ...(location === undefined ? {} : { location }),
       ...(select === undefined ? {} : { selectText: select }),
       ...(select === undefined ? {} : { select: parseXPath(select) }),
+    };
+  }
+
+  if (isXsltElement(element, 'if')) {
+    const test = element.getAttribute('test');
+    if (test === null || test.length === 0) {
+      throw createXsltStaticError(
+        'xsl:if requires a test attribute.',
+        getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+        {
+          suggestions: [{
+            kind: 'fix',
+            label: 'add a test="..." attribute to xsl:if',
+            replacement: 'test="..."',
+            confidence: 1,
+          }],
+        },
+      );
+    }
+
+    const location = getAttributeValueSourceLocation(stylesheetXml, element, 'test', STYLESHEET_SOURCE_NAME)
+      ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
+
+    return {
+      kind: 'if',
+      test: parseXPath(test),
+      testText: test,
+      body: compileInstructions(element.childNodes, stylesheetXml),
+      ...(location === undefined ? {} : { location }),
     };
   }
 

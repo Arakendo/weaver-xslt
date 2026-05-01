@@ -13,7 +13,7 @@ import type { PathExpression, StepExpression } from '../../xpath/parse/ast.js';
 import type { TransformOptions, TransformResult } from '../../processor/types.js';
 import { parseXml } from '../../xml/parse.js';
 import { createXdmNode, type XdmAtomicValue, type XdmItem, type XdmNode } from '../../xdm/types.js';
-import { evaluate } from '../../xpath/eval/evaluator.js';
+import { evaluate, evaluateEffectiveBooleanValue } from '../../xpath/eval/evaluator.js';
 import type { DynamicContext } from '../../xpath/eval/context.js';
 import type { Instruction, StylesheetIR, TemplateRule } from '../compile/ir.js';
 
@@ -307,6 +307,24 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
       const attributes = instruction.attributes.map((attribute) => ` ${attribute.name}="${escapeAttribute(attribute.value)}"`).join('');
       const body = renderInstructions(instruction.body, ir, context);
       return `<${instruction.name}${attributes}>${body}</${instruction.name}>`;
+    }
+    case 'if': {
+      try {
+        return evaluateEffectiveBooleanValue(instruction.test, context)
+          ? renderInstructions(instruction.body, ir, context)
+          : '';
+      } catch (error) {
+        const frame = {
+          kind: 'instruction',
+          label: `xsl:if test="${instruction.testText}"`,
+          ...(instruction.location === undefined ? {} : { location: instruction.location }),
+        } satisfies ErrorFrame;
+        throw withPrependedFrame(
+          error,
+          frame,
+          createRelatedLocation('containing instruction', instruction.location),
+        );
+      }
     }
     case 'valueOf': {
       try {

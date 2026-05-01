@@ -55,6 +55,10 @@ export function evaluate(ast: XPathAst, context: DynamicContext): XdmSequence {
   return createSequence(evaluateExpression(ast, context));
 }
 
+export function evaluateEffectiveBooleanValue(ast: XPathAst, context: DynamicContext): boolean {
+  return effectiveBooleanValue(evaluateExpression(ast, context), ast.span);
+}
+
 function evaluateExpression(ast: XPathAst, context: DynamicContext): XdmItem[] {
   switch (ast.kind) {
     case 'array':
