@@ -120,6 +120,25 @@ describe('@arakendo/xslt scaffold', () => {
     });
   });
 
+  it('suppresses excluded result namespaces on literal result elements', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet
+        version="3.0"
+        xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+        xmlns:foo="urn:foo"
+        exclude-result-prefixes="foo"
+      >
+        <xsl:template match="/">
+          <out xmlns:bar="urn:bar" exclude-result-prefixes="bar">ok</out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root/>')).toEqual({
+      output: '<out>ok</out>',
+    });
+  });
+
   it('renders xsl:if bodies only when the test expression is true', () => {
     const proc = new XsltProcessor(`
       <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">

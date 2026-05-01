@@ -18,18 +18,16 @@ const XSLT_NAMESPACE = 'http://www.w3.org/1999/XSL/Transform';
 const XMLNS_NAMESPACE = 'http://www.w3.org/2000/xmlns/';
 const STYLESHEET_SOURCE_NAME = '<stylesheet>';
 const SUPPORTED_XSLT_INSTRUCTION_NAMES = ['apply-templates', 'call-template', 'choose', 'comment', 'for-each', 'if', 'otherwise', 'text', 'value-of', 'variable', 'when'] as const;
-const SUPPORTED_XSLT_STYLESHEET_ATTRIBUTES = ['version'] as const;
+const SUPPORTED_XSLT_STYLESHEET_ATTRIBUTES = ['exclude-result-prefixes', 'version', 'xpath-default-namespace'] as const;
 const KNOWN_LATER_XSLT_STYLESHEET_ATTRIBUTES = [
   'default-collation',
   'default-mode',
   'default-validation',
-  'exclude-result-prefixes',
   'expand-text',
   'extension-element-prefixes',
   'id',
   'input-type-annotations',
   'use-when',
-  'xpath-default-namespace',
 ] as const;
 const SUPPORTED_XSLT_OUTPUT_ATTRIBUTES = ['method'] as const;
 const SUPPORTED_XSLT_OUTPUT_METHODS = ['xml'] as const;
@@ -829,7 +827,7 @@ function compileTopLevelParam(element: Element, stylesheetXml: string): GlobalPa
 }
 
 function compileTemplateRule(templateElement: Element, stylesheetXml: string): TemplateRule {
-  assertAllowedXsltAttributes(templateElement, stylesheetXml, 'xsl:template', ['match', 'mode', 'name', 'priority']);
+  assertAllowedXsltAttributes(templateElement, stylesheetXml, 'xsl:template', ['exclude-result-prefixes', 'match', 'mode', 'name', 'priority']);
 
   const modeText = templateElement.getAttribute('mode');
   if (modeText !== null) {
@@ -1520,12 +1518,27 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
 }
 
 function compileAttributes(element: Element): AttributeInstruction[] {
-  const attributes: AttributeInstruction[] = collectInheritedNamespaceAttributes(element);
+  const excludedNamespaces = collectExcludedNamespaceState(element);
+  const attributes: AttributeInstruction[] = collectInheritedNamespaceAttributes(element, excludedNamespaces);
 
   for (let index = 0; index < element.attributes.length; index += 1) {
     const attribute = element.attributes.item(index) as Attr | null;
     if (attribute === null) {
       continue;
+    }
+
+    if (isExcludeResultPrefixesAttribute(attribute)) {
+      continue;
+    }
+
+    if (isNamespaceDeclaration(attribute)) {
+      if (attribute.value === XSLT_NAMESPACE) {
+        continue;
+      }
+
+      if (excludedNamespaces.excludeAllNamespaces || excludedNamespaces.excludedNamespaceNames.has(attribute.name)) {
+        continue;
+      }
     }
 
     attributes.push({
@@ -1537,11 +1550,15 @@ function compileAttributes(element: Element): AttributeInstruction[] {
   return attributes;
 }
 
-function collectInheritedNamespaceAttributes(element: Element): AttributeInstruction[] {
+function collectInheritedNamespaceAttributes(
+  element: Element,
+  excludedNamespaces: {
+    readonly excludedNamespaceNames: ReadonlySet<string>;
+    readonly excludeAllNamespaces: boolean;
+  },
+): AttributeInstruction[] {
   const namespaceAttributes = new Map<string, string>();
   const ancestors: Element[] = [];
-  const excludedNamespaceNames = new Set<string>();
-  let excludeAllNamespaces = false;
 
   let current: Node | null = element.parentNode;
   while (current !== null) {
@@ -1552,31 +1569,13 @@ function collectInheritedNamespaceAttributes(element: Element): AttributeInstruc
   }
 
   for (const ancestor of ancestors) {
-    const excludedPrefixes = ancestor.getAttribute('exclude-result-prefixes');
-    if (excludedPrefixes !== null) {
-      for (const prefix of excludedPrefixes.trim().split(/\s+/)) {
-        if (prefix.length === 0) {
-          continue;
-        }
-
-        if (prefix === '#all') {
-          excludeAllNamespaces = true;
-          namespaceAttributes.clear();
-          continue;
-        }
-
-        excludedNamespaceNames.add(prefix === '#default' ? 'xmlns' : `xmlns:${prefix}`);
-        namespaceAttributes.delete(prefix === '#default' ? 'xmlns' : `xmlns:${prefix}`);
-      }
-    }
-
     for (let index = 0; index < ancestor.attributes.length; index += 1) {
       const attribute = ancestor.attributes.item(index) as Attr | null;
       if (attribute === null || !isNamespaceDeclaration(attribute) || attribute.value === XSLT_NAMESPACE) {
         continue;
       }
 
-      if (excludeAllNamespaces || excludedNamespaceNames.has(attribute.name)) {
+      if (excludedNamespaces.excludeAllNamespaces || excludedNamespaces.excludedNamespaceNames.has(attribute.name)) {
         continue;
       }
 
@@ -1597,6 +1596,48 @@ function collectInheritedNamespaceAttributes(element: Element): AttributeInstruc
   }
 
   return attributes;
+}
+
+function collectExcludedNamespaceState(element: Element): {
+  readonly excludedNamespaceNames: ReadonlySet<string>;
+  readonly excludeAllNamespaces: boolean;
+} {
+  const excludedNamespaceNames = new Set<string>();
+  let excludeAllNamespaces = false;
+
+  let current: Node | null = element;
+  while (current !== null) {
+    if (current.nodeType === current.ELEMENT_NODE) {
+      const excludedPrefixes = (current as Element).getAttribute('exclude-result-prefixes');
+      if (excludedPrefixes !== null) {
+        for (const prefix of excludedPrefixes.trim().split(/\s+/)) {
+          if (prefix.length === 0) {
+            continue;
+          }
+
+          if (prefix === '#all') {
+            excludeAllNamespaces = true;
+            excludedNamespaceNames.clear();
+            continue;
+          }
+
+          excludedNamespaceNames.add(prefix === '#default' ? 'xmlns' : `xmlns:${prefix}`);
+        }
+      }
+    }
+
+    current = current.parentNode;
+  }
+
+  return {
+    excludedNamespaceNames,
+    excludeAllNamespaces,
+  };
+}
+
+function isExcludeResultPrefixesAttribute(attribute: Attr): boolean {
+  return (attribute.namespaceURI === null || attribute.namespaceURI.length === 0)
+    && attribute.name === 'exclude-result-prefixes';
 }
 
 function hasMeaningfulTemplateContent(element: Element): boolean {
