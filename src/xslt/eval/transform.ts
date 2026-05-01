@@ -330,7 +330,19 @@ function getDefaultTemplatePriority(template: TemplateRule): number {
 }
 
 function renderInstructions(instructions: readonly Instruction[], ir: StylesheetIR, context: DynamicContext): string {
-  return instructions.map((instruction) => renderInstruction(instruction, ir, context)).join('');
+  let output = '';
+  let currentContext = context;
+
+  for (const instruction of instructions) {
+    if (instruction.kind === 'variable') {
+      currentContext = bindVariableInstruction(instruction, currentContext);
+      continue;
+    }
+
+    output += renderInstruction(instruction, ir, currentContext);
+  }
+
+  return output;
 }
 
 function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: DynamicContext): string {
@@ -339,6 +351,8 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
       return escapeText(instruction.text);
     case 'comment':
       return `<!--${renderInstructions(instruction.body, ir, context)}-->`;
+    case 'variable':
+      return '';
     case 'literalElement': {
       const attributes = instruction.attributes.map((attribute) => ` ${attribute.name}="${escapeAttribute(attribute.value)}"`).join('');
       const body = renderInstructions(instruction.body, ir, context);
@@ -474,6 +488,35 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
         );
       }
     }
+  }
+}
+
+function bindVariableInstruction(
+  instruction: Extract<Instruction, { readonly kind: 'variable' }>,
+  context: DynamicContext,
+): DynamicContext {
+  try {
+    const value = instruction.select === undefined ? [] : [...evaluate(instruction.select, context)];
+    const variables = new Map(context.variables);
+    variables.set(instruction.name, value);
+    variables.set(`{}${instruction.name}`, value);
+    return {
+      ...context,
+      variables,
+    };
+  } catch (error) {
+    const frame = {
+      kind: 'instruction',
+      label: instruction.selectText === undefined
+        ? `xsl:variable name="${instruction.name}"`
+        : `xsl:variable name="${instruction.name}" select="${instruction.selectText}"`,
+      ...(instruction.location === undefined ? {} : { location: instruction.location }),
+    } satisfies ErrorFrame;
+    throw withPrependedFrame(
+      error,
+      frame,
+      createRelatedLocation('containing instruction', instruction.location),
+    );
   }
 }
 

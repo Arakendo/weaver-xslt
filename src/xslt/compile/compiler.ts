@@ -16,7 +16,7 @@ import type { AttributeInstruction, ChooseWhenBranch, Instruction, StylesheetIR,
 
 const XSLT_NAMESPACE = 'http://www.w3.org/1999/XSL/Transform';
 const STYLESHEET_SOURCE_NAME = '<stylesheet>';
-const SUPPORTED_XSLT_INSTRUCTION_NAMES = ['apply-templates', 'call-template', 'choose', 'comment', 'for-each', 'if', 'otherwise', 'text', 'value-of', 'when'] as const;
+const SUPPORTED_XSLT_INSTRUCTION_NAMES = ['apply-templates', 'call-template', 'choose', 'comment', 'for-each', 'if', 'otherwise', 'text', 'value-of', 'variable', 'when'] as const;
 
 type NodeListLike = {
   readonly length: number;
@@ -469,6 +469,53 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
       kind: 'callTemplate',
       name,
       withParams,
+      ...(location === undefined ? {} : { location }),
+    };
+  }
+
+  if (isXsltElement(element, 'variable')) {
+    const name = element.getAttribute('name');
+    if (name === null || name.length === 0) {
+      throw createXsltStaticError(
+        'xsl:variable requires a name attribute.',
+        getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+        {
+          suggestions: [{
+            kind: 'fix',
+            label: 'add a name="..." attribute to xsl:variable',
+            replacement: 'name="..."',
+            confidence: 1,
+          }],
+        },
+      );
+    }
+
+    const select = element.getAttribute('select') ?? undefined;
+    if (select === undefined && hasMeaningfulTemplateContent(element)) {
+      throw createXsltStaticError(
+        'xsl:variable sequence-constructor values are not yet implemented in the current MVP+3 slice.',
+        getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+        {
+          variableName: name,
+        },
+        {
+          suggestions: [{
+            kind: 'fix',
+            label: 'replace xsl:variable content with select="..." in the current MVP+3 slice',
+            confidence: 1,
+          }],
+        },
+      );
+    }
+
+    const location = getAttributeValueSourceLocation(stylesheetXml, element, 'name', STYLESHEET_SOURCE_NAME)
+      ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
+
+    return {
+      kind: 'variable',
+      name,
+      ...(select === undefined ? {} : { select: parseXPath(select) }),
+      ...(select === undefined ? {} : { selectText: select }),
       ...(location === undefined ? {} : { location }),
     };
   }

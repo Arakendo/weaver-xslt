@@ -53,6 +53,10 @@ const MVP3_XSLT30_CASES: readonly Xslt30SliceCase[] = [
     caseName: 'call-template-0101',
   },
   {
+    setFile: 'tests/decl/variable/_variable-test-set.xml',
+    caseName: 'variable-1009',
+  },
+  {
     setFile: 'tests/type/string/_string-test-set.xml',
     caseName: 'string-022',
   },

@@ -78,6 +78,13 @@ export type Instruction =
       readonly body: readonly Instruction[];
     }
   | {
+      readonly kind: 'variable';
+      readonly name: string;
+      readonly select?: XPathAst;
+      readonly selectText?: string;
+      readonly location?: SourceLocation;
+    }
+  | {
       readonly kind: 'if';
       readonly test: XPathAst;
       readonly testText: string;

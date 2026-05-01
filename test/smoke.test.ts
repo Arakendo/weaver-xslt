@@ -248,4 +248,26 @@ describe('@arakendo/xslt scaffold', () => {
       output: '<out><entry>root</entry><entry>a</entry><entry>b</entry></out>',
     });
   });
+
+  it('binds local xsl:variable values for following instructions in the same sequence constructor', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/root">
+          <out>
+            <xsl:variable name="label" select="name()"/>
+            <xsl:value-of select="$label"/>
+            <xsl:text>:</xsl:text>
+            <xsl:for-each select="item">
+              <xsl:variable name="index" select="position()"/>
+              <entry><xsl:value-of select="$index"/></entry>
+            </xsl:for-each>
+          </out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root><item/><item/></root>')).toEqual({
+      output: '<out>root:<entry>1</entry><entry>2</entry></out>',
+    });
+  });
 });
