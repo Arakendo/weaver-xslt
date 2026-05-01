@@ -172,12 +172,16 @@ function templateMatchesNode(template: TemplateRule, node: Node): boolean {
   }
 
   const match = template.match as PathExpression;
-  if (match.absolute || match.base !== undefined || match.steps.length !== 1) {
+  if (match.base !== undefined || match.steps.length !== 1) {
     return false;
   }
 
   const step = match.steps[0];
   if (step?.kind !== 'step') {
+    return false;
+  }
+
+  if (match.absolute && node.parentNode?.nodeType !== node.DOCUMENT_NODE) {
     return false;
   }
 
@@ -232,8 +236,12 @@ function getDefaultTemplatePriority(template: TemplateRule): number {
   }
 
   const match = template.match as PathExpression;
-  if (match.absolute || match.base !== undefined || match.steps.length !== 1) {
+  if (match.base !== undefined || match.steps.length !== 1) {
     return Number.NEGATIVE_INFINITY;
+  }
+
+  if (match.absolute) {
+    return 0.5;
   }
 
   const step = match.steps[0];

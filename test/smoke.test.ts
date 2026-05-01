@@ -87,4 +87,17 @@ describe('@arakendo/xslt scaffold', () => {
       output: '<out>Match-of-wildcard</out>',
     });
   });
+
+  it('supports absolute root-child match patterns such as /doc', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/doc"><out><xsl:value-of select="./text()"/></out></xsl:template>
+        <xsl:template match="text()"><xsl:value-of select="."/></xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<doc>test</doc>')).toEqual({
+      output: '<out>test</out>',
+    });
+  });
 });

@@ -191,7 +191,7 @@ function compileTemplateRule(templateElement: Element, stylesheetXml: string): T
       {
         suggestions: [{
           kind: 'fix',
-          label: 'use one of the currently supported match patterns: /, name, *, node(), or text()',
+          label: 'use one of the currently supported simple match patterns: /, /name, name, *, node(), or text()',
           confidence: 1,
         }],
       },
@@ -390,7 +390,7 @@ function isSupportedTemplateMatch(ast: XPathAst): boolean {
     return true;
   }
 
-  if (path.absolute || path.steps.length !== 1) {
+  if (path.steps.length !== 1) {
     return false;
   }
 

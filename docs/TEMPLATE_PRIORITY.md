@@ -8,6 +8,10 @@ interpreter slice is expected to honor.
 The current slice only assigns priorities for these patterns:
 
 - `/`
+- `/name`
+- `/*`
+- `/text()`
+- `/node()`
 - `name`
 - `*`
 - `text()`
@@ -29,6 +33,10 @@ Selection therefore works in this order:
 ## Default priorities in the current slice
 
 - `/` -> `0.5`
+- `/name` -> `0.5`
+- `/*` -> `0.5`
+- `/text()` -> `0.5`
+- `/node()` -> `0.5`
 - `name` -> `0`
 - `*` -> `-0.5`
 - `text()` -> `-0.5`
@@ -41,3 +49,4 @@ The following fixtures anchor the current behavior:
 - `invoice-simple`
 - `priority-name-over-wildcard`
 - `priority-later-template-wins`
+- `nodetest-001` via `test/conformance/xslt30/mvp3.test.ts`
