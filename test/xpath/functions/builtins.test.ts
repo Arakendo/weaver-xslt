@@ -7,11 +7,16 @@ import { evaluate } from '../../../src/xpath/eval/evaluator.js';
 import type { DynamicContext } from '../../../src/xpath/eval/context.js';
 import { parseXPath } from '../../../src/xpath/parse/parser.js';
 
-function createContext(xml: string): DynamicContext {
+type ContextOptions = {
+  readonly namespaces?: ReadonlyArray<readonly [string, string]>;
+  readonly defaultElementNamespace?: string;
+};
+
+function createContext(xml: string, options: ContextOptions = {}): DynamicContext {
   return {
     staticContext: {
-      namespaces: new Map(),
-      defaultElementNamespace: '',
+      namespaces: new Map(options.namespaces ?? []),
+      defaultElementNamespace: options.defaultElementNamespace ?? '',
     },
     contextItem: createXdmNode(parseXml(xml)),
     contextPosition: 1,
@@ -136,7 +141,9 @@ describe('XPath built-in function coverage', () => {
   });
 
   it('evaluates name and local-name for nodes', () => {
-    const context = createContext('<root xmlns:p="urn:test"><p:item>A</p:item></root>');
+    const context = createContext('<root xmlns:p="urn:test"><p:item>A</p:item></root>', {
+      namespaces: [['p', 'urn:test']],
+    });
 
     expect([...evaluate(parseXPath('name(/root/p:item)'), context)]).toMatchObject([
       { type: 'xs:string', value: 'p:item' },
@@ -144,7 +151,13 @@ describe('XPath built-in function coverage', () => {
     expect([...evaluate(parseXPath('local-name(/root/p:item)'), context)]).toMatchObject([
       { type: 'xs:string', value: 'item' },
     ]);
+    expect([...evaluate(parseXPath('namespace-uri(/root/p:item)'), context)]).toMatchObject([
+      { type: 'xs:string', value: 'urn:test' },
+    ]);
     expect([...evaluate(parseXPath('name(root(/root/p:item))'), context)]).toMatchObject([
+      { type: 'xs:string', value: '' },
+    ]);
+    expect([...evaluate(parseXPath('namespace-uri(/root)'), context)]).toMatchObject([
       { type: 'xs:string', value: '' },
     ]);
     expect([...evaluate(parseXPath('node-name(/root/p:item)'), context)]).toMatchObject([

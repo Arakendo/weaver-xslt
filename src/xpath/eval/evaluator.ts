@@ -520,6 +520,10 @@ function evaluateFunctionCall(
       const item = evaluateOptionalSingletonNodeArg(normalized, args, context, span);
       return [createXdmString(getLocalNameValue(item))];
     }
+    case 'fn:namespace-uri': {
+      const item = evaluateOptionalSingletonNodeArg(normalized, args, context, span);
+      return [createXdmString(getNamespaceUriValue(item))];
+    }
     case 'fn:node-name': {
       const item = evaluateOptionalSingletonNodeArg(normalized, args, context, span);
       const name = getNodeNameValue(item);
@@ -1769,6 +1773,14 @@ function getLocalNameValue(node: XdmNode | undefined): string {
   return getLocalNameFromQName(name);
 }
 
+function getNamespaceUriValue(node: XdmNode | undefined): string {
+  if (node === undefined) {
+    return '';
+  }
+
+  return node.node.namespaceURI ?? '';
+}
+
 function getLocalNameFromQName(name: string): string {
   if (name.length === 0) {
     return '';
@@ -2443,6 +2455,7 @@ function validateFunctionCallSignature(name: string, actualArity: number, span: 
     case 'fn:number':
     case 'fn:name':
     case 'fn:local-name':
+    case 'fn:namespace-uri':
     case 'fn:node-name':
     case 'fn:root':
       if (actualArity !== 0 && actualArity !== 1) {
