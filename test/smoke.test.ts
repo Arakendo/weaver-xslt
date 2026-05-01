@@ -156,4 +156,23 @@ describe('@arakendo/xslt scaffold', () => {
       output: '<out><male></male><other></other></out>',
     });
   });
+
+  it('updates the focus for xsl:for-each iterations', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/root">
+          <out>
+            <xsl:for-each select="item">
+              <xsl:if test="position() = 1"><first><xsl:value-of select="."/></first></xsl:if>
+              <xsl:if test="position() = last()"><last><xsl:value-of select="."/></last></xsl:if>
+            </xsl:for-each>
+          </out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item></root>')).toEqual({
+      output: '<out><first>a</first><last>c</last></out>',
+    });
+  });
 });

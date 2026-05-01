@@ -119,6 +119,10 @@ function compileTopLevelDeclaration(element: Element, stylesheetXml: string): Te
     return undefined;
   }
 
+  if (isXsltElement(element, 'output')) {
+    return undefined;
+  }
+
   if (isXsltElement(element, 'include') || isXsltElement(element, 'import')) {
     const href = element.getAttribute('href') ?? '';
     throw createXsltStaticError(
@@ -416,6 +420,35 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
       whenBranches,
       ...(otherwiseBody === undefined ? {} : { otherwiseBody }),
       ...(otherwiseLocation === undefined ? {} : { otherwiseLocation }),
+    };
+  }
+
+  if (isXsltElement(element, 'for-each')) {
+    const select = element.getAttribute('select');
+    if (select === null || select.length === 0) {
+      throw createXsltStaticError(
+        'xsl:for-each requires a select attribute.',
+        getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+        {
+          suggestions: [{
+            kind: 'fix',
+            label: 'add a select="..." attribute to xsl:for-each',
+            replacement: 'select="..."',
+            confidence: 1,
+          }],
+        },
+      );
+    }
+
+    const location = getAttributeValueSourceLocation(stylesheetXml, element, 'select', STYLESHEET_SOURCE_NAME)
+      ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
+
+    return {
+      kind: 'forEach',
+      select: parseXPath(select),
+      selectText: select,
+      body: compileInstructions(element.childNodes, stylesheetXml),
+      ...(location === undefined ? {} : { location }),
     };
   }
 

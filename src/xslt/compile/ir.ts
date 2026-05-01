@@ -71,6 +71,13 @@ export type Instruction =
       readonly otherwiseLocation?: SourceLocation;
     }
   | {
+      readonly kind: 'forEach';
+      readonly select: XPathAst;
+      readonly selectText: string;
+      readonly body: readonly Instruction[];
+      readonly location?: SourceLocation;
+    }
+  | {
       readonly kind: 'valueOf';
       readonly select: XPathAst;
       readonly selectText: string;

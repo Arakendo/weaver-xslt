@@ -350,6 +350,32 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
         ? ''
         : renderInstructions(instruction.otherwiseBody, ir, context);
     }
+    case 'forEach': {
+      try {
+        const items = [...evaluate(instruction.select, context)];
+        return items.map((item, index) => renderInstructions(
+          instruction.body,
+          ir,
+          {
+            ...context,
+            contextItem: item,
+            contextPosition: index + 1,
+            contextSize: items.length,
+          },
+        )).join('');
+      } catch (error) {
+        const frame = {
+          kind: 'instruction',
+          label: `xsl:for-each select="${instruction.selectText}"`,
+          ...(instruction.location === undefined ? {} : { location: instruction.location }),
+        } satisfies ErrorFrame;
+        throw withPrependedFrame(
+          error,
+          frame,
+          createRelatedLocation('containing instruction', instruction.location),
+        );
+      }
+    }
     case 'valueOf': {
       try {
         const items = [...evaluate(instruction.select, context)];

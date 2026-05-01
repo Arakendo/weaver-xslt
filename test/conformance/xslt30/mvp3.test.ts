@@ -40,6 +40,10 @@ const MVP3_XSLT30_CASES: readonly Xslt30SliceCase[] = [
     caseName: 'choose-0102',
   },
   {
+    setFile: 'tests/attr/xpath-default-namespace/_xpath-default-namespace-test-set.xml',
+    caseName: 'xpath-default-namespace-1101',
+  },
+  {
     setFile: 'tests/type/string/_string-test-set.xml',
     caseName: 'string-022',
   },
