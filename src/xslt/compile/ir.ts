@@ -10,8 +10,12 @@
 import type { XPathAst } from '../../xpath/parse/ast.js';
 import type { SourceLocation } from '../../errors/index.js';
 
+export const STYLESHEET_IR_VERSION = '1.0' as const;
+
 export interface StylesheetIR {
-  readonly version: '3.0';
+  readonly version: typeof STYLESHEET_IR_VERSION;
+  readonly xsltVersion: '3.0';
+  readonly location?: SourceLocation;
   readonly namespaces: Readonly<Record<string, string>>;
   readonly defaultElementNamespace: string;
   readonly globalBindings: readonly GlobalBinding[];
@@ -21,6 +25,7 @@ export interface StylesheetIR {
 export interface AttributeInstruction {
   readonly name: string;
   readonly value: string;
+  readonly location?: SourceLocation;
 }
 
 export interface ChooseWhenBranch {
@@ -93,14 +98,17 @@ export type Instruction =
       readonly name: string;
       readonly attributes: readonly AttributeInstruction[];
       readonly body: readonly Instruction[];
+      readonly location?: SourceLocation;
     }
   | {
       readonly kind: 'literalText';
       readonly text: string;
+      readonly location?: SourceLocation;
     }
   | {
       readonly kind: 'comment';
       readonly body: readonly Instruction[];
+      readonly location?: SourceLocation;
     }
   | {
       readonly kind: 'variable';
@@ -122,6 +130,7 @@ export type Instruction =
       readonly whenBranches: readonly ChooseWhenBranch[];
       readonly otherwiseBody?: readonly Instruction[];
       readonly otherwiseLocation?: SourceLocation;
+      readonly location?: SourceLocation;
     }
   | {
       readonly kind: 'forEach';

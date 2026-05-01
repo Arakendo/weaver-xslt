@@ -140,7 +140,6 @@ const REQUIRED_DETAIL_KEYS: Readonly<Record<string, readonly string[]>> = {
   XPTY0004: ['expectedType', 'actualType'],
   XTDE0040: ['mode'],
   XTSE0165: ['href'],
-  WEAVER_XSLT_UNSUPPORTED_INITIAL_TEMPLATE: ['initialTemplate'],
 };
 
 function classifyPhase(code: string): DiagnosticPhase {

@@ -8,7 +8,7 @@
 import type { Node } from '@xmldom/xmldom';
 
 import { XTDE0040, XTDE0050, XTDE0640, XTDE0700, XTSE0010, XTSE0650, XPTY0004 } from '../../errors/codes.js';
-import { XdmError, XsltError, type ErrorFrame, type ErrorSuggestion, type RelatedLocation } from '../../errors/index.js';
+import { XsltError, type ErrorFrame, type ErrorSuggestion, type RelatedLocation } from '../../errors/index.js';
 import type { PathExpression, StepExpression } from '../../xpath/parse/ast.js';
 import type { TransformOptions, TransformResult } from '../../processor/types.js';
 import { parseXml } from '../../xml/parse.js';
@@ -16,6 +16,8 @@ import { createXdmNode, createXdmString, type XdmAtomicValue, type XdmItem, type
 import { evaluate, evaluateEffectiveBooleanValue } from '../../xpath/eval/evaluator.js';
 import type { DynamicContext } from '../../xpath/eval/context.js';
 import type { GlobalBinding, Instruction, StylesheetIR, TemplateParam, TemplateRule, WithParam } from '../compile/ir.js';
+import { computeLevenshteinDistance, prependXsltErrorFrame as withPrependedFrame } from '../diagnostics.js';
+import { buildTemporaryTree } from './temporaryTree.js';
 
 const PREDEFINED_NAMESPACE_PREFIXES = new Map<string, string>([
   ['array', 'http://www.w3.org/2005/xpath-functions/array'],
@@ -290,28 +292,6 @@ function tryNormalizeEqName(name: string): string | undefined {
   }
 
   return namespaceUri.length === 0 ? localName : `{${namespaceUri}}${localName}`;
-}
-
-function computeLevenshteinDistance(left: string, right: string): number {
-  const previousRow = Array.from({ length: right.length + 1 }, (_, index) => index);
-
-  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
-    let previousDiagonal = previousRow[0] ?? 0;
-    previousRow[0] = leftIndex;
-
-    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
-      const temp = previousRow[rightIndex] ?? 0;
-      const substitutionCost = left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1;
-      previousRow[rightIndex] = Math.min(
-        (previousRow[rightIndex] ?? 0) + 1,
-        (previousRow[rightIndex - 1] ?? 0) + 1,
-        previousDiagonal + substitutionCost,
-      );
-      previousDiagonal = temp;
-    }
-  }
-
-  return previousRow[right.length] ?? right.length;
 }
 
 function findBestMatchingTemplate(
@@ -748,20 +728,7 @@ function evaluateTemporaryTree(
   ir: StylesheetIR,
   context: DynamicContext,
 ): readonly XdmItem[] {
-  const serialized = renderInstructions(body, ir, context);
-  const temporaryDocument = parseXml(`<temporary-root>${serialized}</temporary-root>`);
-  const fragment = temporaryDocument.createDocumentFragment();
-  const wrapper = temporaryDocument.documentElement;
-
-  if (wrapper === null) {
-    return [createXdmNode(fragment)];
-  }
-
-  while (wrapper.firstChild !== null) {
-    fragment.appendChild(wrapper.firstChild);
-  }
-
-  return [createXdmNode(fragment)];
+  return [buildTemporaryTree(renderInstructions(body, ir, context))];
 }
 
 function throwMissingTemplateParam(
@@ -1070,25 +1037,6 @@ function describeItemType(item: XdmItem): string {
   }
 
   return (item as XdmAtomicValue).type;
-}
-
-function withPrependedFrame(error: unknown, frame: ErrorFrame, related?: RelatedLocation): unknown {
-  if (!(error instanceof XdmError)) {
-    return error;
-  }
-
-  return new XsltError(
-    error.code,
-    error.detailMessage,
-    error.location,
-    error.details,
-    {
-      related: related === undefined ? error.related : [related, ...error.related],
-      frames: [frame, ...error.frames],
-      suggestions: error.suggestions,
-      causes: error.causes.length === 0 ? [error] : error.causes,
-    },
-  );
 }
 
 function createRelatedLocation(label: string, location: TemplateRule['location']): RelatedLocation | undefined {

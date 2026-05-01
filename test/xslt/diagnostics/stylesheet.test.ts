@@ -716,7 +716,8 @@ describe('XSLT diagnostics', () => {
 
   it('suggests the closest named template for runtime xsl:call-template fallback typos', () => {
     const ir = {
-      version: '3.0',
+      version: '1.0',
+      xsltVersion: '3.0',
       namespaces: {},
       defaultElementNamespace: '',
       globalBindings: [],

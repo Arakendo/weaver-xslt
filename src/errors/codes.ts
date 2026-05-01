@@ -63,7 +63,4 @@ export const XTDE1360 = 'XTDE1360'; // current-group outside for-each-group
 export const SENR0001 = 'SENR0001'; // item is attribute or namespace node
 export const SERE0003 = 'SERE0003'; // invalid XML 1.0 character
 
-// Weaver-local XSLT runtime diagnostics
-export const WEAVER_XSLT_UNSUPPORTED_INITIAL_TEMPLATE = 'WEAVER_XSLT_UNSUPPORTED_INITIAL_TEMPLATE';
-
 export type ErrorCode = string;

@@ -5,6 +5,7 @@ import { parseXml } from '../../src/xml/parse.js';
 import { createXdmNode } from '../../src/xdm/types.js';
 import { evaluate } from '../../src/xpath/eval/evaluator.js';
 import { parseXPath } from '../../src/xpath/parse/parser.js';
+import { captureError } from '../helpers/captureError.js';
 import type { DynamicContext } from '../../src/xpath/eval/context.js';
 
 function createContext(xml: string): DynamicContext {
@@ -18,15 +19,6 @@ function createContext(xml: string): DynamicContext {
     contextSize: 1,
     variables: new Map(),
   };
-}
-
-function captureError(action: () => void): unknown {
-  try {
-    action();
-    throw new Error('Expected the action to throw.');
-  } catch (error) {
-    return error;
-  }
 }
 
 describe('XPath diagnostics', () => {
