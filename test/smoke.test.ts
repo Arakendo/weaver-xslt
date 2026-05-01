@@ -175,4 +175,33 @@ describe('@arakendo/xslt scaffold', () => {
       output: '<out><first>a</first><last>c</last></out>',
     });
   });
+
+  it('calls parameterless named templates with the current focus intact', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/root">
+          <out>
+            <xsl:call-template name="emit-root"/>
+            <xsl:for-each select="item">
+              <xsl:call-template name="emit-item"/>
+            </xsl:for-each>
+          </out>
+        </xsl:template>
+        <xsl:template name="emit-root">
+          <root-name><xsl:value-of select="name()"/></root-name>
+        </xsl:template>
+        <xsl:template name="emit-item">
+          <item>
+            <xsl:value-of select="position()"/>
+            <xsl:text>:</xsl:text>
+            <xsl:value-of select="."/>
+          </item>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root><item>a</item><item>b</item></root>')).toEqual({
+      output: '<out><root-name>root</root-name><item>1:a</item><item>2:b</item></out>',
+    });
+  });
 });

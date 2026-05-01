@@ -16,7 +16,7 @@ import type { AttributeInstruction, ChooseWhenBranch, Instruction, StylesheetIR,
 
 const XSLT_NAMESPACE = 'http://www.w3.org/1999/XSL/Transform';
 const STYLESHEET_SOURCE_NAME = '<stylesheet>';
-const SUPPORTED_XSLT_INSTRUCTION_NAMES = ['apply-templates', 'choose', 'if', 'otherwise', 'text', 'value-of', 'when'] as const;
+const SUPPORTED_XSLT_INSTRUCTION_NAMES = ['apply-templates', 'call-template', 'choose', 'for-each', 'if', 'otherwise', 'text', 'value-of', 'when'] as const;
 
 type NodeListLike = {
   readonly length: number;
@@ -198,21 +198,6 @@ function compileTemplateRule(templateElement: Element, stylesheetXml: string): T
     );
   }
 
-  if (matchText === undefined && name !== undefined) {
-    throw createXsltStaticError(
-      'Named templates are not yet implemented in the current MVP+3 slice.',
-      getAttributeValueSourceLocation(stylesheetXml, templateElement, 'name', STYLESHEET_SOURCE_NAME)
-        ?? getNodeSourceLocation(stylesheetXml, templateElement, STYLESHEET_SOURCE_NAME),
-      {
-        suggestions: [{
-          kind: 'fix',
-          label: 'use match="/" or another supported match pattern instead of a named-only template',
-          confidence: 1,
-        }],
-      },
-    );
-  }
-
   const match = matchText === undefined ? undefined : parseXPath(matchText);
   if (match !== undefined && !isSupportedTemplateMatch(match)) {
     throw createXsltStaticError(
@@ -311,6 +296,50 @@ function compileInstruction(node: Node, stylesheetXml: string): Instruction | un
       ...(location === undefined ? {} : { location }),
       ...(select === undefined ? {} : { selectText: select }),
       ...(select === undefined ? {} : { select: parseXPath(select) }),
+    };
+  }
+
+  if (isXsltElement(element, 'call-template')) {
+    const name = element.getAttribute('name');
+    if (name === null || name.length === 0) {
+      throw createXsltStaticError(
+        'xsl:call-template requires a name attribute.',
+        getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+        {
+          suggestions: [{
+            kind: 'fix',
+            label: 'add a name="..." attribute to xsl:call-template',
+            replacement: 'name="..."',
+            confidence: 1,
+          }],
+        },
+      );
+    }
+
+    if (childElements(element).length > 0) {
+      throw createXsltStaticError(
+        'xsl:call-template parameters are not yet implemented in the current MVP+3 slice.',
+        getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+        {
+          templateName: name,
+        },
+        {
+          suggestions: [{
+            kind: 'fix',
+            label: 'remove xsl:with-param children and use a parameterless named template in the current MVP+3 slice',
+            confidence: 1,
+          }],
+        },
+      );
+    }
+
+    const location = getAttributeValueSourceLocation(stylesheetXml, element, 'name', STYLESHEET_SOURCE_NAME)
+      ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME);
+
+    return {
+      kind: 'callTemplate',
+      name,
+      ...(location === undefined ? {} : { location }),
     };
   }
 

@@ -78,6 +78,11 @@ export type Instruction =
       readonly location?: SourceLocation;
     }
   | {
+      readonly kind: 'callTemplate';
+      readonly name: string;
+      readonly location?: SourceLocation;
+    }
+  | {
       readonly kind: 'valueOf';
       readonly select: XPathAst;
       readonly selectText: string;

@@ -7,7 +7,7 @@
 
 import type { Node } from '@xmldom/xmldom';
 
-import { WEAVER_XSLT_UNSUPPORTED_INITIAL_TEMPLATE, XTDE0040, XPTY0004 } from '../../errors/codes.js';
+import { WEAVER_XSLT_UNSUPPORTED_INITIAL_TEMPLATE, XTDE0040, XTSE0010, XPTY0004 } from '../../errors/codes.js';
 import { XdmError, XsltError, type ErrorFrame, type RelatedLocation } from '../../errors/index.js';
 import type { PathExpression, StepExpression } from '../../xpath/parse/ast.js';
 import type { TransformOptions, TransformResult } from '../../processor/types.js';
@@ -129,6 +129,17 @@ function applyTemplateToNode(node: Node, ir: StylesheetIR, context: DynamicConte
   }
 
   return renderBuiltInTemplate(node, ir, context.staticContext);
+}
+
+function findNamedTemplate(name: string, templates: readonly TemplateRule[]): TemplateRule | undefined {
+  for (let index = templates.length - 1; index >= 0; index -= 1) {
+    const candidate = templates[index];
+    if (candidate?.name === name) {
+      return candidate;
+    }
+  }
+
+  return undefined;
 }
 
 function findBestMatchingTemplate(
@@ -373,6 +384,29 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
           error,
           frame,
           createRelatedLocation('containing instruction', instruction.location),
+        );
+      }
+    }
+    case 'callTemplate': {
+      const template = findNamedTemplate(instruction.name, ir.templates);
+      if (template === undefined) {
+        throw new XsltError(
+          XTSE0010,
+          `Named template ${instruction.name} is not declared in the current stylesheet.`,
+          instruction.location,
+          {
+            templateName: instruction.name,
+          },
+        );
+      }
+
+      try {
+        return renderInstructions(template.body, ir, context);
+      } catch (error) {
+        throw withPrependedFrame(
+          error,
+          createTemplateFrame(template),
+          createRelatedLocation('called template', template.location),
         );
       }
     }
