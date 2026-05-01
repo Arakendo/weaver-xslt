@@ -201,7 +201,7 @@ sequence/atomization rules are right, or everything downstream is cursed
 
 ---
 
-### MVP+3 — XSLT MVP on interpreter (first green transform)
+### MVP+3 — XSLT MVP on interpreter (done)
 
 **Goal:** run a real (tiny) invoice stylesheet end-to-end. This is the
 first moment `@arakendo/xslt` does what it says on the tin.
@@ -241,20 +241,20 @@ first moment `@arakendo/xslt` does what it says on the tin.
 - Schema-aware anything
 
 **Exit criteria:**
-- [ ] At least 3 goldens under `test/golden/` pass byte-exact
-- [ ] Overlapping-pattern and default-priority fixtures exist and are
+- [x] At least 3 goldens under `test/golden/` pass byte-exact
+- [x] Overlapping-pattern and default-priority fixtures exist and are
   named in the priority mini-spec; no "mostly right" dispatch
   behavior ships without those examples going green
-- [ ] XSLT conformance runner filtered to the supported feature set
+- [x] XSLT conformance runner filtered to the supported feature set
       reports a non-trivial pass rate
-- [ ] A runtime error in an `<xsl:value-of select="...">` prints:
+- [x] A runtime error in an `<xsl:value-of select="...">` prints:
       stylesheet file + line + column, the offending subexpression with
       caret, the enclosing template's match pattern, and a call chain
       back to `apply-templates` (D1 requirement, not a nice-to-have)
-- [ ] At least one XSLT runtime-failure fixture snapshots the structured
+- [x] At least one XSLT runtime-failure fixture snapshots the structured
   `DiagnosticReport` including `frames` and `related` spans, not only
   the formatted text
-- [ ] README has a working "hello world" copy-paste example
+- [x] README has a working "hello world" copy-paste example
 
 **Testing strategy note:**
 - MVP+3 XSLT validation should stage in this order: focused smoke/unit tests,
@@ -262,6 +262,13 @@ first moment `@arakendo/xslt` does what it says on the tin.
   supported feature set. Do not treat the whole `xslt30-test` catalog as the
   denominator until template dispatch, built-in rules, and the minimal XML
   serializer are stable enough to make the failures interpretable.
+
+**Completed notes:**
+- The golden harness now covers `hello`, `value-of-basic`, `invoice-simple`, and the priority fixtures, with the current suite passing `5/5`.
+- The priority mini-spec is captured in `docs/TEMPLATE_PRIORITY.md` and names the executable fixtures that anchor the current dispatch behavior.
+- The curated XSLT 3.0 MVP+3 conformance slice currently reports `73/73` passing under `test/conformance/xslt30/mvp3.test.ts`.
+- Runtime diagnostics now preserve stylesheet frames, related spans, and structured `DiagnosticReport` snapshots for XSLT failures.
+- MVP+3 now accepts the minimal `exclude-result-prefixes` behavior needed by the current slice, including namespace suppression on literal result elements.
 
 **This is the MVP.** Everything after this is increments.
 
