@@ -218,14 +218,9 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
           ? renderInstructions(instruction.body, ir, context)
           : '';
       } catch (error) {
-        const frame = {
-          kind: 'instruction',
-          label: `xsl:if test="${instruction.testText}"`,
-          ...(instruction.location === undefined ? {} : { location: instruction.location }),
-        } satisfies ErrorFrame;
         throw withPrependedFrame(
           error,
-          frame,
+          createInstructionFrame(`xsl:if test="${instruction.testText}"`, instruction.location),
           createRelatedLocation('containing instruction', instruction.location),
         );
       }
@@ -237,14 +232,9 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
             return renderInstructions(branch.body, ir, context);
           }
         } catch (error) {
-          const frame = {
-            kind: 'instruction',
-            label: `xsl:when test="${branch.testText}"`,
-            ...(branch.location === undefined ? {} : { location: branch.location }),
-          } satisfies ErrorFrame;
           throw withPrependedFrame(
             error,
-            frame,
+            createInstructionFrame(`xsl:when test="${branch.testText}"`, branch.location),
             createRelatedLocation('containing instruction', branch.location),
           );
         }
@@ -268,14 +258,9 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
           },
         )).join('');
       } catch (error) {
-        const frame = {
-          kind: 'instruction',
-          label: `xsl:for-each select="${instruction.selectText}"`,
-          ...(instruction.location === undefined ? {} : { location: instruction.location }),
-        } satisfies ErrorFrame;
         throw withPrependedFrame(
           error,
-          frame,
+          createInstructionFrame(`xsl:for-each select="${instruction.selectText}"`, instruction.location),
           createRelatedLocation('containing instruction', instruction.location),
         );
       }
@@ -311,14 +296,9 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
         const separator = instruction.separator ?? ' ';
         return escapeText(items.map(itemToStringValue).join(separator));
       } catch (error) {
-        const frame = {
-          kind: 'instruction',
-          label: `xsl:value-of select="${instruction.selectText}"`,
-          ...(instruction.location === undefined ? {} : { location: instruction.location }),
-        } satisfies ErrorFrame;
         throw withPrependedFrame(
           error,
-          frame,
+          createInstructionFrame(`xsl:value-of select="${instruction.selectText}"`, instruction.location),
           createRelatedLocation('containing instruction', instruction.location),
         );
       }
@@ -337,16 +317,14 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
           instruction.withParams,
         );
       } catch (error) {
-        const frame = {
-          kind: 'instruction',
-          label: instruction.selectText === undefined
-            ? 'xsl:apply-templates'
-            : `xsl:apply-templates select="${instruction.selectText}"`,
-          ...(instruction.location === undefined ? {} : { location: instruction.location }),
-        } satisfies ErrorFrame;
         throw withPrependedFrame(
           error,
-          frame,
+          createInstructionFrame(
+            instruction.selectText === undefined
+              ? 'xsl:apply-templates'
+              : `xsl:apply-templates select="${instruction.selectText}"`,
+            instruction.location,
+          ),
           createRelatedLocation('caller instruction', instruction.location),
         );
       }
@@ -369,16 +347,14 @@ function bindVariableInstruction(
       variables,
     };
   } catch (error) {
-    const frame = {
-      kind: 'instruction',
-      label: instruction.selectText === undefined
-        ? `xsl:variable name="${instruction.name}"`
-        : `xsl:variable name="${instruction.name}" select="${instruction.selectText}"`,
-      ...(instruction.location === undefined ? {} : { location: instruction.location }),
-    } satisfies ErrorFrame;
     throw withPrependedFrame(
       error,
-      frame,
+      createInstructionFrame(
+        instruction.selectText === undefined
+          ? `xsl:variable name="${instruction.name}"`
+          : `xsl:variable name="${instruction.name}" select="${instruction.selectText}"`,
+        instruction.location,
+      ),
       createRelatedLocation('containing instruction', instruction.location),
     );
   }
@@ -575,16 +551,14 @@ function evaluateGlobalBindings(
           return cachedValue;
         } catch (error) {
           state = 'pending';
-          const frame = {
-            kind: 'instruction',
-            label: binding.selectText === undefined
-              ? `xsl:${binding.kind} name="${binding.name}"`
-              : `xsl:${binding.kind} name="${binding.name}" select="${binding.selectText}"`,
-            ...(binding.location === undefined ? {} : { location: binding.location }),
-          } satisfies ErrorFrame;
           throw withPrependedFrame(
             error,
-            frame,
+            createInstructionFrame(
+              binding.selectText === undefined
+                ? `xsl:${binding.kind} name="${binding.name}"`
+                : `xsl:${binding.kind} name="${binding.name}" select="${binding.selectText}"`,
+              binding.location,
+            ),
             createRelatedLocation(`top-level ${binding.kind}`, binding.location),
           );
         }
@@ -710,6 +684,14 @@ function createTemplateFrame(template: TemplateRule): ErrorFrame {
     kind: 'template',
     label: '<anonymous>',
     ...(template.location === undefined ? {} : { location: template.location }),
+  };
+}
+
+function createInstructionFrame(label: string, location?: TemplateRule['location']): ErrorFrame {
+  return {
+    kind: 'instruction',
+    label,
+    ...(location === undefined ? {} : { location }),
   };
 }
 
