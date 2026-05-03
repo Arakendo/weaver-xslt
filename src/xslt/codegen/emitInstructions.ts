@@ -266,7 +266,6 @@ function emitInstruction(
     case 'forEach': {
       const simplePath = tryGetSimpleChildPath(instruction.select);
       const body = emitInstructionSequence(instruction.body, runtimeHelpers, {
-        ...options,
         contextNodeIdentifier: 'currentNode',
       });
       if (simplePath === undefined || body === undefined) {
