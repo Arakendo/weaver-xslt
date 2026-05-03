@@ -263,6 +263,22 @@ function emitInstruction(
 
       return otherwiseExpression;
     }
+    case 'forEach': {
+      const simplePath = tryGetSimpleChildPath(instruction.select);
+      const body = emitInstructionSequence(instruction.body, runtimeHelpers, {
+        ...options,
+        contextNodeIdentifier: 'currentNode',
+      });
+      if (simplePath === undefined || body === undefined) {
+        return undefined;
+      }
+
+      runtimeHelpers.add('selectSimplePathNodes');
+      const startNode = simplePath.absolute ? 'document' : contextNodeIdentifier;
+      return tsRawExpression(
+        `selectSimplePathNodes(${startNode}, ${JSON.stringify(simplePath.segments)}).map((currentNode) => ${body.code}).join("")`,
+      );
+    }
     case 'applyTemplates':
       return options.renderApplyTemplates?.(instruction);
     default:

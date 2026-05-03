@@ -312,6 +312,11 @@ we should expect to rev the IR whenever codegen exposes a missing semantic.
   child template bodies currently fall back to the runtime/interpreter path.
   Treat this as an explicit staging boundary until planner context is made
   intentionally recursive.
+- Deferred follow-up candidate: recursive native template-dispatch planning.
+  If nested `xsl:apply-templates` becomes a meaningful product limitation for
+  readability, performance, or debugger fidelity, introduce an explicit
+  recursive dispatch-planning increment rather than extending the current
+  root-only planner ad hoc.
 - CLI stub: `node dist/cli.js compile <file>` writes `<file>.ts`. Not yet
   the shipped CLI, but real enough to dogfood.
 

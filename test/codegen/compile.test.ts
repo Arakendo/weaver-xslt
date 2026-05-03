@@ -21,6 +21,8 @@ import { XsltProcessor } from '../../src/index.js';
 
 const FIXTURE_STYLESHEET = '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:template match="/"><hello><xsl:value-of select="/root/name"/></hello></xsl:template></xsl:stylesheet>';
 const CONDITIONAL_FIXTURE_STYLESHEET = '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:template match="/"><out><xsl:if test="/root/name = &apos;world&apos;"><yes/></xsl:if><xsl:choose><xsl:when test="/root/role = &apos;admin&apos;"><role>admin</role></xsl:when><xsl:otherwise><role>user</role></xsl:otherwise></xsl:choose></out></xsl:template></xsl:stylesheet>';
+const FOR_EACH_FIXTURE_STYLESHEET = '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:template match="/"><items><xsl:for-each select="/root/item"><item><xsl:value-of select="name"/></item></xsl:for-each></items></xsl:template></xsl:stylesheet>';
+const FOR_EACH_IF_FIXTURE_STYLESHEET = '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:template match="/"><items><xsl:for-each select="/root/item"><item><xsl:value-of select="name"/><xsl:if test="flag"><flagged/></xsl:if></item></xsl:for-each></items></xsl:template></xsl:stylesheet>';
 const MATCHED_ROOT_FIXTURE_STYLESHEET = `
       <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         <xsl:template match="/root">
@@ -199,6 +201,39 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(emitted).toContain('(!selectSimplePathExists(currentNode, ["root","flag"]))');
     expect(emitted).toContain('(true ? "<always>" +');
     expect(emitted).toContain('(false ? "<never>" +');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
+  });
+
+  it('emits native code for a simple xsl:for-each over a simple path', () => {
+    const emitted = compileStylesheetToTs(FOR_EACH_FIXTURE_STYLESHEET, { path: 'for-each.xsl' });
+    const transpiled = ts.transpileModule(emitted, {
+      compilerOptions: {
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ES2022,
+      },
+      reportDiagnostics: true,
+    });
+
+    expect(transpiled.diagnostics ?? []).toEqual([]);
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((currentNode) =>');
+    expect(emitted).toContain('escapeText(selectSimplePathText(currentNode, ["name"]))');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
+  });
+
+  it('emits native code when xsl:for-each contains xsl:if in its body', () => {
+    const emitted = compileStylesheetToTs(FOR_EACH_IF_FIXTURE_STYLESHEET, { path: 'for-each-if.xsl' });
+    const transpiled = ts.transpileModule(emitted, {
+      compilerOptions: {
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ES2022,
+      },
+      reportDiagnostics: true,
+    });
+
+    expect(transpiled.diagnostics ?? []).toEqual([]);
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((currentNode) =>');
+    expect(emitted).toContain('escapeText(selectSimplePathText(currentNode, ["name"]))');
+    expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
@@ -573,6 +608,20 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(emitted.trimEnd()).toBe(fixture.trimEnd());
   });
 
+  it('matches the checked-in generated fixture for the for-each stylesheet', () => {
+    const emitted = compileStylesheetToTs(FOR_EACH_FIXTURE_STYLESHEET, { path: 'for-each.xsl' });
+    const fixture = readFileSync(new URL('../generated-fixtures/for-each.xsl.ts', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
+
+    expect(emitted.trimEnd()).toBe(fixture.trimEnd());
+  });
+
+  it('matches the checked-in generated fixture for the for-each-if stylesheet', () => {
+    const emitted = compileStylesheetToTs(FOR_EACH_IF_FIXTURE_STYLESHEET, { path: 'for-each-if.xsl' });
+    const fixture = readFileSync(new URL('../generated-fixtures/for-each-if.xsl.ts', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
+
+    expect(emitted.trimEnd()).toBe(fixture.trimEnd());
+  });
+
   it('matches the checked-in generated fixture for the matched-root stylesheet', () => {
     const emitted = compileStylesheetToTs(MATCHED_ROOT_FIXTURE_STYLESHEET, { path: 'matched-root.xsl' });
     const fixture = readFileSync(new URL('../generated-fixtures/matched-root.xsl.ts', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
@@ -745,6 +794,33 @@ describe('XSLT codegen MVP4 slice', () => {
       readonly transform: (source: string) => ReturnType<XsltProcessor['transform']>;
     };
     const interpreterResult = new XsltProcessor(MATCHED_ROOT_FIXTURE_STYLESHEET).transform(sourceXml);
+    expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
+  });
+
+  it('executes a native xsl:for-each module through the runtime surface', () => {
+    const sourceXml = '<root><item><name>apple</name></item><item><name>pear</name></item></root>';
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(FOR_EACH_FIXTURE_STYLESHEET, 'for-each.xsl');
+
+    expect(diagnostics).toEqual([]);
+
+    const generatedModule = exports as {
+      readonly transform: (source: string) => ReturnType<XsltProcessor['transform']>;
+    };
+    const interpreterResult = new XsltProcessor(FOR_EACH_FIXTURE_STYLESHEET).transform(sourceXml);
+
+    expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
+  });
+
+  it('executes a native xsl:for-each body containing xsl:if through the runtime surface', () => {
+    const sourceXml = '<root><item><name>apple</name><flag/></item><item><name>pear</name></item></root>';
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(FOR_EACH_IF_FIXTURE_STYLESHEET, 'for-each-if.xsl');
+
+    expect(diagnostics).toEqual([]);
+
+    const generatedModule = exports as {
+      readonly transform: (source: string) => ReturnType<XsltProcessor['transform']>;
+    };
+    const interpreterResult = new XsltProcessor(FOR_EACH_IF_FIXTURE_STYLESHEET).transform(sourceXml);
 
     expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
   });
