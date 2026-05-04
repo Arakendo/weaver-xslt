@@ -959,7 +959,7 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a root apply-templates with a relative select uses a child template containing xsl:for-each with nested xsl:apply-templates', () => {
+  it('emits native code when a root apply-templates with a relative select uses a child template containing xsl:for-each with nested xsl:apply-templates', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_RELATIVE_SELECT_FOR_EACH_APPLY_TEMPLATES_FIXTURE_STYLESHEET, { path: 'apply-templates-relative-for-each-apply-templates.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -970,11 +970,13 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a root apply-templates with a relative select uses a child template containing xsl:for-each with nested xsl:apply-templates without select', () => {
+  it('emits native code when a root apply-templates with a relative select uses a child template containing xsl:for-each with nested xsl:apply-templates without select', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_RELATIVE_SELECT_FOR_EACH_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, { path: 'apply-templates-relative-for-each-apply-templates-default.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -985,8 +987,10 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
   it('emits native code for a root apply-templates with a multi-step relative select and a simple relative match template', () => {
@@ -1113,7 +1117,7 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a root apply-templates with a multi-step relative select uses a simple relative match template containing xsl:for-each with nested xsl:apply-templates', () => {
+  it('emits native code when a root apply-templates with a multi-step relative select uses a simple relative match template containing xsl:for-each with nested xsl:apply-templates', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_RELATIVE_SELECT_SIMPLE_MATCH_FOR_EACH_APPLY_TEMPLATES_FIXTURE_STYLESHEET, { path: 'apply-templates-relative-simple-match-for-each-apply-templates.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -1124,11 +1128,13 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a root apply-templates with a multi-step relative select uses a simple relative match template containing xsl:for-each with nested xsl:apply-templates without select', () => {
+  it('emits native code when a root apply-templates with a multi-step relative select uses a simple relative match template containing xsl:for-each with nested xsl:apply-templates without select', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_RELATIVE_SELECT_SIMPLE_MATCH_FOR_EACH_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, { path: 'apply-templates-relative-simple-match-for-each-apply-templates-default.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -1139,8 +1145,10 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
   it('emits native code for a root apply-templates with a multi-step relative select and a nested relative match template', () => {
@@ -1267,7 +1275,7 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a root apply-templates with a multi-step relative select uses a nested relative match template containing xsl:for-each with nested xsl:apply-templates', () => {
+  it('emits native code when a root apply-templates with a multi-step relative select uses a nested relative match template containing xsl:for-each with nested xsl:apply-templates', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_RELATIVE_SELECT_NESTED_MATCH_FOR_EACH_APPLY_TEMPLATES_FIXTURE_STYLESHEET, { path: 'apply-templates-relative-nested-match-for-each-apply-templates.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -1278,11 +1286,13 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a root apply-templates with a multi-step relative select uses a nested relative match template containing xsl:for-each with nested xsl:apply-templates without select', () => {
+  it('emits native code when a root apply-templates with a multi-step relative select uses a nested relative match template containing xsl:for-each with nested xsl:apply-templates without select', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_RELATIVE_SELECT_NESTED_MATCH_FOR_EACH_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, { path: 'apply-templates-relative-nested-match-for-each-apply-templates-default.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -1293,8 +1303,10 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
   it('emits native code for a root apply-templates with a relative select and an absolute match template', () => {
@@ -1423,7 +1435,7 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a root apply-templates with a relative select uses an absolute match template containing xsl:for-each with nested xsl:apply-templates', () => {
+  it('emits native code when a root apply-templates with a relative select uses an absolute match template containing xsl:for-each with nested xsl:apply-templates', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_RELATIVE_SELECT_ABSOLUTE_MATCH_FOR_EACH_APPLY_TEMPLATES_FIXTURE_STYLESHEET, { path: 'apply-templates-relative-absolute-match-for-each-apply-templates.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -1434,11 +1446,13 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a root apply-templates with a relative select uses an absolute match template containing xsl:for-each with nested xsl:apply-templates without select', () => {
+  it('emits native code when a root apply-templates with a relative select uses an absolute match template containing xsl:for-each with nested xsl:apply-templates without select', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_RELATIVE_SELECT_ABSOLUTE_MATCH_FOR_EACH_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, { path: 'apply-templates-relative-absolute-match-for-each-apply-templates-default.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -1449,8 +1463,10 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
   it('emits native code for a root apply-templates with a multi-step relative select and an absolute nested match template', () => {
@@ -1577,7 +1593,7 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a root apply-templates with a multi-step relative select uses an absolute nested match template containing xsl:for-each with nested xsl:apply-templates', () => {
+  it('emits native code when a root apply-templates with a multi-step relative select uses an absolute nested match template containing xsl:for-each with nested xsl:apply-templates', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_RELATIVE_SELECT_ABSOLUTE_NESTED_MATCH_FOR_EACH_APPLY_TEMPLATES_FIXTURE_STYLESHEET, { path: 'apply-templates-relative-absolute-nested-match-for-each-apply-templates.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -1588,11 +1604,13 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a root apply-templates with a multi-step relative select uses an absolute nested match template containing xsl:for-each with nested xsl:apply-templates without select', () => {
+  it('emits native code when a root apply-templates with a multi-step relative select uses an absolute nested match template containing xsl:for-each with nested xsl:apply-templates without select', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_RELATIVE_SELECT_ABSOLUTE_NESTED_MATCH_FOR_EACH_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, { path: 'apply-templates-relative-absolute-nested-match-for-each-apply-templates-default.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -1603,8 +1621,10 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
   it('emits native code for a root apply-templates select and a simple absolute match template', () => {
@@ -1889,7 +1909,7 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(emitted).not.toContain('applyBuiltInTemplatesByPath(');
   });
 
-  it('falls back when an absolute match template contains xsl:for-each with nested xsl:apply-templates', () => {
+  it('emits native code when an absolute match template contains xsl:for-each with nested xsl:apply-templates', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_ABSOLUTE_MATCH_FOR_EACH_APPLY_TEMPLATES_FIXTURE_STYLESHEET, { path: 'apply-templates-absolute-match-for-each-apply-templates.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -1900,11 +1920,13 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when an absolute match template contains xsl:for-each with nested xsl:apply-templates without select', () => {
+  it('emits native code when an absolute match template contains xsl:for-each with nested xsl:apply-templates without select', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_ABSOLUTE_MATCH_FOR_EACH_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, { path: 'apply-templates-absolute-match-for-each-apply-templates-default.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -1915,8 +1937,10 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('applyBuiltInTemplatesByPath(');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
   it('emits native code for a root apply-templates without select and a simple relative match template', () => {
@@ -2251,7 +2275,7 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when an absolute nested match template contains xsl:for-each with nested xsl:apply-templates', () => {
+  it('emits native code when an absolute nested match template contains xsl:for-each with nested xsl:apply-templates', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_ABSOLUTE_NESTED_MATCH_FOR_EACH_APPLY_TEMPLATES_FIXTURE_STYLESHEET, { path: 'apply-templates-absolute-nested-match-for-each-apply-templates.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -2262,11 +2286,13 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when an absolute nested match template contains xsl:for-each with nested xsl:apply-templates without select', () => {
+  it('emits native code when an absolute nested match template contains xsl:for-each with nested xsl:apply-templates without select', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_ABSOLUTE_NESTED_MATCH_FOR_EACH_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, { path: 'apply-templates-absolute-nested-match-for-each-apply-templates-default.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -2277,8 +2303,10 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('applyBuiltInTemplatesByPath(');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
   it('emits native code for a root apply-templates select and a nested simple relative match template', () => {
@@ -2412,7 +2440,7 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a nested relative match template contains xsl:for-each with nested xsl:apply-templates', () => {
+  it('emits native code when a nested relative match template contains xsl:for-each with nested xsl:apply-templates', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_NESTED_MATCH_FOR_EACH_APPLY_TEMPLATES_FIXTURE_STYLESHEET, { path: 'apply-templates-nested-match-for-each-apply-templates.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -2423,11 +2451,13 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a nested relative match template contains xsl:for-each with nested xsl:apply-templates without select', () => {
+  it('emits native code when a nested relative match template contains xsl:for-each with nested xsl:apply-templates without select', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_NESTED_MATCH_FOR_EACH_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, { path: 'apply-templates-nested-match-for-each-apply-templates-default.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -2438,8 +2468,10 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('applyBuiltInTemplatesByPath(');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
   it('emits native code for a root apply-templates without select and a nested simple relative match template', () => {
@@ -2751,7 +2783,7 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a child template contains xsl:for-each with nested xsl:apply-templates', () => {
+  it('emits native code when a child template contains xsl:for-each with nested xsl:apply-templates', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_CHILD_FOR_EACH_APPLY_TEMPLATES_FIXTURE_STYLESHEET, { path: 'apply-templates-child-for-each-apply-templates.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -2762,11 +2794,13 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a child template contains xsl:for-each with nested xsl:apply-templates without select', () => {
+  it('emits native code when a child template contains xsl:for-each with nested xsl:apply-templates without select', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_CHILD_FOR_EACH_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, { path: 'apply-templates-child-for-each-apply-templates-default.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -2777,8 +2811,10 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('applyBuiltInTemplatesByPath(');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["group"]).map((currentNode) =>');
+    expect(emitted).toContain('applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
   it('emits native code when a child template contains xsl:choose', () => {
@@ -2878,7 +2914,7 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a child template contains nested xsl:apply-templates', () => {
+  it('emits native code when a child template contains nested xsl:apply-templates', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_CHILD_APPLY_TEMPLATES_FIXTURE_STYLESHEET, { path: 'apply-templates-child-apply-templates.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -2889,11 +2925,12 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
+    expect(emitted).toContain('selectSimplePathNodes(templateNode, ["detail"]).map((templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
-  it('falls back when a child template contains nested xsl:apply-templates without select', () => {
+  it('emits native code when a child template contains nested xsl:apply-templates without select', () => {
     const emitted = compileStylesheetToTs(APPLY_TEMPLATES_CHILD_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, { path: 'apply-templates-child-apply-templates-default.xsl' });
     const transpiled = ts.transpileModule(emitted, {
       compilerOptions: {
@@ -2904,8 +2941,9 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
-    expect(emitted).not.toContain('applyBuiltInTemplatesByPath(');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
+    expect(emitted).toContain('applyBuiltInTemplatesByPath(templateNode, ["detail"], (templateNode) =>');
+    expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
   it('falls back to the interpreter-backed runtime surface for unsupported instructions', () => {
@@ -5095,8 +5133,8 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
   });
 
-  it('executes a relative-select absolute-nested-match for-each nested xsl:apply-templates stylesheet through the fallback runtime surface', () => {
-    const sourceXml = '<root><section><item><name>apple</name><group><detail>fresh</detail><detail>green</detail></group></item></section></root>';
+  it('executes a relative-select absolute-nested-match for-each nested xsl:apply-templates stylesheet through the runtime surface', () => {
+    const sourceXml = '<root><section><item><name>apple</name><group><detail>fresh</detail><detail>green</detail></group></item></section><section><item><name>pear</name><group><detail>ripe</detail></group></item></section></root>';
     const { diagnostics, exports } = compileAndLoadGeneratedModule(APPLY_TEMPLATES_RELATIVE_SELECT_ABSOLUTE_NESTED_MATCH_FOR_EACH_APPLY_TEMPLATES_FIXTURE_STYLESHEET, 'apply-templates-relative-absolute-nested-match-for-each-apply-templates.xsl');
 
     expect(diagnostics).toEqual([]);
@@ -5109,8 +5147,8 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
   });
 
-  it('executes a relative-select absolute-nested-match for-each nested xsl:apply-templates stylesheet without select through the fallback runtime surface', () => {
-    const sourceXml = '<root><section><item><name>apple</name><group><detail>fresh</detail><detail>green</detail></group></item></section></root>';
+  it('executes a relative-select absolute-nested-match for-each nested xsl:apply-templates stylesheet without select through the runtime surface', () => {
+    const sourceXml = '<root><section><item><name>apple</name><group><detail>fresh</detail><detail>green</detail></group></item></section><section><item><name>pear</name><group><detail>ripe</detail></group></item></section></root>';
     const { diagnostics, exports } = compileAndLoadGeneratedModule(APPLY_TEMPLATES_RELATIVE_SELECT_ABSOLUTE_NESTED_MATCH_FOR_EACH_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, 'apply-templates-relative-absolute-nested-match-for-each-apply-templates-default.xsl');
 
     expect(diagnostics).toEqual([]);
@@ -5459,8 +5497,8 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
   });
 
-  it('executes a nested relative match for-each nested xsl:apply-templates stylesheet through the fallback runtime surface', () => {
-    const sourceXml = '<root><section><item><name>apple</name><group><detail>fresh</detail><detail>green</detail></group></item></section></root>';
+  it('executes a nested relative match for-each nested xsl:apply-templates stylesheet through the runtime surface', () => {
+    const sourceXml = '<root><section><item><name>apple</name><group><detail>fresh</detail><detail>green</detail></group></item></section><section><item><name>pear</name><group><detail>ripe</detail></group></item></section></root>';
     const { diagnostics, exports } = compileAndLoadGeneratedModule(APPLY_TEMPLATES_NESTED_MATCH_FOR_EACH_APPLY_TEMPLATES_FIXTURE_STYLESHEET, 'apply-templates-nested-match-for-each-apply-templates.xsl');
 
     expect(diagnostics).toEqual([]);
@@ -5473,8 +5511,8 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
   });
 
-  it('executes a nested relative match for-each nested xsl:apply-templates stylesheet without select through the fallback runtime surface', () => {
-    const sourceXml = '<root><section><item><name>apple</name><group><detail>fresh</detail><detail>green</detail></group></item></section></root>';
+  it('executes a nested relative match for-each nested xsl:apply-templates stylesheet without select through the runtime surface', () => {
+    const sourceXml = '<root><section><item><name>apple</name><group><detail>fresh</detail><detail>green</detail></group></item></section><section><item><name>pear</name><group><detail>ripe</detail></group></item></section></root>';
     const { diagnostics, exports } = compileAndLoadGeneratedModule(APPLY_TEMPLATES_NESTED_MATCH_FOR_EACH_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, 'apply-templates-nested-match-for-each-apply-templates-default.xsl');
 
     expect(diagnostics).toEqual([]);
@@ -5599,8 +5637,8 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
   });
 
-  it('executes a child-template for-each nested xsl:apply-templates stylesheet through the fallback runtime surface', () => {
-    const sourceXml = '<root><item><name>apple</name><group><detail>fresh</detail><detail>green</detail></group></item></root>';
+  it('executes a child-template for-each nested xsl:apply-templates stylesheet through the runtime surface', () => {
+    const sourceXml = '<root><item><name>apple</name><group><detail>fresh</detail><detail>green</detail></group></item><item><name>pear</name><group><detail>ripe</detail></group></item></root>';
     const { diagnostics, exports } = compileAndLoadGeneratedModule(APPLY_TEMPLATES_CHILD_FOR_EACH_APPLY_TEMPLATES_FIXTURE_STYLESHEET, 'apply-templates-child-for-each-apply-templates.xsl');
 
     expect(diagnostics).toEqual([]);
@@ -5613,8 +5651,8 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
   });
 
-  it('executes a child-template for-each nested xsl:apply-templates stylesheet without select through the fallback runtime surface', () => {
-    const sourceXml = '<root><item><name>apple</name><group><detail>fresh</detail><detail>green</detail></group></item></root>';
+  it('executes a child-template for-each nested xsl:apply-templates stylesheet without select through the runtime surface', () => {
+    const sourceXml = '<root><item><name>apple</name><group><detail>fresh</detail><detail>green</detail></group></item><item><name>pear</name><group><detail>ripe</detail></group></item></root>';
     const { diagnostics, exports } = compileAndLoadGeneratedModule(APPLY_TEMPLATES_CHILD_FOR_EACH_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, 'apply-templates-child-for-each-apply-templates-default.xsl');
 
     expect(diagnostics).toEqual([]);
@@ -5697,8 +5735,8 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
   });
 
-  it('executes a child-template nested xsl:apply-templates stylesheet through the fallback runtime surface', () => {
-    const sourceXml = '<root><item><name>apple</name><detail>fresh</detail><detail>green</detail></item></root>';
+  it('executes a child-template nested xsl:apply-templates stylesheet through the runtime surface', () => {
+    const sourceXml = '<root><item><name>apple</name><detail>fresh</detail><detail>green</detail></item><item><name>pear</name><detail>ripe</detail></item></root>';
     const { diagnostics, exports } = compileAndLoadGeneratedModule(APPLY_TEMPLATES_CHILD_APPLY_TEMPLATES_FIXTURE_STYLESHEET, 'apply-templates-child-apply-templates.xsl');
 
     expect(diagnostics).toEqual([]);
@@ -5711,8 +5749,8 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
   });
 
-  it('executes a child-template nested xsl:apply-templates stylesheet without select through the fallback runtime surface', () => {
-    const sourceXml = '<root><item><name>apple</name><detail>fresh</detail><detail>green</detail></item></root>';
+  it('executes a child-template nested xsl:apply-templates stylesheet without select through the runtime surface', () => {
+    const sourceXml = '<root><item><name>apple</name><detail>fresh</detail><detail>green</detail></item><item><name>pear</name><detail>ripe</detail></item></root>';
     const { diagnostics, exports } = compileAndLoadGeneratedModule(APPLY_TEMPLATES_CHILD_APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, 'apply-templates-child-apply-templates-default.xsl');
 
     expect(diagnostics).toEqual([]);

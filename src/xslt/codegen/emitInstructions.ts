@@ -9,7 +9,7 @@ import {
   tsStringLiteral,
   type TsExpression,
 } from './ts-ir.js';
-import { emitRootApplyTemplatesInstruction, tryGetRootApplyTemplatesShape } from './nativeApplyTemplates.js';
+import { emitRootApplyTemplatesInstruction, tryGetRootApplyTemplatesNestedShape, tryGetRootApplyTemplatesShape } from './nativeApplyTemplates.js';
 
 export interface NativeTransformPlan {
   readonly currentNodeExpression: TsExpression;
@@ -75,10 +75,17 @@ function tryCreateSingleTemplateNativePlan(ir: StylesheetIR): NativeTransformPla
 function tryCreateRootApplyTemplatesNativePlan(ir: StylesheetIR): NativeTransformPlan | undefined {
   const runtimeHelpers = new Set<string>(['createCompiledDocument']);
   const shape = tryGetRootApplyTemplatesShape(ir);
-  if (shape === undefined) {
+  const nestedShape = shape === undefined ? tryGetRootApplyTemplatesNestedShape(ir) : undefined;
+  if (shape === undefined && nestedShape === undefined) {
     return undefined;
   }
-  const { rootTemplate, childTemplate, childMatchAbsolute, childMatchPath } = shape;
+  const rootTemplate = shape?.rootTemplate ?? nestedShape?.rootTemplate;
+  const childTemplate = shape?.childTemplate ?? nestedShape?.childTemplate;
+  const childMatchAbsolute = shape?.childMatchAbsolute ?? nestedShape?.childMatchAbsolute;
+  const childMatchPath = shape?.childMatchPath ?? nestedShape?.childMatchPath;
+  if (rootTemplate === undefined || childTemplate === undefined || childMatchAbsolute === undefined || childMatchPath === undefined) {
+    return undefined;
+  }
 
   const outputExpression = emitInstructionSequence(rootTemplate.body, runtimeHelpers, {
     contextNodeIdentifier: 'document',
@@ -91,6 +98,13 @@ function tryCreateRootApplyTemplatesNativePlan(ir: StylesheetIR): NativeTransfor
       runtimeHelpers,
       emitInstructionSequence,
       tryGetSimpleChildPath,
+        nestedShape === undefined
+          ? undefined
+          : {
+              nestedChildTemplate: nestedShape.nestedChildTemplate,
+              nestedChildMatchAbsolute: nestedShape.nestedChildMatchAbsolute,
+              nestedChildMatchPath: nestedShape.nestedChildMatchPath,
+            },
     ),
   });
   if (outputExpression === undefined) {
