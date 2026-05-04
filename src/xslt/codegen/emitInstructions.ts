@@ -29,7 +29,12 @@ export function tryCreateNativeTransformPlan(ir: StylesheetIR): NativeTransformP
     return singleTemplatePlan;
   }
 
-  return tryCreateRootApplyTemplatesNativePlan(ir);
+  const rootApplyTemplatesPlan = tryCreateRootApplyTemplatesNativePlan(ir);
+  if (rootApplyTemplatesPlan !== undefined) {
+    return rootApplyTemplatesPlan;
+  }
+
+  return tryCreateMatchedTemplateApplyTemplatesNativePlan(ir);
 }
 
 function tryCreateSingleTemplateNativePlan(ir: StylesheetIR): NativeTransformPlan | undefined {
@@ -81,6 +86,7 @@ function tryCreateRootApplyTemplatesNativePlan(ir: StylesheetIR): NativeTransfor
       childTemplate,
       childMatchAbsolute,
       childMatchPath,
+      'currentNode',
       runtimeHelpers,
       emitInstructionSequence,
       tryGetSimpleChildPath,
@@ -94,6 +100,85 @@ function tryCreateRootApplyTemplatesNativePlan(ir: StylesheetIR): NativeTransfor
     currentNodeExpression: tsRawExpression('document'),
     currentNodeMayBeNull: false,
     needsCurrentNodeBinding: false,
+    outputExpression,
+    runtimeHelpers: [...runtimeHelpers].sort(),
+  };
+}
+
+function tryCreateMatchedTemplateApplyTemplatesNativePlan(ir: StylesheetIR): NativeTransformPlan | undefined {
+  if (ir.templates.length !== 2) {
+    return undefined;
+  }
+
+  const primaryTemplate = ir.templates.find((template) =>
+    template.name === undefined
+    && template.modes.length === 0
+    && template.params.length === 0
+    && template.match !== undefined
+    && template.match.kind === 'path'
+    && template.match.absolute
+    && template.match.base === undefined,
+  );
+  const childTemplate = ir.templates.find((template) => template !== primaryTemplate);
+  if (primaryTemplate === undefined || childTemplate === undefined) {
+    return undefined;
+  }
+
+  if (
+    childTemplate.name !== undefined
+    || childTemplate.modes.length > 0
+    || childTemplate.params.length > 0
+    || childTemplate.match === undefined
+    || childTemplate.match.kind !== 'path'
+    || childTemplate.match.absolute
+    || childTemplate.match.base !== undefined
+  ) {
+    return undefined;
+  }
+
+  const childMatchPath = childTemplate.match.steps.map((step) => {
+    if (
+      step.kind !== 'step'
+      || step.axis !== 'child'
+      || step.predicates.length > 0
+      || step.nodeTest.kind !== 'nameTest'
+      || step.nodeTest.name.includes(':')
+    ) {
+      return undefined;
+    }
+
+    return step.nodeTest.name;
+  });
+  if (childMatchPath.length === 0 || childMatchPath.some((segment) => segment === undefined)) {
+    return undefined;
+  }
+
+  const runtimeHelpers = new Set<string>(['createCompiledDocument']);
+  const templateContext = createTemplateContextPlan(primaryTemplate, runtimeHelpers);
+  if (templateContext === undefined) {
+    return undefined;
+  }
+
+  const outputExpression = emitInstructionSequence(primaryTemplate.body, runtimeHelpers, {
+    renderApplyTemplates: (instruction) => emitRootApplyTemplatesInstruction(
+      instruction,
+      childTemplate,
+      false,
+      childMatchPath,
+      'currentNode',
+      runtimeHelpers,
+      emitInstructionSequence,
+      tryGetSimpleChildPath,
+    ),
+  });
+  if (outputExpression === undefined) {
+    return undefined;
+  }
+
+  return {
+    currentNodeExpression: templateContext.currentNodeExpression,
+    currentNodeMayBeNull: templateContext.currentNodeMayBeNull,
+    needsCurrentNodeBinding: templateContext.currentNodeMayBeNull || outputExpression.code.includes('currentNode'),
     outputExpression,
     runtimeHelpers: [...runtimeHelpers].sort(),
   };
@@ -266,6 +351,7 @@ function emitInstruction(
     case 'forEach': {
       const simplePath = tryGetSimpleChildPath(instruction.select);
       const body = emitInstructionSequence(instruction.body, runtimeHelpers, {
+        ...options,
         contextNodeIdentifier: 'currentNode',
       });
       if (simplePath === undefined || body === undefined) {

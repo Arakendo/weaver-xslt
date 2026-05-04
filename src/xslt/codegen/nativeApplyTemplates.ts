@@ -38,6 +38,7 @@ export function emitRootApplyTemplatesInstruction(
   childTemplate: TemplateRule,
   childMatchAbsolute: boolean,
   childMatchPath: readonly string[],
+  contextNodeIdentifier: string,
   runtimeHelpers: Set<string>,
   emitInstructionSequence: (
     instructions: readonly Instruction[],
@@ -71,7 +72,7 @@ export function emitRootApplyTemplatesInstruction(
     return tsRawExpression(
       childMatchAbsolute
         ? `applyBuiltInTemplatesByPath(document, ${JSON.stringify(childMatchPath)}, (templateNode) => ${childBody.code}, true)`
-        : `applyBuiltInTemplatesByPath(document, ${JSON.stringify(childMatchPath)}, (templateNode) => ${childBody.code})`,
+        : `applyBuiltInTemplatesByPath(${contextNodeIdentifier}, ${JSON.stringify(childMatchPath)}, (templateNode) => ${childBody.code})`,
     );
   }
 
@@ -85,7 +86,7 @@ export function emitRootApplyTemplatesInstruction(
 
   runtimeHelpers.add('selectSimplePathNodes');
   return tsRawExpression(
-    `selectSimplePathNodes(document, ${JSON.stringify(selectPath.segments)}).map((templateNode) => ${childBody.code}).join("")`,
+    `selectSimplePathNodes(${selectPath.absolute ? 'document' : contextNodeIdentifier}, ${JSON.stringify(selectPath.segments)}).map((templateNode) => ${childBody.code}).join("")`,
   );
 }
 
