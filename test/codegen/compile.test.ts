@@ -2929,6 +2929,41 @@ describe('XSLT codegen MVP4 slice', () => {
     expect(emitted.trimEnd()).toBe(fixture.trimEnd());
   });
 
+  it('matches the checked-in generated fixture for the relative stylesheet', () => {
+    const stylesheet = `
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/">
+          <out>
+            <xsl:value-of select="root/name"/>
+            <xsl:if test="root/flag"><flagged/></xsl:if>
+          </out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `;
+    const emitted = compileStylesheetToTs(stylesheet, { path: 'relative.xsl' });
+    const fixture = readFileSync(new URL('../generated-fixtures/relative.xsl.ts', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
+
+    expect(emitted.trimEnd()).toBe(fixture.trimEnd());
+  });
+
+  it('matches the checked-in generated fixture for the boolean-helpers stylesheet', () => {
+    const stylesheet = `
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/">
+          <out>
+            <xsl:if test="not(root/flag)"><missing/></xsl:if>
+            <xsl:if test="true()"><always/></xsl:if>
+            <xsl:if test="false()"><never/></xsl:if>
+          </out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `;
+    const emitted = compileStylesheetToTs(stylesheet, { path: 'boolean-helpers.xsl' });
+    const fixture = readFileSync(new URL('../generated-fixtures/boolean-helpers.xsl.ts', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
+
+    expect(emitted.trimEnd()).toBe(fixture.trimEnd());
+  });
+
   it('matches the checked-in generated fixture for the for-each stylesheet', () => {
     const emitted = compileStylesheetToTs(FOR_EACH_FIXTURE_STYLESHEET, { path: 'for-each.xsl' });
     const fixture = readFileSync(new URL('../generated-fixtures/for-each.xsl.ts', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
@@ -3977,6 +4012,69 @@ describe('XSLT codegen MVP4 slice', () => {
     const interpreterResult = new XsltProcessor(stylesheet).transform(sourceXml);
 
     expect(generatedModule.source).toMatchObject({ path: 'hello.xsl' });
+    expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
+  });
+
+  it('executes a native conditional module through the runtime surface', () => {
+    const sourceXml = '<root><name>world</name><role>admin</role></root>';
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(CONDITIONAL_FIXTURE_STYLESHEET, 'conditional.xsl');
+
+    expect(diagnostics).toEqual([]);
+
+    const generatedModule = exports as {
+      readonly transform: (source: string) => ReturnType<XsltProcessor['transform']>;
+    };
+    const interpreterResult = new XsltProcessor(CONDITIONAL_FIXTURE_STYLESHEET).transform(sourceXml);
+
+    expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
+  });
+
+  it('executes a native relative-path module through the runtime surface', () => {
+    const stylesheet = `
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/">
+          <out>
+            <xsl:value-of select="root/name"/>
+            <xsl:if test="root/flag"><flagged/></xsl:if>
+          </out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `;
+    const sourceXml = '<root><name>world</name><flag/></root>';
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'relative.xsl');
+
+    expect(diagnostics).toEqual([]);
+
+    const generatedModule = exports as {
+      readonly transform: (source: string) => ReturnType<XsltProcessor['transform']>;
+    };
+    const interpreterResult = new XsltProcessor(stylesheet).transform(sourceXml);
+
+    expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
+  });
+
+  it('executes a native boolean-helper module through the runtime surface', () => {
+    const stylesheet = `
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/">
+          <out>
+            <xsl:if test="not(root/flag)"><missing/></xsl:if>
+            <xsl:if test="true()"><always/></xsl:if>
+            <xsl:if test="false()"><never/></xsl:if>
+          </out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `;
+    const sourceXml = '<root><name>world</name></root>';
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'boolean-helpers.xsl');
+
+    expect(diagnostics).toEqual([]);
+
+    const generatedModule = exports as {
+      readonly transform: (source: string) => ReturnType<XsltProcessor['transform']>;
+    };
+    const interpreterResult = new XsltProcessor(stylesheet).transform(sourceXml);
+
     expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
   });
 
