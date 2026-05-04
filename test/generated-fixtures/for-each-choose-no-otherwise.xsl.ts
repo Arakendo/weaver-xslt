@@ -3,6 +3,7 @@ import type { TransformContext, TransformResult } from "@arakendo/weaver-xslt/ru
 
 export const source = { path: "for-each-choose-no-otherwise.xsl", digest: "a24f4255" } as const;
 
+/** match="/" (for-each-choose-no-otherwise.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
   void ctx;
   const document = createCompiledDocument(sourceXml);

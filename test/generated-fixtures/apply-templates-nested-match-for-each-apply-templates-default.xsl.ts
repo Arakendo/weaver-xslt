@@ -3,20 +3,27 @@ import type { TransformContext, TransformResult } from "@arakendo/weaver-xslt/ru
 
 export const source = { path: "apply-templates-nested-match-for-each-apply-templates-default.xsl", digest: "46d5ca45" } as const;
 
+/** match="/" (apply-templates-nested-match-for-each-apply-templates-default.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
   void ctx;
   const document = createCompiledDocument(sourceXml);
   return {
     output:
       "<items>" +
-    selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) => "<item>" +
+    selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) => (
+  /** match="section/item" (apply-templates-nested-match-for-each-apply-templates-default.xsl:1) */
+  "<item>" +
     escapeText(selectSimplePathText(templateNode, ["name"])) +
     "<details>" +
-    selectSimplePathNodes(templateNode, ["group"]).map((currentNode) => applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) => "<detail>" +
+    selectSimplePathNodes(templateNode, ["group"]).map((currentNode) => applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) => (
+  /** match="detail" (apply-templates-nested-match-for-each-apply-templates-default.xsl:1) */
+  "<detail>" +
     escapeText(stringValueOfNode(templateNode)) +
-    "</detail>")).join("") +
+    "</detail>"
+))).join("") +
     "</details>" +
-    "</item>").join("") +
+    "</item>"
+)).join("") +
     "</items>",
   };
 }

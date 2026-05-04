@@ -6,7 +6,7 @@ conformance and dynamic features.
 
 <sub>package: `@arakendo/weaver-xslt` · repo: `weaver-xslt`</sub>
 
-> Status: **interpreter MVP in progress** — the XPath core is in place, the MVP+3 XSLT interpreter slice runs real transforms, and the curated XSLT 3.0 conformance slice is now online.
+> Status: **MVP+4 complete** — the interpreter slice is live, the first codegen backend now emits readable TypeScript, generated fixtures are checked in for review, and the generated-module debugger path is wired up in VS Code.
 
 > **Open source, closed contributions.** This project is MIT licensed — fork
 > and use it however you like. External pull requests and issues are not
@@ -125,7 +125,7 @@ plan with scope and exit criteria per increment. High-level milestones:
 - [x] M1 — XPath vertical slice + diagnostic bones
 - [x] M2 — XPath core on interpreter (~20% of QT3)
 - [ ] M3 — XSLT MVP on interpreter (interpreter slice active; remaining exit criteria still in progress)
-- [ ] M4 — **Codegen backend v1** (IR → readable TypeScript)
+- [x] M4 — **Codegen backend v1** (IR → readable TypeScript)
 - [ ] M5 — Typed params, typed extension functions, CLI compile
 - [ ] M6 — Watch mode, source maps, static-analysis diagnostics v2
 - [ ] M7 — XPath type system, maps/arrays, higher-order functions

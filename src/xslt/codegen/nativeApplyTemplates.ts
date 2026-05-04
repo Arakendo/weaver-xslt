@@ -1,6 +1,7 @@
 import type { Instruction, StylesheetIR, TemplateRule } from '../compile/ir.js';
 import type { PathExpression, StepExpression } from '../../xpath/parse/ast.js';
 import { tsRawExpression, type TsExpression } from './ts-ir.js';
+import { renderCommentedArrowFunction, renderTemplateProvenanceComment } from './provenance.js';
 
 interface RootApplyTemplatesShape {
   readonly rootTemplate: TemplateRule;
@@ -144,6 +145,7 @@ export function emitRootApplyTemplatesInstruction(
   tryGetSimpleChildPath: (
     ast: PathExpression | StepExpression | object,
   ) => { readonly absolute: boolean; readonly segments: readonly string[] } | undefined,
+  sourcePath?: string,
   nestedOptions?: {
     readonly nestedChildTemplate: TemplateRule;
     readonly nestedChildMatchAbsolute: boolean;
@@ -171,18 +173,25 @@ export function emitRootApplyTemplatesInstruction(
           runtimeHelpers,
           emitInstructionSequence,
           tryGetSimpleChildPath,
+          sourcePath,
         ),
       });
   if (childBody === undefined) {
     return undefined;
   }
 
+  const childTemplateCallback = renderCommentedArrowFunction(
+    renderTemplateProvenanceComment(childTemplate, sourcePath),
+    '(templateNode)',
+    childBody.code,
+  );
+
   if (instruction.select === undefined) {
     runtimeHelpers.add('applyBuiltInTemplatesByPath');
     return tsRawExpression(
       childMatchAbsolute
-        ? `applyBuiltInTemplatesByPath(document, ${JSON.stringify(childMatchPath)}, (templateNode) => ${childBody.code}, true)`
-        : `applyBuiltInTemplatesByPath(${contextNodeIdentifier}, ${JSON.stringify(childMatchPath)}, (templateNode) => ${childBody.code})`,
+        ? `applyBuiltInTemplatesByPath(document, ${JSON.stringify(childMatchPath)}, ${childTemplateCallback}, true)`
+        : `applyBuiltInTemplatesByPath(${contextNodeIdentifier}, ${JSON.stringify(childMatchPath)}, ${childTemplateCallback})`,
     );
   }
 
@@ -196,7 +205,7 @@ export function emitRootApplyTemplatesInstruction(
 
   runtimeHelpers.add('selectSimplePathNodes');
   return tsRawExpression(
-    `selectSimplePathNodes(${selectPath.absolute ? 'document' : contextNodeIdentifier}, ${JSON.stringify(selectPath.segments)}).map((templateNode) => ${childBody.code}).join("")`,
+    `selectSimplePathNodes(${selectPath.absolute ? 'document' : contextNodeIdentifier}, ${JSON.stringify(selectPath.segments)}).map(${childTemplateCallback}).join("")`,
   );
 }
 

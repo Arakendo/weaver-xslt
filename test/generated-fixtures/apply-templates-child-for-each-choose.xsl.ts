@@ -3,20 +3,24 @@ import type { TransformContext, TransformResult } from "@arakendo/weaver-xslt/ru
 
 export const source = { path: "apply-templates-child-for-each-choose.xsl", digest: "24c680cc" } as const;
 
+/** match="/" (apply-templates-child-for-each-choose.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
   void ctx;
   const document = createCompiledDocument(sourceXml);
   return {
     output:
       "<items>" +
-    selectSimplePathNodes(document, ["root","item"]).map((templateNode) => "<item>" +
+    selectSimplePathNodes(document, ["root","item"]).map((templateNode) => (
+  /** match="item" (apply-templates-child-for-each-choose.xsl:1) */
+  "<item>" +
     escapeText(selectSimplePathText(templateNode, ["name"])) +
     "<details>" +
     selectSimplePathNodes(templateNode, ["detail"]).map((currentNode) => (selectSimplePathExists(currentNode, ["flag"]) ? "<flagged>" +
     "</flagged>" : "<plain>" +
     "</plain>")).join("") +
     "</details>" +
-    "</item>").join("") +
+    "</item>"
+)).join("") +
     "</items>",
   };
 }

@@ -302,6 +302,8 @@ describe('XSLT codegen MVP4 slice', () => {
 
     const emitted = compileStylesheetToTs(stylesheet, { path: 'named-template-focus.xsl' });
 
+    expect(emitted).toContain('/** name="emit-root" (named-template-focus.xsl:11) */');
+    expect(emitted).toContain('/** name="emit-item" (named-template-focus.xsl:14) */');
     expect(emitted).toContain('escapeText(nameOfNode(currentNode))');
     expect(emitted).toContain('String((currentIndex + 1))');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');

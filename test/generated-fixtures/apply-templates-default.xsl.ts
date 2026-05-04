@@ -3,15 +3,19 @@ import type { TransformContext, TransformResult } from "@arakendo/weaver-xslt/ru
 
 export const source = { path: "apply-templates-default.xsl", digest: "ebe9616d" } as const;
 
+/** match="/" (apply-templates-default.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
   void ctx;
   const document = createCompiledDocument(sourceXml);
   return {
     output:
       "<items>" +
-    applyBuiltInTemplatesByPath(document, ["item"], (templateNode) => "<item>" +
+    applyBuiltInTemplatesByPath(document, ["item"], (templateNode) => (
+  /** match="item" (apply-templates-default.xsl:1) */
+  "<item>" +
     escapeText(stringValueOfNode(templateNode)) +
-    "</item>") +
+    "</item>"
+)) +
     "</items>",
   };
 }

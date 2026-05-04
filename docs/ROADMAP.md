@@ -318,21 +318,22 @@ we should expect to rev the IR whenever codegen exposes a missing semantic.
   recursive dispatch-planning increment rather than extending the current
   root-only planner ad hoc.
 - CLI stub: `node dist/cli.js compile <file>` writes `<file>.ts`. Not yet
-  the shipped CLI, but real enough to dogfood.
+  the shipped CLI, but now real enough to dogfood.
 
 **Exit criteria:**
-- [ ] Every MVP+3 golden passes under codegen (byte-equal to interpreter)
-- [ ] Generated fixtures exist and are human-reviewable
-- [ ] A generated file runs without importing the *compiler* — only
+- [x] Every MVP+3 golden passes under codegen (byte-equal to interpreter)
+- [x] Generated fixtures exist and are human-reviewable
+- [x] A generated file runs without importing the *compiler* — only
       `@arakendo/weaver-xslt/runtime`. (Test: delete everything except runtime
       + generated files in a sandbox, execute, see output.)
-- [ ] IR version is documented; any IR schema change requires updating
+- [x] IR version is documented; any IR schema change requires updating
       `src/xslt/compile/ir.ts` version constant
-- [ ] Diagnostic parity fixtures compare interpreter and codegen
+- [x] Diagnostic parity fixtures compare interpreter and codegen
   `DiagnosticReport` values for representative runtime and compile-time
   failures; parity is on structure first, formatter text second
-- [ ] Sanity check: set a breakpoint in the generated TS in VS Code
-      debugger, run a test, breakpoint hits, `ctx` is inspectable
+- [x] Sanity check: set a breakpoint in the generated TS in VS Code
+  debugger, run `.vscode/launch.json` "Debug Generated Fixture Test",
+  breakpoint hits, `ctx` is inspectable
 
 ---
 

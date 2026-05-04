@@ -3,6 +3,7 @@ import type { TransformContext, TransformResult } from "@arakendo/weaver-xslt/ru
 
 export const source = { path: "matched-nested-root-for-each-apply-templates-default.xsl", digest: "3e086e77" } as const;
 
+/** match="/root/section" (matched-nested-root-for-each-apply-templates-default.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
   void ctx;
   const document = createCompiledDocument(sourceXml);
@@ -16,9 +17,12 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     selectSimplePathNodes(currentNode, ["item"]).map((currentNode) => "<item>" +
     escapeText(selectSimplePathText(currentNode, ["name"])) +
     "<details>" +
-    applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) => "<detail>" +
+    applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) => (
+  /** match="detail" (matched-nested-root-for-each-apply-templates-default.xsl:1) */
+  "<detail>" +
     escapeText(stringValueOfNode(templateNode)) +
-    "</detail>") +
+    "</detail>"
+)) +
     "</details>" +
     "</item>").join("") +
     "</items>",

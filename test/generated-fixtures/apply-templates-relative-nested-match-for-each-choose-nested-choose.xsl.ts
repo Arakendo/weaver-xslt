@@ -3,13 +3,16 @@ import type { TransformContext, TransformResult } from "@arakendo/weaver-xslt/ru
 
 export const source = { path: "apply-templates-relative-nested-match-for-each-choose-nested-choose.xsl", digest: "18c0be99" } as const;
 
+/** match="/" (apply-templates-relative-nested-match-for-each-choose-nested-choose.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
   void ctx;
   const document = createCompiledDocument(sourceXml);
   return {
     output:
       "<items>" +
-    selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) => "<item>" +
+    selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) => (
+  /** match="section/item" (apply-templates-relative-nested-match-for-each-choose-nested-choose.xsl:1) */
+  "<item>" +
     escapeText(selectSimplePathText(templateNode, ["name"])) +
     "<details>" +
     selectSimplePathNodes(templateNode, ["detail"]).map((currentNode) => (selectSimplePathExists(currentNode, ["flag"]) ? (selectSimplePathExists(currentNode, ["marker"]) ? "<flagged>" +
@@ -18,7 +21,8 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     "</vip>" : "<plain>" +
     "</plain>"))).join("") +
     "</details>" +
-    "</item>").join("") +
+    "</item>"
+)).join("") +
     "</items>",
   };
 }

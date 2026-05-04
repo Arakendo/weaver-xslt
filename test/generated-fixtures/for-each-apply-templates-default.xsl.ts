@@ -3,6 +3,7 @@ import type { TransformContext, TransformResult } from "@arakendo/weaver-xslt/ru
 
 export const source = { path: "for-each-apply-templates-default.xsl", digest: "d58458e5" } as const;
 
+/** match="/" (for-each-apply-templates-default.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
   void ctx;
   const document = createCompiledDocument(sourceXml);
@@ -12,9 +13,12 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     selectSimplePathNodes(document, ["root","item"]).map((currentNode) => "<item>" +
     escapeText(selectSimplePathText(currentNode, ["name"])) +
     "<details>" +
-    applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) => "<detail>" +
+    applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) => (
+  /** match="detail" (for-each-apply-templates-default.xsl:1) */
+  "<detail>" +
     escapeText(stringValueOfNode(templateNode)) +
-    "</detail>") +
+    "</detail>"
+)) +
     "</details>" +
     "</item>").join("") +
     "</items>",

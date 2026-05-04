@@ -185,6 +185,9 @@ It must be:
 4. **Versioned.** Adding a node kind = minor bump. Changing a shape =
   major bump. The root `StylesheetIR` object carries an explicit `version`
   field; external tools should not infer version from package metadata.
+  The authoritative constant is `STYLESHEET_IR_VERSION` in
+  `src/xslt/compile/ir.ts`; any IR schema change must update that value in
+  the same change.
 5. **Free of execution caches.** Pre-resolved bindings, dispatch tables,
   memoized analysis artifacts, and runtime helpers live in a separate
   `RuntimePlan` / `EmitPlan` overlay keyed off the IR, not on IR nodes

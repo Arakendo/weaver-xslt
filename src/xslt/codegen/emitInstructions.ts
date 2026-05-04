@@ -10,8 +10,10 @@ import {
   type TsExpression,
 } from './ts-ir.js';
 import { emitRootApplyTemplatesInstruction, tryGetRootApplyTemplatesNestedShape, tryGetRootApplyTemplatesShape } from './nativeApplyTemplates.js';
+import { renderCommentedArrowFunction, renderTemplateProvenanceComment } from './provenance.js';
 
 export interface NativeTransformPlan {
+  readonly entryTemplate: TemplateRule;
   readonly currentNodeExpression: TsExpression;
   readonly currentNodeMayBeNull: boolean;
   readonly needsCurrentNodeBinding: boolean;
@@ -19,25 +21,25 @@ export interface NativeTransformPlan {
   readonly runtimeHelpers: readonly string[];
 }
 
-export function tryCreateNativeTransformPlan(ir: StylesheetIR): NativeTransformPlan | undefined {
+export function tryCreateNativeTransformPlan(ir: StylesheetIR, sourcePath?: string): NativeTransformPlan | undefined {
   if (ir.globalBindings.length > 0) {
     return undefined;
   }
 
-  const singleTemplatePlan = tryCreateSingleTemplateNativePlan(ir);
+  const singleTemplatePlan = tryCreateSingleTemplateNativePlan(ir, sourcePath);
   if (singleTemplatePlan !== undefined) {
     return singleTemplatePlan;
   }
 
-  const rootApplyTemplatesPlan = tryCreateRootApplyTemplatesNativePlan(ir);
+  const rootApplyTemplatesPlan = tryCreateRootApplyTemplatesNativePlan(ir, sourcePath);
   if (rootApplyTemplatesPlan !== undefined) {
     return rootApplyTemplatesPlan;
   }
 
-  return tryCreateMatchedTemplateApplyTemplatesNativePlan(ir);
+  return tryCreateMatchedTemplateApplyTemplatesNativePlan(ir, sourcePath);
 }
 
-function tryCreateSingleTemplateNativePlan(ir: StylesheetIR): NativeTransformPlan | undefined {
+function tryCreateSingleTemplateNativePlan(ir: StylesheetIR, sourcePath?: string): NativeTransformPlan | undefined {
   const runtimeHelpers = new Set<string>(['createCompiledDocument']);
   if (ir.templates.length === 0) {
     return undefined;
@@ -87,12 +89,14 @@ function tryCreateSingleTemplateNativePlan(ir: StylesheetIR): NativeTransformPla
     : {
         namedTemplates,
         activeNamedTemplateNames: [],
+        ...(sourcePath === undefined ? {} : { sourcePath }),
       });
   if (outputExpression === undefined) {
     return undefined;
   }
 
   return {
+    entryTemplate: template,
     currentNodeExpression: templateContext.currentNodeExpression,
     currentNodeMayBeNull: templateContext.currentNodeMayBeNull,
     needsCurrentNodeBinding: templateContext.currentNodeMayBeNull || outputExpression.code.includes('currentNode'),
@@ -101,7 +105,7 @@ function tryCreateSingleTemplateNativePlan(ir: StylesheetIR): NativeTransformPla
   };
 }
 
-function tryCreateRootApplyTemplatesNativePlan(ir: StylesheetIR): NativeTransformPlan | undefined {
+function tryCreateRootApplyTemplatesNativePlan(ir: StylesheetIR, sourcePath?: string): NativeTransformPlan | undefined {
   const runtimeHelpers = new Set<string>(['createCompiledDocument']);
   const shape = tryGetRootApplyTemplatesShape(ir);
   const nestedShape = shape === undefined ? tryGetRootApplyTemplatesNestedShape(ir) : undefined;
@@ -127,6 +131,7 @@ function tryCreateRootApplyTemplatesNativePlan(ir: StylesheetIR): NativeTransfor
       runtimeHelpers,
       emitInstructionSequence,
       tryGetSimpleChildPath,
+      sourcePath,
         nestedShape === undefined
           ? undefined
           : {
@@ -141,6 +146,7 @@ function tryCreateRootApplyTemplatesNativePlan(ir: StylesheetIR): NativeTransfor
   }
 
   return {
+    entryTemplate: rootTemplate,
     currentNodeExpression: tsRawExpression('document'),
     currentNodeMayBeNull: false,
     needsCurrentNodeBinding: false,
@@ -149,7 +155,7 @@ function tryCreateRootApplyTemplatesNativePlan(ir: StylesheetIR): NativeTransfor
   };
 }
 
-function tryCreateMatchedTemplateApplyTemplatesNativePlan(ir: StylesheetIR): NativeTransformPlan | undefined {
+function tryCreateMatchedTemplateApplyTemplatesNativePlan(ir: StylesheetIR, sourcePath?: string): NativeTransformPlan | undefined {
   if (ir.templates.length !== 2) {
     return undefined;
   }
@@ -214,6 +220,7 @@ function tryCreateMatchedTemplateApplyTemplatesNativePlan(ir: StylesheetIR): Nat
       runtimeHelpers,
       emitInstructionSequence,
       tryGetSimpleChildPath,
+      sourcePath,
     ),
   });
   if (outputExpression === undefined) {
@@ -221,6 +228,7 @@ function tryCreateMatchedTemplateApplyTemplatesNativePlan(ir: StylesheetIR): Nat
   }
 
   return {
+    entryTemplate: primaryTemplate,
     currentNodeExpression: templateContext.currentNodeExpression,
     currentNodeMayBeNull: templateContext.currentNodeMayBeNull,
     needsCurrentNodeBinding: templateContext.currentNodeMayBeNull || outputExpression.code.includes('currentNode'),
@@ -268,6 +276,7 @@ function emitInstructionSequence(
     readonly lastExpression?: string;
     readonly namedTemplates?: ReadonlyMap<string, TemplateRule>;
     readonly activeNamedTemplateNames?: readonly string[];
+    readonly sourcePath?: string;
     readonly variableBindings?: ReadonlyMap<string, TsExpression>;
     readonly renderApplyTemplates?: (
       instruction: Extract<Instruction, { readonly kind: 'applyTemplates' }>,
@@ -333,6 +342,7 @@ function emitInstruction(
     readonly lastExpression?: string;
     readonly namedTemplates?: ReadonlyMap<string, TemplateRule>;
     readonly activeNamedTemplateNames?: readonly string[];
+    readonly sourcePath?: string;
     readonly variableBindings?: ReadonlyMap<string, TsExpression>;
     readonly renderApplyTemplates?: (
       instruction: Extract<Instruction, { readonly kind: 'applyTemplates' }>,
@@ -601,11 +611,22 @@ function emitInstruction(
         return undefined;
       }
 
-      return emitInstructionSequence(namedTemplate.body, runtimeHelpers, {
+      const body = emitInstructionSequence(namedTemplate.body, runtimeHelpers, {
         ...options,
         contextNodeIdentifier,
         activeNamedTemplateNames: [...activeNamedTemplateNames, instruction.name],
       });
+      if (body === undefined) {
+        return undefined;
+      }
+
+      return tsRawExpression(
+        `(${renderCommentedArrowFunction(
+          renderTemplateProvenanceComment(namedTemplate, options.sourcePath),
+          '()',
+          body.code,
+        )})()`,
+      );
     }
     case 'applyTemplates':
       return options.renderApplyTemplates?.(instruction, contextNodeIdentifier);

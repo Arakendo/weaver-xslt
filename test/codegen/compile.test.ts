@@ -18,7 +18,10 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
+    expect(emitted).toContain('/** match="/" (apply-templates.xsl:1) */');
+    expect(emitted).toContain('/** match="item" (apply-templates.xsl:1) */');
+    expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((');
+    expect(emitted).toContain('(templateNode) => (');
     expect(emitted).toContain('escapeText(selectSimplePathText(templateNode, ["name"]))');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
@@ -34,7 +37,8 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('applyBuiltInTemplatesByPath(document, ["item"], (templateNode) =>');
+    expect(emitted).toContain('applyBuiltInTemplatesByPath(document, ["item"], (');
+    expect(emitted).toContain('(templateNode) => (');
     expect(emitted).toContain('escapeText(stringValueOfNode(templateNode))');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
@@ -50,7 +54,8 @@ describe('XSLT codegen MVP4 slice', () => {
     });
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
-    expect(emitted).toContain('applyBuiltInTemplatesByPath(document, ["root","item"], (templateNode) =>');
+    expect(emitted).toContain('applyBuiltInTemplatesByPath(document, ["root","item"], (');
+    expect(emitted).toContain('(templateNode) => (');
     expect(emitted).toContain(', true)');
     expect(emitted).toContain('escapeText(selectSimplePathText(templateNode, ["name"]))');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');

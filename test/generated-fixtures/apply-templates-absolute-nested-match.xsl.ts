@@ -3,15 +3,19 @@ import type { TransformContext, TransformResult } from "@arakendo/weaver-xslt/ru
 
 export const source = { path: "apply-templates-absolute-nested-match.xsl", digest: "3a91b6ce" } as const;
 
+/** match="/" (apply-templates-absolute-nested-match.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
   void ctx;
   const document = createCompiledDocument(sourceXml);
   return {
     output:
       "<items>" +
-    selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) => "<item>" +
+    selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) => (
+  /** match="/root/section/item" (apply-templates-absolute-nested-match.xsl:1) */
+  "<item>" +
     escapeText(selectSimplePathText(templateNode, ["name"])) +
-    "</item>").join("") +
+    "</item>"
+)).join("") +
     "</items>",
   };
 }

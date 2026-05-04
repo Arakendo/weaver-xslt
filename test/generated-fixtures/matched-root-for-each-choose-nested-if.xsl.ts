@@ -3,6 +3,7 @@ import type { TransformContext, TransformResult } from "@arakendo/weaver-xslt/ru
 
 export const source = { path: "matched-root-for-each-choose-nested-if.xsl", digest: "9b5cfc42" } as const;
 
+/** match="/root" (matched-root-for-each-choose-nested-if.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
   void ctx;
   const document = createCompiledDocument(sourceXml);
