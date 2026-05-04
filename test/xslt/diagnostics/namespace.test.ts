@@ -388,7 +388,7 @@ describe('XSLT diagnostics', () => {
     expect(report.suggestions).toEqual([
       {
         kind: 'fix',
-        label: 'use one of the currently supported simple match patterns: /, /name, name, *, node(), or text()',
+        label: 'use one of the currently supported child-only match patterns: /, /name, name, section/item, *, node(), or text()',
         confidence: 1,
       },
     ]);
@@ -398,7 +398,7 @@ describe('XSLT diagnostics', () => {
       '--> <stylesheet>:2:24',
       '2 |   <xsl:template match="item[@id]">',
       '  |                        ^^^^^^^^^',
-      '  help: use one of the currently supported simple match patterns: /, /name, name, *, node(), or text()',
+      '  help: use one of the currently supported child-only match patterns: /, /name, name, section/item, *, node(), or text()',
     ].join('\n'));
   });
 
