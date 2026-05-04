@@ -94,6 +94,22 @@ export function stringValueOfNode(node: Node): string {
   return collectStringValue(node);
 }
 
+export function nameOfNode(node: Node | null): string {
+  if (node === null || node.nodeType === node.DOCUMENT_NODE) {
+    return '';
+  }
+
+  return node.nodeName ?? '';
+}
+
+export function localNameOfNode(node: Node | null): string {
+  if (node === null || node.nodeType === node.DOCUMENT_NODE) {
+    return '';
+  }
+
+  return node.localName ?? node.nodeName ?? '';
+}
+
 export function escapeText(value: string): string {
   return value
     .replaceAll('&', '&amp;')

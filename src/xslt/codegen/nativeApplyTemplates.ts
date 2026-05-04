@@ -75,14 +75,16 @@ export function tryGetRootApplyTemplatesNestedShape(ir: StylesheetIR): RootApply
     return undefined;
   }
 
+  const definedCandidates = candidateTemplates.filter((candidate): candidate is NonNullable<typeof candidate> => candidate !== undefined);
+
   const matchingCandidates = rootApplyTemplates.select === undefined
     ? (() => {
-        const absoluteCandidates = candidateTemplates.filter((candidate) => candidate !== undefined && candidate.matchAbsolute);
+        const absoluteCandidates = definedCandidates.filter((candidate) => candidate.matchAbsolute);
         if (absoluteCandidates.length > 0) {
           return absoluteCandidates;
         }
 
-        const relativeCandidates = candidateTemplates.filter((candidate) => candidate !== undefined && !candidate.matchAbsolute);
+        const relativeCandidates = definedCandidates.filter((candidate) => !candidate.matchAbsolute);
         const maxLength = relativeCandidates.reduce((currentMax, candidate) => Math.max(currentMax, candidate.matchPath.length), 0);
         return relativeCandidates.filter((candidate) => candidate.matchPath.length === maxLength);
       })()
@@ -92,9 +94,8 @@ export function tryGetRootApplyTemplatesNestedShape(ir: StylesheetIR): RootApply
           return [];
         }
 
-        return candidateTemplates.filter((candidate) =>
-          candidate !== undefined
-          && selectPathMatchesTemplate(selectPath.segments, candidate.matchPath, candidate.matchAbsolute),
+        return definedCandidates.filter((candidate) =>
+          selectPathMatchesTemplate(selectPath.segments, candidate.matchPath, candidate.matchAbsolute),
         );
       })();
   if (matchingCandidates.length !== 1) {
@@ -106,7 +107,7 @@ export function tryGetRootApplyTemplatesNestedShape(ir: StylesheetIR): RootApply
     return undefined;
   }
 
-  const nestedCandidate = candidateTemplates.find((candidate) => candidate?.template !== childCandidate.template);
+  const nestedCandidate = definedCandidates.find((candidate) => candidate.template !== childCandidate.template);
   if (nestedCandidate === undefined) {
     return undefined;
   }
@@ -155,11 +156,13 @@ export function emitRootApplyTemplatesInstruction(
 
   // MVP+4 only plans the root apply-templates dispatch. Nested apply-templates
   // inside child template bodies still fall back through generic emission.
-  const childBody = emitInstructionSequence(childTemplate.body, runtimeHelpers, {
-    contextNodeIdentifier: 'templateNode',
-    renderApplyTemplates: nestedOptions === undefined
-      ? undefined
-      : (nestedInstruction, nestedContextNodeIdentifier) => emitRootApplyTemplatesInstruction(
+  const childBody = emitInstructionSequence(childTemplate.body, runtimeHelpers, nestedOptions === undefined
+    ? {
+        contextNodeIdentifier: 'templateNode',
+      }
+    : {
+        contextNodeIdentifier: 'templateNode',
+        renderApplyTemplates: (nestedInstruction, nestedContextNodeIdentifier) => emitRootApplyTemplatesInstruction(
           nestedInstruction,
           nestedOptions.nestedChildTemplate,
           nestedOptions.nestedChildMatchAbsolute,
@@ -169,7 +172,7 @@ export function emitRootApplyTemplatesInstruction(
           emitInstructionSequence,
           tryGetSimpleChildPath,
         ),
-  });
+      });
   if (childBody === undefined) {
     return undefined;
   }
