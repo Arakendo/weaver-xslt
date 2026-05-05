@@ -40,7 +40,7 @@ jobs:
 
       - name: Test
         if: runner.os == 'Windows'
-        run: npm test -- --pool=forks --no-file-parallelism
+        run: npm test -- --pool=forks --poolOptions.forks.singleFork --no-file-parallelism
 
       - name: Build
         run: npm run build
