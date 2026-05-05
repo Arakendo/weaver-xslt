@@ -1,7 +1,8 @@
+import { execFileSync } from 'node:child_process';
 import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
@@ -34,7 +35,7 @@ describe('generated fixture audit', () => {
     }
   });
 
-  it('runs a generated module in a sandbox that only exposes the runtime subpath', async () => {
+  it('runs a generated module in a sandbox that only exposes the runtime subpath', () => {
     const sandboxDir = mkdtempSync(join(tmpdir(), 'weaver-runtime-sandbox-'));
 
     try {
@@ -60,31 +61,47 @@ describe('generated fixture audit', () => {
       mkdirSync(dirname(generatedModulePath), { recursive: true });
       writeFileSync(generatedModulePath, transpiled.outputText, 'utf8');
 
-      const generatedModule = await importWithBackoff(`${pathToFileURL(generatedModulePath).href}?t=${Date.now()}`) as {
-        readonly transform: (sourceXml: string) => { readonly output: string };
-      };
-
-      expect(generatedModule.transform('<root><name>world</name></root>').output).toBe('<hello>world</hello>');
+      expect(runGeneratedModuleWithBackoff(sandboxDir, '<root><name>world</name></root>')).toBe('<hello>world</hello>');
     } finally {
       rmSync(sandboxDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
     }
   });
 });
 
-async function importWithBackoff(href: string): Promise<unknown> {
+function runGeneratedModuleWithBackoff(sandboxDir: string, sourceXml: string): string {
+  const runnerPath = join(sandboxDir, 'run-generated-module.mjs');
+  writeFileSync(runnerPath, [
+    `const generatedModule = await import(${JSON.stringify('./generated/sandbox-hello.mjs')});`,
+    `process.stdout.write(generatedModule.transform(${JSON.stringify(sourceXml)}).output);`,
+  ].join('\n'), 'utf8');
+
   let delay = 100;
   let lastError: unknown;
+
   for (let attempt = 0; attempt < 7; attempt++) {
     try {
-      return await import(href);
-    } catch (err) {
-      lastError = err;
+      return execFileSync(process.execPath, [runnerPath], {
+        cwd: sandboxDir,
+        encoding: 'utf8',
+        stdio: 'pipe',
+      });
+    } catch (error) {
+      const execError = error as Error & { stdout?: Buffer | string; stderr?: Buffer | string };
+      const stdout = String(execError.stdout ?? '');
+      const stderr = String(execError.stderr ?? '');
+      lastError = new Error([
+        execError.message,
+        stdout.length > 0 ? `stdout:\n${stdout}` : undefined,
+        stderr.length > 0 ? `stderr:\n${stderr}` : undefined,
+      ].filter((part): part is string => part !== undefined).join('\n\n'));
+
       if (attempt < 6) {
-        await new Promise<void>((resolve) => { setTimeout(resolve, delay); });
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, delay);
         delay *= 2;
       }
     }
   }
+
   throw lastError;
 }
 
