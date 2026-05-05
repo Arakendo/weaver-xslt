@@ -38,9 +38,13 @@ jobs:
         if: runner.os != 'Windows'
         run: npm test
 
-      - name: Test
+      - name: Test Codegen And Integration
         if: runner.os == 'Windows'
-        run: npm test -- --pool=forks --poolOptions.forks.singleFork --no-file-parallelism
+        run: npm test -- test/codegen test/integration --pool=forks --poolOptions.forks.singleFork --no-file-parallelism
+
+      - name: Test Remaining Windows Slice
+        if: runner.os == 'Windows'
+        run: npm test -- test/cli.test.ts test/golden.test.ts test/smoke.test.ts test/conformance test/xpath test/xslt --pool=forks --poolOptions.forks.singleFork --no-file-parallelism
 
       - name: Build
         run: npm run build
