@@ -9,19 +9,53 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const document = createCompiledDocument(sourceXml);
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(document, ["root","item"]).map((templateNode) => (
+      (
+  /** literal items (apply-templates-child-choose-multi-when.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:apply-templates (apply-templates-child-choose-multi-when.xsl:1) */
+  selectSimplePathNodes(document, ["root","item"]).map((templateNode) => (
   /** match="item" (apply-templates-child-choose-multi-when.xsl:1) */
+  (
+  /** literal item (apply-templates-child-choose-multi-when.xsl:1) */
   "<item>" +
-    escapeText(selectSimplePathText(templateNode, ["name"])) +
-    (selectSimplePathExists(templateNode, ["flag"]) ? "<flagged>" +
-    "</flagged>" : (selectSimplePathExists(templateNode, ["vip"]) ? "<vip>" +
-    "</vip>" : "<plain>" +
-    "</plain>")) +
+    (
+  /** xsl:value-of (apply-templates-child-choose-multi-when.xsl:1) */
+  escapeText(selectSimplePathText(templateNode, ["name"]))
+) +
+    (
+  /** xsl:choose (apply-templates-child-choose-multi-when.xsl:1) */
+  (selectSimplePathExists(templateNode, ["flag"]) ? (
+  /** xsl:when (apply-templates-child-choose-multi-when.xsl:1) */
+  (
+  /** literal flagged (apply-templates-child-choose-multi-when.xsl:1) */
+  "<flagged>" +
+    "</flagged>"
+)
+) : (selectSimplePathExists(templateNode, ["vip"]) ? (
+  /** xsl:when (apply-templates-child-choose-multi-when.xsl:1) */
+  (
+  /** literal vip (apply-templates-child-choose-multi-when.xsl:1) */
+  "<vip>" +
+    "</vip>"
+)
+) : (
+  /** xsl:otherwise (apply-templates-child-choose-multi-when.xsl:1) */
+  (
+  /** literal plain (apply-templates-child-choose-multi-when.xsl:1) */
+  "<plain>" +
+    "</plain>"
+)
+)))
+) +
     "</item>"
-)).join("") +
-    "</items>",
+)
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=apply-templates-child-choose-multi-when.xsl.map

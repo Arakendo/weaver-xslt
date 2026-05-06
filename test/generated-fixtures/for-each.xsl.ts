@@ -10,12 +10,25 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const currentNode = document;
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(document, ["root","item"]).map((currentNode) => "<item>" +
-    escapeText(selectSimplePathText(currentNode, ["name"])) +
-    "</item>").join("") +
-    "</items>",
+      (
+  /** literal items (for-each.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:for-each (for-each.xsl:1) */
+  selectSimplePathNodes(document, ["root","item"]).map((currentNode) => (
+  /** literal item (for-each.xsl:1) */
+  "<item>" +
+    (
+  /** xsl:value-of (for-each.xsl:1) */
+  escapeText(selectSimplePathText(currentNode, ["name"]))
+) +
+    "</item>"
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=for-each.xsl.map

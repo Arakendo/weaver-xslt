@@ -72,8 +72,8 @@ describe('XSLT codegen core emission smoke tests', () => {
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
     expect(emitted).toContain('selectSimplePathText(document, ["root","name"]) === "world"');
-    expect(emitted).toContain('? "<yes>" +');
-    expect(emitted).toContain('"</yes>" : ""');
+    expect(emitted).toContain('"<yes>" +');
+    expect(emitted).toContain(': "")');
     expect(emitted).toContain('selectSimplePathText(document, ["root","role"]) === "admin"');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
@@ -83,8 +83,8 @@ describe('XSLT codegen core emission smoke tests', () => {
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
     expect(emitted).toContain('(!selectSimplePathExists(currentNode, ["root","flag"]))');
-    expect(emitted).toContain('(true ? "<always>" +');
-    expect(emitted).toContain('(false ? "<never>" +');
+    expect(emitted).toContain('"<always>" +');
+    expect(emitted).toContain('"<never>" +');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 });

@@ -7,7 +7,7 @@
 
 import { FOAR0001, FORG0006, XPTY0019 } from '../../errors/codes.js';
 import { XPathError } from '../../errors/XPathError.js';
-import type { ErrorDetails } from '../../errors/XdmError.js';
+import type { ErrorContext, ErrorDetails } from '../../errors/XdmError.js';
 import { createSequence } from '../../xdm/sequence.js';
 import {
   createXdmArray,
@@ -377,7 +377,7 @@ const {
   effectiveBooleanValue,
 });
 
-function createXPathError(code: string, message: string, span: SpanLike, details?: ErrorDetails): XPathError {
+function createXPathError(code: string, message: string, span: SpanLike, details?: ErrorDetails, context?: ErrorContext): XPathError {
   return new XPathError(code, message, {
     source: '<xpath>',
     line: span.line,
@@ -386,7 +386,7 @@ function createXPathError(code: string, message: string, span: SpanLike, details
     endLine: span.endLine,
     endColumn: span.endColumn,
     endOffset: span.end,
-  }, details);
+  }, details, context);
 }
 
 function describeItemsType(items: readonly XdmItem[]): string {

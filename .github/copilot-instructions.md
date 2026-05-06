@@ -13,6 +13,8 @@
 ## Conventions
 - **Diagnostics-first**: parser, AST, IR, and evaluator work should preserve source locations and make errors clearer, not defer that work.
 - Prefer compile-time diagnostics over runtime surprises whenever the design allows it.
+- Treat diagnostics as first-class product artifacts: analyzers and runtimes discover them, while canonical ordering and shared presentation policy should live in the shared diagnostics boundary rather than inside individual analysis passes or one-off surfaces.
+- Use [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) DEC-013 as the primary diagnostics north star, and use [docs/DIAGNOSTIC_INTRINSICS.md](../docs/DIAGNOSTIC_INTRINSICS.md) when work crosses into compiler-recognized `wx:*` observability/assertion surface.
 - Generated TypeScript should stay readable and inspectable. Do not optimize by making codegen output opaque.
 - Keep Node-specific APIs out of core engine logic unless the code is clearly CLI-only or tooling-only.
 - Scope work to the current roadmap increment. Do not silently pull features forward from later milestones.

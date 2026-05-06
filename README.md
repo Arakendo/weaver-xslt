@@ -1,12 +1,12 @@
 # Weaver
 
-A TypeScript-native **XSLT 3.0 compiler** that emits inspectable, typed,
-debuggable transform modules — with an interpreter backend for
-conformance and dynamic features.
+A TypeScript-native **XSLT 3.0 platform** with interpreter and native
+execution backends, plus inspectable emitted TypeScript for bundlers,
+debuggers, and generated-artifact workflows.
 
 <sub>package: `@arakendo/weaver-xslt` · repo: `weaver-xslt`</sub>
 
-> Status: **MVP+4 complete** — the interpreter slice is live, the first codegen backend now emits readable TypeScript, generated fixtures are checked in for review, and the generated-module debugger path is wired up in VS Code.
+> Status: **MVP+5 complete, MVP+6 in progress** — typed params, typed extension functions, CLI compile/run/watch, source maps, diagnostics v2, and thin Vite/esbuild plugin wrappers are in place; broader watch and debugger polish is still landing.
 
 > **Open source, closed contributions.** This project is MIT licensed — fork
 > and use it however you like. External pull requests and issues are not
@@ -15,9 +15,10 @@ conformance and dynamic features.
 ## Why another XSLT engine?
 
 Because existing ones treat XSLT as a black box. This one treats it as a
-**build step**: compile your `.xsl` once, get a typed, tree-shakeable,
-source-mapped TypeScript module you can import, debug in DevTools,
-type-check your params against, and bundle with Vite or esbuild.
+**build step and execution platform**: compile your `.xsl` once, get a typed,
+tree-shakeable, source-mapped TypeScript module you can import, debug in
+DevTools, type-check your params against, run through the interpreter, or
+bundle with Vite or esbuild.
 
 See [docs/DIFFERENTIATORS.md](./docs/DIFFERENTIATORS.md) for the four
 things this project aims to be clearly best at. See
@@ -68,7 +69,15 @@ npm run build
 node dist/cli.js compile ./hello.xsl
 ```
 
-That writes `./hello.xsl.ts`, `./hello.xsl.d.ts`, and `./hello.xsl.digest` using the current codegen backend.
+That writes `./hello.xsl.ts`, `./hello.xsl.d.ts`, `./hello.xsl.digest`, and
+`./hello.xsl.map` using the current codegen backend.
+
+For iterative work, the CLI can also watch the same glob and keep those
+artifacts in sync as stylesheets are added, edited, or deleted:
+
+```bash
+node dist/cli.js watch ./hello.xsl
+```
 
 You can also run a stylesheet directly through the interpreter:
 
@@ -85,13 +94,46 @@ node dist/cli.js --help
 When the package is installed from npm, the same command is exposed as
 `weaver-xslt compile ./hello.xsl` via the package `bin` entry.
 
+The compile and watch commands also accept `--sample <xml-file>` when you want
+static typo diagnostics against a representative input document.
+
+## Bundlers
+
+Thin wrapper plugins are available for bundler/dev-server flows that want to
+import `.xsl` files directly:
+
+```ts
+import { weaverVitePlugin } from '@arakendo/weaver-xslt/vite';
+
+export default {
+  plugins: [weaverVitePlugin()],
+};
+```
+
+```ts
+import { weaverEsbuildPlugin } from '@arakendo/weaver-xslt/esbuild';
+
+export default {
+  plugins: [weaverEsbuildPlugin()],
+};
+```
+
+Both wrappers compile `.xsl` files through the same artifact pipeline used by
+the CLI, so generated TypeScript, source maps, and compile-time diagnostics
+stay aligned across entry points.
+
+For the manual Chrome DevTools source-map verification pass, use the fixture in
+[docs/DEVTOOLS_CHECKLIST.md](./docs/DEVTOOLS_CHECKLIST.md).
+
 ## Scripts
 
 | Script              | Description                               |
 | ------------------- | ----------------------------------------- |
 | `npm run build`     | Compile TypeScript to `dist/`             |
 | `npm run dev`       | Run `src/index.ts` in watch mode via tsx  |
+| `npm run devtools:fixture` | Start the local browser fixture used for Chrome DevTools `.xsl` breakpoint verification |
 | `npm test`          | Run the Vitest test suite once            |
+| `npm run benchmark:watch` | Measure a real `weaver-xslt watch` round-trip on a generated 200-line stylesheet |
 | `npm run test:packaging` | Build and dry-run the published package surface |
 | `npm run test:watch`| Run Vitest in watch mode                  |
 | `npm run typecheck` | Type-check without emitting               |
@@ -153,10 +195,10 @@ plan with scope and exit criteria per increment. High-level milestones:
 - [x] M0 — Project scaffold + W3C test suites cataloged (14.6k XSLT, 31.8k QT3)
 - [x] M1 — XPath vertical slice + diagnostic bones
 - [x] M2 — XPath core on interpreter (~20% of QT3)
-- [ ] M3 — XSLT MVP on interpreter (interpreter slice active; remaining exit criteria still in progress)
+- [x] M3 — XSLT MVP on interpreter
 - [x] M4 — **Codegen backend v1** (IR → readable TypeScript)
-- [ ] M5 — Typed params, typed extension functions, CLI compile
-- [ ] M6 — Watch mode, source maps, static-analysis diagnostics v2
+- [x] M5 — Typed params, typed extension functions, CLI
+- [ ] M6 — Watch mode, source maps, static-analysis diagnostics v2, bundler polish
 - [ ] M7 — XPath type system, maps/arrays, higher-order functions
 - [ ] M8 — XSLT 3.0 feature-complete (non-streaming)
 - [ ] M9 — Conformance push (≥70% under both backends)

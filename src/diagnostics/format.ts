@@ -1,6 +1,8 @@
-import type { DiagnosticReport } from './report.js';
+import { assertValidDiagnostic, diagnosticReportFromError, type DiagnosticReport } from './report.js';
 
 export function formatDiagnostic(report: DiagnosticReport, sourceText?: string): string {
+  assertValidDiagnostic(report);
+
   const header = `${report.severity}[${report.code}]: ${report.message}`;
   if (report.primary === undefined || sourceText === undefined) {
     return [header, ...formatFrames(report), ...formatRelated(report), ...formatDetails(report), ...formatSuggestions(report)].join('\n');
@@ -29,6 +31,19 @@ export function formatDiagnostic(report: DiagnosticReport, sourceText?: string):
     ...formatDetails(report),
     ...formatSuggestions(report),
   ].join('\n');
+}
+
+export function formatDiagnostics(reports: readonly DiagnosticReport[], sourceText?: string): string {
+  if (reports.length === 0) {
+    return '';
+  }
+
+  return `${reports.map((report) => formatDiagnostic(report, sourceText)).join('\n')}\n`;
+}
+
+export function renderDiagnosticError(error: unknown, sourceText?: string): string {
+  const report = diagnosticReportFromError(error);
+  return sourceText === undefined ? report.message : formatDiagnostic(report, sourceText);
 }
 
 function formatFrames(report: DiagnosticReport): string[] {

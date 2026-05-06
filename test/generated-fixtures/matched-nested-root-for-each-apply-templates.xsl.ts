@@ -13,20 +13,42 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   }
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(currentNode, ["item"]).map((currentNode) => "<item>" +
-    escapeText(selectSimplePathText(currentNode, ["name"])) +
-    "<details>" +
-    selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) => (
+      (
+  /** literal items (matched-nested-root-for-each-apply-templates.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:for-each (matched-nested-root-for-each-apply-templates.xsl:1) */
+  selectSimplePathNodes(currentNode, ["item"]).map((currentNode) => (
+  /** literal item (matched-nested-root-for-each-apply-templates.xsl:1) */
+  "<item>" +
+    (
+  /** xsl:value-of (matched-nested-root-for-each-apply-templates.xsl:1) */
+  escapeText(selectSimplePathText(currentNode, ["name"]))
+) +
+    (
+  /** literal details (matched-nested-root-for-each-apply-templates.xsl:1) */
+  "<details>" +
+    (
+  /** xsl:apply-templates (matched-nested-root-for-each-apply-templates.xsl:1) */
+  selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) => (
   /** match="detail" (matched-nested-root-for-each-apply-templates.xsl:1) */
+  (
+  /** literal detail (matched-nested-root-for-each-apply-templates.xsl:1) */
   "<detail>" +
     escapeText(stringValueOfNode(templateNode)) +
     "</detail>"
-)).join("") +
-    "</details>" +
-    "</item>").join("") +
-    "</items>",
+)
+)).join("")
+) +
+    "</details>"
+) +
+    "</item>"
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=matched-nested-root-for-each-apply-templates.xsl.map

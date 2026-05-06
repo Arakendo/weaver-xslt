@@ -74,6 +74,7 @@ export function diagnosticReportFromError(error: unknown): DiagnosticReport {
       suggestions: [],
       causes: [],
     };
+    assertValidDiagnostic(report);
     return report;
   }
 
@@ -91,11 +92,9 @@ export function diagnosticReportFromError(error: unknown): DiagnosticReport {
     causes: error.causes.map((cause) => diagnosticReportFromError(cause)),
   };
 
-  if (primary !== undefined) {
-    return { ...report, primary };
-  }
-
-  return report;
+  const normalizedReport = primary !== undefined ? { ...report, primary } : report;
+  assertValidDiagnostic(normalizedReport);
+  return normalizedReport;
 }
 
 export function assertValidDiagnostic(report: DiagnosticReport): void {

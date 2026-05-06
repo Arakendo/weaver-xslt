@@ -32,8 +32,8 @@ describe('XSLT codegen apply-templates child emission', () => {
     expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
     expect(emitted).toContain('escapeText(selectSimplePathText(templateNode, ["name"]))');
     expect(emitted).toContain('selectSimplePathExists(templateNode, ["flag"])');
-    expect(emitted).toContain('? "<flagged>" +');
-    expect(emitted).toContain(': "<plain>" +');
+    expect(emitted).toContain('"<flagged>" +');
+    expect(emitted).toContain('"<plain>" +');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
@@ -44,7 +44,7 @@ describe('XSLT codegen apply-templates child emission', () => {
     expect(emitted).toContain('selectSimplePathNodes(document, ["root","item"]).map((templateNode) =>');
     expect(emitted).toContain('escapeText(selectSimplePathText(templateNode, ["name"]))');
     expect(emitted).toContain('selectSimplePathExists(templateNode, ["flag"])');
-    expect(emitted).toContain('? "<flagged>" +');
+    expect(emitted).toContain('"<flagged>" +');
     expect(emitted).toContain(': "")');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
@@ -57,9 +57,9 @@ describe('XSLT codegen apply-templates child emission', () => {
     expect(emitted).toContain('escapeText(selectSimplePathText(templateNode, ["name"]))');
     expect(emitted).toContain('selectSimplePathExists(templateNode, ["flag"])');
     expect(emitted).toContain('selectSimplePathExists(templateNode, ["vip"])');
-    expect(emitted).toContain('? "<flagged>" +');
-    expect(emitted).toContain('? "<vip>" +');
-    expect(emitted).toContain(': "<plain>" +');
+    expect(emitted).toContain('"<flagged>" +');
+    expect(emitted).toContain('"<vip>" +');
+    expect(emitted).toContain('"<plain>" +');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 

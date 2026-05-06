@@ -10,17 +10,69 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const currentNode = document;
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(document, ["root","item"]).map((currentNode) => "<item>" +
-    escapeText(selectSimplePathText(currentNode, ["name"])) +
-    (selectSimplePathExists(currentNode, ["flag"]) ? (selectSimplePathExists(currentNode, ["detail"]) ? "<flagged>" +
-    "</flagged>" : "<brief>" +
-    "</brief>") : (selectSimplePathExists(currentNode, ["vip"]) ? "<vip>" +
-    "</vip>" : "<plain>" +
-    "</plain>")) +
-    "</item>").join("") +
-    "</items>",
+      (
+  /** literal items (for-each-choose-nested-choose.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:for-each (for-each-choose-nested-choose.xsl:1) */
+  selectSimplePathNodes(document, ["root","item"]).map((currentNode) => (
+  /** literal item (for-each-choose-nested-choose.xsl:1) */
+  "<item>" +
+    (
+  /** xsl:value-of (for-each-choose-nested-choose.xsl:1) */
+  escapeText(selectSimplePathText(currentNode, ["name"]))
+) +
+    (
+  /** xsl:choose (for-each-choose-nested-choose.xsl:1) */
+  (selectSimplePathExists(currentNode, ["flag"]) ? (
+  /** xsl:when (for-each-choose-nested-choose.xsl:1) */
+  (
+  /** xsl:choose (for-each-choose-nested-choose.xsl:1) */
+  (selectSimplePathExists(currentNode, ["detail"]) ? (
+  /** xsl:when (for-each-choose-nested-choose.xsl:1) */
+  (
+  /** literal flagged (for-each-choose-nested-choose.xsl:1) */
+  "<flagged>" +
+    "</flagged>"
+)
+) : (
+  /** xsl:otherwise (for-each-choose-nested-choose.xsl:1) */
+  (
+  /** literal brief (for-each-choose-nested-choose.xsl:1) */
+  "<brief>" +
+    "</brief>"
+)
+))
+)
+) : (
+  /** xsl:otherwise (for-each-choose-nested-choose.xsl:1) */
+  (
+  /** xsl:choose (for-each-choose-nested-choose.xsl:1) */
+  (selectSimplePathExists(currentNode, ["vip"]) ? (
+  /** xsl:when (for-each-choose-nested-choose.xsl:1) */
+  (
+  /** literal vip (for-each-choose-nested-choose.xsl:1) */
+  "<vip>" +
+    "</vip>"
+)
+) : (
+  /** xsl:otherwise (for-each-choose-nested-choose.xsl:1) */
+  (
+  /** literal plain (for-each-choose-nested-choose.xsl:1) */
+  "<plain>" +
+    "</plain>"
+)
+))
+)
+))
+) +
+    "</item>"
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=for-each-choose-nested-choose.xsl.map

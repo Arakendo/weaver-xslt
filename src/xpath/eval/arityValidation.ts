@@ -1,5 +1,5 @@
 import { XPST0017 } from '../../errors/codes.js';
-import type { ErrorDetails } from '../../errors/XdmError.js';
+import type { ErrorContext, ErrorDetails, ErrorSuggestion } from '../../errors/XdmError.js';
 import type { XPathAst } from '../parse/ast.js';
 
 type SpanLike = {
@@ -16,6 +16,7 @@ type CreateXPathError = (
   message: string,
   span: SpanLike,
   details?: ErrorDetails,
+  context?: ErrorContext,
 ) => Error;
 
 const EXACT_ARITY_NAMES = new Map<string, readonly string[]>([
@@ -86,7 +87,7 @@ export function createArityValidationHelpers(createXPathError: CreateXPathError)
       throw createXPathError(XPST0017, `Unknown function ${name}.`, span, {
         functionName: name,
         actualArity,
-      });
+      }, createFunctionSuggestionContext(name));
     }
 
     if (!matchesArityRequirement(actualArity, arityRequirement)) {
@@ -116,6 +117,67 @@ export function createArityValidationHelpers(createXPathError: CreateXPathError)
 
 export function lookupFunctionArityRequirement(name: string): string | undefined {
   return FUNCTION_ARITY_REQUIREMENTS.get(name);
+}
+
+export function listKnownFunctionNames(): readonly string[] {
+  return [...FUNCTION_ARITY_REQUIREMENTS.keys()];
+}
+
+export function createFunctionNameSuggestion(name: string): ErrorSuggestion | undefined {
+  const candidatePrefix = name.startsWith('map:') ? 'map:' : 'fn:';
+  const hasExplicitPrefix = name.includes(':');
+  const displayName = hasExplicitPrefix ? name : candidatePrefix === 'fn:' ? name : `${candidatePrefix}${name}`;
+
+  const nearest = listKnownFunctionNames()
+    .filter((candidate) => candidate.startsWith(candidatePrefix))
+    .map((candidate) => {
+      const displayCandidate = hasExplicitPrefix || candidatePrefix !== 'fn:'
+        ? candidate
+        : candidate.slice(3);
+      return {
+        displayCandidate,
+        distance: computeLevenshteinDistance(displayName, displayCandidate),
+      };
+    })
+    .sort((left, right) => left.distance - right.distance)[0];
+
+  if (nearest === undefined || nearest.distance > 2) {
+    return undefined;
+  }
+
+  return {
+    kind: 'fix',
+    label: `did you mean ${nearest.displayCandidate}(...)?`,
+    replacement: nearest.displayCandidate,
+    confidence: nearest.distance === 0 ? 1 : 1 - (nearest.distance / nearest.displayCandidate.length),
+  };
+}
+
+function createFunctionSuggestionContext(name: string): ErrorContext | undefined {
+  const suggestion = createFunctionNameSuggestion(name);
+  return suggestion === undefined ? undefined : { suggestions: [suggestion] };
+}
+
+function computeLevenshteinDistance(left: string, right: string): number {
+  const previousRow = Array.from({ length: right.length + 1 }, (_, index) => index);
+
+  for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
+    let previousDiagonal = previousRow[0] ?? 0;
+    previousRow[0] = leftIndex;
+
+    for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
+      const temp = previousRow[rightIndex] ?? 0;
+      const substitutionCost = left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1;
+      previousRow[rightIndex] = Math.min(
+        (previousRow[rightIndex] ?? 0) + 1,
+        (previousRow[rightIndex - 1] ?? 0) + 1,
+        previousDiagonal + substitutionCost,
+      );
+      previousDiagonal = temp;
+    }
+  }
+
+  return previousRow[right.length] ?? right.length;
 }
 
 export function matchesArityRequirement(actualArity: number, arityRequirement: string): boolean {

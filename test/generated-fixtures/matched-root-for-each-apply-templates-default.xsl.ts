@@ -13,20 +13,42 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   }
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(currentNode, ["item"]).map((currentNode) => "<item>" +
-    escapeText(selectSimplePathText(currentNode, ["name"])) +
-    "<details>" +
-    applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) => (
+      (
+  /** literal items (matched-root-for-each-apply-templates-default.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:for-each (matched-root-for-each-apply-templates-default.xsl:1) */
+  selectSimplePathNodes(currentNode, ["item"]).map((currentNode) => (
+  /** literal item (matched-root-for-each-apply-templates-default.xsl:1) */
+  "<item>" +
+    (
+  /** xsl:value-of (matched-root-for-each-apply-templates-default.xsl:1) */
+  escapeText(selectSimplePathText(currentNode, ["name"]))
+) +
+    (
+  /** literal details (matched-root-for-each-apply-templates-default.xsl:1) */
+  "<details>" +
+    (
+  /** xsl:apply-templates (matched-root-for-each-apply-templates-default.xsl:1) */
+  applyBuiltInTemplatesByPath(currentNode, ["detail"], (templateNode) => (
   /** match="detail" (matched-root-for-each-apply-templates-default.xsl:1) */
+  (
+  /** literal detail (matched-root-for-each-apply-templates-default.xsl:1) */
   "<detail>" +
     escapeText(stringValueOfNode(templateNode)) +
     "</detail>"
-)) +
-    "</details>" +
-    "</item>").join("") +
-    "</items>",
+)
+))
+) +
+    "</details>"
+) +
+    "</item>"
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=matched-root-for-each-apply-templates-default.xsl.map

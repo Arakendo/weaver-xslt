@@ -9,10 +9,17 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const document = createCompiledDocument(sourceXml);
   return {
     output:
-      "<hello>" +
-    escapeText(selectSimplePathText(document, ["root","name"])) +
-    "</hello>",
+      (
+  /** literal hello (hello.xsl:1) */
+  "<hello>" +
+    (
+  /** xsl:value-of (hello.xsl:1) */
+  escapeText(selectSimplePathText(document, ["root","name"]))
+) +
+    "</hello>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=hello.xsl.map

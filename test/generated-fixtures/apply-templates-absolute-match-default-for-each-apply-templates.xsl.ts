@@ -9,23 +9,48 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const document = createCompiledDocument(sourceXml);
   return {
     output:
-      "<items>" +
-    applyBuiltInTemplatesByPath(document, ["root","item"], (templateNode) => (
+      (
+  /** literal items (apply-templates-absolute-match-default-for-each-apply-templates.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:apply-templates (apply-templates-absolute-match-default-for-each-apply-templates.xsl:1) */
+  applyBuiltInTemplatesByPath(document, ["root","item"], (templateNode) => (
   /** match="/root/item" (apply-templates-absolute-match-default-for-each-apply-templates.xsl:1) */
+  (
+  /** literal item (apply-templates-absolute-match-default-for-each-apply-templates.xsl:1) */
   "<item>" +
-    escapeText(selectSimplePathText(templateNode, ["name"])) +
-    "<details>" +
-    selectSimplePathNodes(templateNode, ["group"]).map((currentNode) => selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) => (
+    (
+  /** xsl:value-of (apply-templates-absolute-match-default-for-each-apply-templates.xsl:1) */
+  escapeText(selectSimplePathText(templateNode, ["name"]))
+) +
+    (
+  /** literal details (apply-templates-absolute-match-default-for-each-apply-templates.xsl:1) */
+  "<details>" +
+    (
+  /** xsl:for-each (apply-templates-absolute-match-default-for-each-apply-templates.xsl:1) */
+  selectSimplePathNodes(templateNode, ["group"]).map((currentNode) => (
+  /** xsl:apply-templates (apply-templates-absolute-match-default-for-each-apply-templates.xsl:1) */
+  selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) => (
   /** match="detail" (apply-templates-absolute-match-default-for-each-apply-templates.xsl:1) */
+  (
+  /** literal detail (apply-templates-absolute-match-default-for-each-apply-templates.xsl:1) */
   "<detail>" +
     escapeText(stringValueOfNode(templateNode)) +
     "</detail>"
-)).join("")).join("") +
-    "</details>" +
+)
+)).join("")
+)).join("")
+) +
+    "</details>"
+) +
     "</item>"
-), true) +
-    "</items>",
+)
+), true)
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=apply-templates-absolute-match-default-for-each-apply-templates.xsl.map

@@ -9,18 +9,52 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const document = createCompiledDocument(sourceXml);
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(document, ["root","item"]).map((templateNode) => (
+      (
+  /** literal items (apply-templates-child-choose-nested-if.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:apply-templates (apply-templates-child-choose-nested-if.xsl:1) */
+  selectSimplePathNodes(document, ["root","item"]).map((templateNode) => (
   /** match="item" (apply-templates-child-choose-nested-if.xsl:1) */
+  (
+  /** literal item (apply-templates-child-choose-nested-if.xsl:1) */
   "<item>" +
-    escapeText(selectSimplePathText(templateNode, ["name"])) +
-    (selectSimplePathExists(templateNode, ["flag"]) ? (selectSimplePathExists(templateNode, ["detail"]) ? "<flagged>" +
-    "</flagged>" : "") : (selectSimplePathExists(templateNode, ["vip"]) ? "<vip>" +
-    "</vip>" : "")) +
+    (
+  /** xsl:value-of (apply-templates-child-choose-nested-if.xsl:1) */
+  escapeText(selectSimplePathText(templateNode, ["name"]))
+) +
+    (
+  /** xsl:choose (apply-templates-child-choose-nested-if.xsl:1) */
+  (selectSimplePathExists(templateNode, ["flag"]) ? (
+  /** xsl:when (apply-templates-child-choose-nested-if.xsl:1) */
+  (
+  /** xsl:if (apply-templates-child-choose-nested-if.xsl:1) */
+  (selectSimplePathExists(templateNode, ["detail"]) ? (
+  /** literal flagged (apply-templates-child-choose-nested-if.xsl:1) */
+  "<flagged>" +
+    "</flagged>"
+) : "")
+)
+) : (
+  /** xsl:otherwise (apply-templates-child-choose-nested-if.xsl:1) */
+  (
+  /** xsl:if (apply-templates-child-choose-nested-if.xsl:1) */
+  (selectSimplePathExists(templateNode, ["vip"]) ? (
+  /** literal vip (apply-templates-child-choose-nested-if.xsl:1) */
+  "<vip>" +
+    "</vip>"
+) : "")
+)
+))
+) +
     "</item>"
-)).join("") +
-    "</items>",
+)
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=apply-templates-child-choose-nested-if.xsl.map

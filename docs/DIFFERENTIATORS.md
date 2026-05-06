@@ -1,9 +1,11 @@
 # Differentiators — the "why bother" document
 
 > **Thesis:** Weaver (`@arakendo/weaver-xslt`) is not another XSLT interpreter. It is a
-> **TypeScript-native XSLT compiler** that emits inspectable, typed,
-> debuggable transform modules. The interpreter exists for conformance
-> testing and dynamic features; the codegen backend is the product.
+> **TypeScript-native XSLT platform** with two first-class execution backends:
+> interpreter and native. The native backend can run directly in-process or
+> emit inspectable, typed, debuggable TS/JS transform modules. Emitted
+> TypeScript is a major product differentiator, but it is a delivery mode of
+> the native backend rather than the definition of it.
 >
 > If we are not clearly better than Saxon-JS at **(a) error messages,
 > (b) integration with TS build pipelines, and (c) being debuggable with
@@ -74,7 +76,9 @@ Tattoo-rule version: **no node without a span; no span without a test.**
 
 ### D2. **Compile to inspectable TypeScript**
 
-Primary backend is a **codegen** that emits plain, readable TS:
+Primary product backend is **native execution**. Its first delivery mode emits
+plain, readable TS, and the same native planning path should also be able to
+run directly in-process:
 
 ```ts
 // invoice.xsl.ts — generated, do not edit
@@ -108,6 +112,10 @@ API surface. We commit to it being readable and inspectable, but we do
 **not** promise that helper names, local function names, or internal
 emission structure are semver-stable for consumers to import directly.
 
+The architectural rule is: native execution does not depend on writing files.
+Emission is one transport form for the native backend, not the only way the
+native backend exists.
+
 This also sets up a future Weaver-native workbench: XSLT, generated TS,
 diagnostics, and runtime output shown side-by-side from the same compile/run
 pipeline. That workbench is not a separate product thesis; it is D2 made
@@ -117,6 +125,11 @@ The interpreter backend remains for:
 - Dynamic XSLT features (`xsl:evaluate`, dynamic mode names)
 - Development / REPL usage
 - Running conformance tests without rebuilding every time
+
+The native backend exists for:
+- First-class product execution in environments where ahead-of-time planning is desirable
+- Readable emitted TS/JS artifacts for bundlers, workbench, and distribution
+- A future `execution = "native" | "interpreter" | "auto"` policy surface without pretending interpreter is temporary
 
 Both backends share the same IR. Conformance tests run against **both**,
 guaranteeing semantic parity.
@@ -266,8 +279,9 @@ Things we will **explicitly not** compete on:
   The full spec chapter is a multi-year project on its own.
 - **XQuery.** Different language, different scope.
 - **`xsl:evaluate` dynamic compilation.** Supported via interpreter
-  backend only; disabled in pure-codegen mode. The codegen has a
-  deterministic output; `xsl:evaluate` destroys that.
+  backend only; disabled under the native backend for now. Native
+  emission depends on deterministic output, and direct native execution
+  should not become a shadow interpreter with different semantics.
 - **Saxon compatibility as a marketing promise.** We pass W3C tests,
   not Saxon's private quirks.
 
@@ -292,7 +306,7 @@ XPath AST) must be:
 5. **Free of execution caches.** Runtime-only and codegen-only helpers
   live in plan overlays, not on the IR itself.
 
-Concretely: if the codegen backend can't be written as a pure function
+Concretely: if the native emitter can't be written as a pure function
 `IR → string`, the IR is doing too little. Fix the IR, not the backend.
 
 ---
@@ -307,7 +321,7 @@ not for *scope* — see that doc for the feature list per M:
 | 1 | IR + interpreter backend | Shortest path to running *anything* end-to-end |
 | 2 | **Diagnostic quality** (source locations, error contexts, good messages) | Establishes the debugging-first culture before it's impossible to retrofit |
 | 3 | XPath core + XSLT MVP on the interpreter | Conformance foundation |
-| 4 | **Codegen backend** producing readable TS | The product differentiator |
+| 4 | **Native backend** with readable TS emission | The product execution path and differentiator |
 | 5 | Typed params, typed extension functions | The integration differentiator |
 | 6 | **Watch mode + CLI + bundler plugin** (D5) | Feedback loop — the pitch doesn't work without it |
 | 7 | Conformance push (both backends) | Credibility |
@@ -360,11 +374,11 @@ cursed in hard-to-diagnose ways.
 produces output. Treat the XPath suite as the daily scoreboard
 separately from the XSLT suite. Budget accordingly.
 
-### H3. Codegen will expose every IR mistake at maximum volume
+### H3. Native emission will expose every IR mistake at maximum volume
 
-Interpreter bugs are "fix it later" lines of code. Codegen bugs are
+Interpreter bugs are "fix it later" lines of code. Native-emission bugs are
 **printed into 4,000 lines of generated TypeScript**, visible in PRs,
-visible to users. The first codegen backend will almost certainly
+visible to users. The first native emitter will almost certainly
 require at least one IR revision to accommodate it. The *second*
 backend (e.g. the streaming codegen) will probably require another.
 
@@ -372,7 +386,7 @@ backend (e.g. the streaming codegen) will probably require another.
 - Accept that the IR version will tick forward during M4–M5
 - Check generated output into a fixtures folder under version control
   so IR changes surface as reviewable diffs
-- Do not ship the codegen as `1.0` until after the first real-world
+- Do not ship native emission as `1.0` until after the first real-world
   stylesheet compiles cleanly ("real-world" = not one we wrote)
 
 ### H4. The "step through in DevTools" success criterion is load-bearing

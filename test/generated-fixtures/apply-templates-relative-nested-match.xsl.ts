@@ -9,15 +9,28 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const document = createCompiledDocument(sourceXml);
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) => (
+      (
+  /** literal items (apply-templates-relative-nested-match.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:apply-templates (apply-templates-relative-nested-match.xsl:1) */
+  selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) => (
   /** match="section/item" (apply-templates-relative-nested-match.xsl:1) */
+  (
+  /** literal item (apply-templates-relative-nested-match.xsl:1) */
   "<item>" +
-    escapeText(selectSimplePathText(templateNode, ["name"])) +
+    (
+  /** xsl:value-of (apply-templates-relative-nested-match.xsl:1) */
+  escapeText(selectSimplePathText(templateNode, ["name"]))
+) +
     "</item>"
-)).join("") +
-    "</items>",
+)
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=apply-templates-relative-nested-match.xsl.map

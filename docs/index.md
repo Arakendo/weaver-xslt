@@ -33,6 +33,8 @@ codegen backend slice, and the initial typed CLI and extension-function surface.
 - [Differentiators](DIFFERENTIATORS.md) for the product thesis
 - [Architecture](ARCHITECTURE.md) for the pinned design decisions
 - [Roadmap](ROADMAP.md) for milestone scope and exit criteria
+- [DevTools Checklist](DEVTOOLS_CHECKLIST.md) for manual `.xsl` source-map and breakpoint verification
+- [Progress Artifacts](PROGRESS_ARTIFACTS.md) for public milestone evidence published on `weaverxslt.org`
 - [Errors](ERRORS.md) for the diagnostic model
 
 ## Source of truth

@@ -10,14 +10,36 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const currentNode = document;
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(document, ["root","item"]).map((currentNode) => "<item>" +
-    escapeText(selectSimplePathText(currentNode, ["name"])) +
-    (selectSimplePathExists(currentNode, ["flag"]) ? "<flagged>" +
-    "</flagged>" : "") +
-    "</item>").join("") +
-    "</items>",
+      (
+  /** literal items (for-each-choose-no-otherwise.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:for-each (for-each-choose-no-otherwise.xsl:1) */
+  selectSimplePathNodes(document, ["root","item"]).map((currentNode) => (
+  /** literal item (for-each-choose-no-otherwise.xsl:1) */
+  "<item>" +
+    (
+  /** xsl:value-of (for-each-choose-no-otherwise.xsl:1) */
+  escapeText(selectSimplePathText(currentNode, ["name"]))
+) +
+    (
+  /** xsl:choose (for-each-choose-no-otherwise.xsl:1) */
+  (selectSimplePathExists(currentNode, ["flag"]) ? (
+  /** xsl:when (for-each-choose-no-otherwise.xsl:1) */
+  (
+  /** literal flagged (for-each-choose-no-otherwise.xsl:1) */
+  "<flagged>" +
+    "</flagged>"
+)
+) : "")
+) +
+    "</item>"
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=for-each-choose-no-otherwise.xsl.map

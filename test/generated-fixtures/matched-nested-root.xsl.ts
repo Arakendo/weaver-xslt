@@ -13,12 +13,25 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   }
   return {
     output:
-      "<item>" +
-    escapeText(selectSimplePathText(currentNode, ["name"])) +
-    (selectSimplePathExists(currentNode, ["flag"]) ? "<flagged>" +
-    "</flagged>" : "") +
-    "</item>",
+      (
+  /** literal item (matched-nested-root.xsl:1) */
+  "<item>" +
+    (
+  /** xsl:value-of (matched-nested-root.xsl:1) */
+  escapeText(selectSimplePathText(currentNode, ["name"]))
+) +
+    (
+  /** xsl:if (matched-nested-root.xsl:1) */
+  (selectSimplePathExists(currentNode, ["flag"]) ? (
+  /** literal flagged (matched-nested-root.xsl:1) */
+  "<flagged>" +
+    "</flagged>"
+) : "")
+) +
+    "</item>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=matched-nested-root.xsl.map

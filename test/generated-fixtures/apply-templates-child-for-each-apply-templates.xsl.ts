@@ -9,23 +9,48 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const document = createCompiledDocument(sourceXml);
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(document, ["root","item"]).map((templateNode) => (
+      (
+  /** literal items (apply-templates-child-for-each-apply-templates.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:apply-templates (apply-templates-child-for-each-apply-templates.xsl:1) */
+  selectSimplePathNodes(document, ["root","item"]).map((templateNode) => (
   /** match="item" (apply-templates-child-for-each-apply-templates.xsl:1) */
+  (
+  /** literal item (apply-templates-child-for-each-apply-templates.xsl:1) */
   "<item>" +
-    escapeText(selectSimplePathText(templateNode, ["name"])) +
-    "<details>" +
-    selectSimplePathNodes(templateNode, ["group"]).map((currentNode) => selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) => (
+    (
+  /** xsl:value-of (apply-templates-child-for-each-apply-templates.xsl:1) */
+  escapeText(selectSimplePathText(templateNode, ["name"]))
+) +
+    (
+  /** literal details (apply-templates-child-for-each-apply-templates.xsl:1) */
+  "<details>" +
+    (
+  /** xsl:for-each (apply-templates-child-for-each-apply-templates.xsl:1) */
+  selectSimplePathNodes(templateNode, ["group"]).map((currentNode) => (
+  /** xsl:apply-templates (apply-templates-child-for-each-apply-templates.xsl:1) */
+  selectSimplePathNodes(currentNode, ["detail"]).map((templateNode) => (
   /** match="detail" (apply-templates-child-for-each-apply-templates.xsl:1) */
+  (
+  /** literal detail (apply-templates-child-for-each-apply-templates.xsl:1) */
   "<detail>" +
     escapeText(stringValueOfNode(templateNode)) +
     "</detail>"
-)).join("")).join("") +
-    "</details>" +
+)
+)).join("")
+)).join("")
+) +
+    "</details>"
+) +
     "</item>"
-)).join("") +
-    "</items>",
+)
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=apply-templates-child-for-each-apply-templates.xsl.map

@@ -13,12 +13,25 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   }
   return {
     output:
-      "<out>" +
-    escapeText(selectSimplePathText(currentNode, ["name"])) +
-    (selectSimplePathExists(currentNode, ["flag"]) ? "<flagged>" +
-    "</flagged>" : "") +
-    "</out>",
+      (
+  /** literal out (matched-root.xsl:4) */
+  "<out>" +
+    (
+  /** xsl:value-of (matched-root.xsl:5) */
+  escapeText(selectSimplePathText(currentNode, ["name"]))
+) +
+    (
+  /** xsl:if (matched-root.xsl:6) */
+  (selectSimplePathExists(currentNode, ["flag"]) ? (
+  /** literal flagged (matched-root.xsl:6) */
+  "<flagged>" +
+    "</flagged>"
+) : "")
+) +
+    "</out>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=matched-root.xsl.map

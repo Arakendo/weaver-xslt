@@ -10,12 +10,25 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const currentNode = document;
   return {
     output:
-      "<out>" +
-    escapeText(selectSimplePathText(currentNode, ["root","name"])) +
-    (selectSimplePathExists(currentNode, ["root","flag"]) ? "<flagged>" +
-    "</flagged>" : "") +
-    "</out>",
+      (
+  /** literal out (relative.xsl:4) */
+  "<out>" +
+    (
+  /** xsl:value-of (relative.xsl:5) */
+  escapeText(selectSimplePathText(currentNode, ["root","name"]))
+) +
+    (
+  /** xsl:if (relative.xsl:6) */
+  (selectSimplePathExists(currentNode, ["root","flag"]) ? (
+  /** literal flagged (relative.xsl:6) */
+  "<flagged>" +
+    "</flagged>"
+) : "")
+) +
+    "</out>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=relative.xsl.map

@@ -11,4 +11,6 @@ export {
   type RelatedSpan,
   type SourceSpan,
 } from './report.js';
-export { formatDiagnostic } from './format.js';
+export { formatDiagnostic, formatDiagnostics, renderDiagnosticError } from './format.js';
+export { compareDiagnostics, sortDiagnostics } from './order.js';
+export { projectDiagnosticReport, projectDiagnosticReports, type JsonDiagnosticReport } from './project.js';

@@ -9,20 +9,42 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const document = createCompiledDocument(sourceXml);
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) => (
+      (
+  /** literal items (apply-templates-relative-simple-match-for-each.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:apply-templates (apply-templates-relative-simple-match-for-each.xsl:1) */
+  selectSimplePathNodes(document, ["root","section","item"]).map((templateNode) => (
   /** match="item" (apply-templates-relative-simple-match-for-each.xsl:1) */
+  (
+  /** literal item (apply-templates-relative-simple-match-for-each.xsl:1) */
   "<item>" +
-    escapeText(selectSimplePathText(templateNode, ["name"])) +
-    "<details>" +
-    selectSimplePathNodes(templateNode, ["detail"]).map((currentNode) => "<detail>" +
+    (
+  /** xsl:value-of (apply-templates-relative-simple-match-for-each.xsl:1) */
+  escapeText(selectSimplePathText(templateNode, ["name"]))
+) +
+    (
+  /** literal details (apply-templates-relative-simple-match-for-each.xsl:1) */
+  "<details>" +
+    (
+  /** xsl:for-each (apply-templates-relative-simple-match-for-each.xsl:1) */
+  selectSimplePathNodes(templateNode, ["detail"]).map((currentNode) => (
+  /** literal detail (apply-templates-relative-simple-match-for-each.xsl:1) */
+  "<detail>" +
     escapeText(stringValueOfNode(currentNode)) +
-    "</detail>").join("") +
-    "</details>" +
+    "</detail>"
+)).join("")
+) +
+    "</details>"
+) +
     "</item>"
-)).join("") +
-    "</items>",
+)
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=apply-templates-relative-simple-match-for-each.xsl.map

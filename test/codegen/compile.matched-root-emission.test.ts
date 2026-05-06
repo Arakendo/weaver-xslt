@@ -64,8 +64,8 @@ describe('XSLT codegen matched-root emission', () => {
     expect(emitted).toContain('const currentNode = selectSimplePathNode(document, ["root"]);');
     expect(emitted).toContain('selectSimplePathNodes(currentNode, ["item"]).map((currentNode) =>');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
-    expect(emitted).toContain('? "<flagged>" +');
-    expect(emitted).toContain(': "<plain>" +');
+    expect(emitted).toContain('"<flagged>" +');
+    expect(emitted).toContain('"<plain>" +');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
@@ -76,7 +76,7 @@ describe('XSLT codegen matched-root emission', () => {
     expect(emitted).toContain('const currentNode = selectSimplePathNode(document, ["root"]);');
     expect(emitted).toContain('selectSimplePathNodes(currentNode, ["item"]).map((currentNode) =>');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
-    expect(emitted).toContain('? "<flagged>" +');
+    expect(emitted).toContain('"<flagged>" +');
     expect(emitted).toContain(': "")');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
@@ -89,9 +89,9 @@ describe('XSLT codegen matched-root emission', () => {
     expect(emitted).toContain('selectSimplePathNodes(currentNode, ["item"]).map((currentNode) =>');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["vip"])');
-    expect(emitted).toContain('? "<flagged>" +');
-    expect(emitted).toContain('? "<vip>" +');
-    expect(emitted).toContain(': "<plain>" +');
+    expect(emitted).toContain('"<flagged>" +');
+    expect(emitted).toContain('"<vip>" +');
+    expect(emitted).toContain('"<plain>" +');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 

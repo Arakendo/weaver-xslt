@@ -13,15 +13,49 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   }
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(currentNode, ["item"]).map((currentNode) => "<item>" +
-    escapeText(selectSimplePathText(currentNode, ["name"])) +
-    (selectSimplePathExists(currentNode, ["flag"]) ? (selectSimplePathExists(currentNode, ["detail"]) ? "<flagged>" +
-    "</flagged>" : "") : (selectSimplePathExists(currentNode, ["vip"]) ? "<vip>" +
-    "</vip>" : "")) +
-    "</item>").join("") +
-    "</items>",
+      (
+  /** literal items (matched-root-for-each-choose-nested-if.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:for-each (matched-root-for-each-choose-nested-if.xsl:1) */
+  selectSimplePathNodes(currentNode, ["item"]).map((currentNode) => (
+  /** literal item (matched-root-for-each-choose-nested-if.xsl:1) */
+  "<item>" +
+    (
+  /** xsl:value-of (matched-root-for-each-choose-nested-if.xsl:1) */
+  escapeText(selectSimplePathText(currentNode, ["name"]))
+) +
+    (
+  /** xsl:choose (matched-root-for-each-choose-nested-if.xsl:1) */
+  (selectSimplePathExists(currentNode, ["flag"]) ? (
+  /** xsl:when (matched-root-for-each-choose-nested-if.xsl:1) */
+  (
+  /** xsl:if (matched-root-for-each-choose-nested-if.xsl:1) */
+  (selectSimplePathExists(currentNode, ["detail"]) ? (
+  /** literal flagged (matched-root-for-each-choose-nested-if.xsl:1) */
+  "<flagged>" +
+    "</flagged>"
+) : "")
+)
+) : (
+  /** xsl:otherwise (matched-root-for-each-choose-nested-if.xsl:1) */
+  (
+  /** xsl:if (matched-root-for-each-choose-nested-if.xsl:1) */
+  (selectSimplePathExists(currentNode, ["vip"]) ? (
+  /** literal vip (matched-root-for-each-choose-nested-if.xsl:1) */
+  "<vip>" +
+    "</vip>"
+) : "")
+)
+))
+) +
+    "</item>"
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=matched-root-for-each-choose-nested-if.xsl.map

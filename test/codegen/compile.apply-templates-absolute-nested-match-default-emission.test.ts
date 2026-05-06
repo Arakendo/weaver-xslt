@@ -57,8 +57,8 @@ describe('XSLT codegen apply-templates absolute nested-match default emission', 
     expect(emitted).toContain(', true)');
     expect(emitted).toContain('selectSimplePathNodes(templateNode, ["detail"]).map((currentNode) =>');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
-    expect(emitted).toContain('? "<flagged>" +');
-    expect(emitted).toContain(': "<plain>" +');
+    expect(emitted).toContain('"<flagged>" +');
+    expect(emitted).toContain('"<plain>" +');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
@@ -70,7 +70,7 @@ describe('XSLT codegen apply-templates absolute nested-match default emission', 
     expect(emitted).toContain(', true)');
     expect(emitted).toContain('selectSimplePathNodes(templateNode, ["detail"]).map((currentNode) =>');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
-    expect(emitted).toContain('? "<flagged>" +');
+    expect(emitted).toContain('"<flagged>" +');
     expect(emitted).toContain(': "")');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
@@ -84,9 +84,9 @@ describe('XSLT codegen apply-templates absolute nested-match default emission', 
     expect(emitted).toContain('selectSimplePathNodes(templateNode, ["detail"]).map((currentNode) =>');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["vip"])');
-    expect(emitted).toContain('? "<flagged>" +');
-    expect(emitted).toContain('? "<vip>" +');
-    expect(emitted).toContain(': "<plain>" +');
+    expect(emitted).toContain('"<flagged>" +');
+    expect(emitted).toContain('"<vip>" +');
+    expect(emitted).toContain('"<plain>" +');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 

@@ -9,23 +9,45 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const document = createCompiledDocument(sourceXml);
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(document, ["root","item"]).map((templateNode) => (
+      (
+  /** literal items (apply-templates-child-apply-templates.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:apply-templates (apply-templates-child-apply-templates.xsl:1) */
+  selectSimplePathNodes(document, ["root","item"]).map((templateNode) => (
   /** match="item" (apply-templates-child-apply-templates.xsl:1) */
+  (
+  /** literal item (apply-templates-child-apply-templates.xsl:1) */
   "<item>" +
-    escapeText(selectSimplePathText(templateNode, ["name"])) +
-    "<details>" +
-    selectSimplePathNodes(templateNode, ["detail"]).map((templateNode) => (
+    (
+  /** xsl:value-of (apply-templates-child-apply-templates.xsl:1) */
+  escapeText(selectSimplePathText(templateNode, ["name"]))
+) +
+    (
+  /** literal details (apply-templates-child-apply-templates.xsl:1) */
+  "<details>" +
+    (
+  /** xsl:apply-templates (apply-templates-child-apply-templates.xsl:1) */
+  selectSimplePathNodes(templateNode, ["detail"]).map((templateNode) => (
   /** match="detail" (apply-templates-child-apply-templates.xsl:1) */
+  (
+  /** literal detail (apply-templates-child-apply-templates.xsl:1) */
   "<detail>" +
     escapeText(stringValueOfNode(templateNode)) +
     "</detail>"
-)).join("") +
-    "</details>" +
+)
+)).join("")
+) +
+    "</details>"
+) +
     "</item>"
-)).join("") +
-    "</items>",
+)
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=apply-templates-child-apply-templates.xsl.map

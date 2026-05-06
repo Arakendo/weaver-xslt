@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weaver DevTools Fixture</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Segoe UI", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        padding: 2rem;
+        background: linear-gradient(160deg, #f7f4ea 0%, #e7eef5 100%);
+        color: #1d2935;
+      }
+
+      main {
+        max-width: 760px;
+        padding: 1.5rem;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 24px 60px rgba(29, 41, 53, 0.12);
+      }
+
+      button {
+        border: 0;
+        border-radius: 999px;
+        padding: 0.85rem 1.2rem;
+        background: #1f5b8f;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      pre {
+        overflow: auto;
+        padding: 1rem;
+        border-radius: 12px;
+        background: #102033;
+        color: #eef5ff;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Weaver DevTools Fixture</h1>
+      <p>
+        Use this page for the MVP+6 Chrome DevTools source-map verification.
+        Set a breakpoint in <code>demo.xsl</code>, then click the render button.
+      </p>
+      <button id="render" type="button">Render Transform</button>
+      <h2>Output</h2>
+      <pre id="output"></pre>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

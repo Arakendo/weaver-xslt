@@ -10,7 +10,13 @@ import {
   type TsExpression,
 } from './ts-ir.js';
 import { emitRootApplyTemplatesInstruction, tryGetRootApplyTemplatesNestedShape, tryGetRootApplyTemplatesShape } from './nativeApplyTemplates.js';
-import { renderCommentedArrowFunction, renderTemplateProvenanceComment } from './provenance.js';
+import {
+  renderCommentedArrowFunction,
+  renderInstructionProvenanceComment,
+  renderOtherwiseProvenanceComment,
+  renderTemplateProvenanceComment,
+  renderWhenProvenanceComment,
+} from './provenance.js';
 
 export interface NativeTransformPlan {
   readonly entryTemplate: TemplateRule;
@@ -350,6 +356,19 @@ function emitInstruction(
     ) => TsExpression | undefined;
   },
 ): TsExpression | undefined {
+  const annotateInstruction = (expression: TsExpression | undefined): TsExpression | undefined => {
+    if (expression === undefined) {
+      return undefined;
+    }
+
+    const comment = renderInstructionProvenanceComment(instruction, options.sourcePath);
+    if (comment === undefined) {
+      return expression;
+    }
+
+    return tsRawExpression(`(\n  ${comment}\n  ${expression.code}\n)`);
+  };
+
   switch (instruction.kind) {
     case 'literalElement': {
       const body = emitInstructionSequence(instruction.body, runtimeHelpers, {
@@ -360,11 +379,11 @@ function emitInstruction(
         return undefined;
       }
 
-      return tsConcatExpression([
+      return annotateInstruction(tsConcatExpression([
         tsStringLiteral(`<${instruction.name}${emitAttributes(instruction.attributes)}>`),
         body,
         tsStringLiteral(`</${instruction.name}>`),
-      ]);
+      ]));
     }
     case 'literalText':
       return tsStringLiteral(escapeTextLiteral(instruction.text));
@@ -377,11 +396,11 @@ function emitInstruction(
         return undefined;
       }
 
-      return tsConcatExpression([
+      return annotateInstruction(tsConcatExpression([
         tsStringLiteral('<!--'),
         body,
         tsStringLiteral('-->'),
-      ]);
+      ]));
     }
     case 'valueOf': {
       if (instruction.select.kind === 'contextItem') {
@@ -402,7 +421,7 @@ function emitInstruction(
         }
 
         runtimeHelpers.add('escapeText');
-        return tsCallExpression('escapeText', [variableExpression]);
+        return annotateInstruction(tsCallExpression('escapeText', [variableExpression]));
       }
 
       if (instruction.select.kind === 'functionCall' && instruction.select.arguments.length === 0) {
@@ -418,29 +437,29 @@ function emitInstruction(
 
         if (numericExpression !== undefined) {
           runtimeHelpers.add('escapeText');
-          return tsCallExpression('escapeText', [
+          return annotateInstruction(tsCallExpression('escapeText', [
             tsRawExpression(`String(${numericExpression})`),
-          ]);
+          ]));
         }
 
         if (instruction.select.callee === 'name') {
           runtimeHelpers.add('escapeText');
           runtimeHelpers.add('nameOfNode');
-          return tsCallExpression('escapeText', [
+          return annotateInstruction(tsCallExpression('escapeText', [
             tsCallExpression('nameOfNode', [
               tsRawExpression(contextNodeIdentifier),
             ]),
-          ]);
+          ]));
         }
 
         if (instruction.select.callee === 'local-name') {
           runtimeHelpers.add('escapeText');
           runtimeHelpers.add('localNameOfNode');
-          return tsCallExpression('escapeText', [
+          return annotateInstruction(tsCallExpression('escapeText', [
             tsCallExpression('localNameOfNode', [
               tsRawExpression(contextNodeIdentifier),
             ]),
-          ]);
+          ]));
         }
       }
 
@@ -455,36 +474,36 @@ function emitInstruction(
               runtimeHelpers.add('escapeText');
               runtimeHelpers.add('nameOfNode');
               runtimeHelpers.add('selectSimplePathNode');
-              return tsCallExpression('escapeText', [
+              return annotateInstruction(tsCallExpression('escapeText', [
                 tsCallExpression('nameOfNode', [
                   tsCallExpression('selectSimplePathNode', [
                     tsRawExpression(startNode),
                     tsRawExpression(JSON.stringify(simplePath.segments)),
                   ]),
                 ]),
-              ]);
+              ]));
             }
 
             if (instruction.select.callee === 'local-name') {
               runtimeHelpers.add('escapeText');
               runtimeHelpers.add('localNameOfNode');
               runtimeHelpers.add('selectSimplePathNode');
-              return tsCallExpression('escapeText', [
+              return annotateInstruction(tsCallExpression('escapeText', [
                 tsCallExpression('localNameOfNode', [
                   tsCallExpression('selectSimplePathNode', [
                     tsRawExpression(startNode),
                     tsRawExpression(JSON.stringify(simplePath.segments)),
                   ]),
                 ]),
-              ]);
+              ]));
             }
 
             if (instruction.select.callee === 'count') {
               runtimeHelpers.add('escapeText');
               runtimeHelpers.add('selectSimplePathNodes');
-              return tsCallExpression('escapeText', [
+              return annotateInstruction(tsCallExpression('escapeText', [
                 tsRawExpression(`String(selectSimplePathNodes(${startNode}, ${JSON.stringify(simplePath.segments)}).length)`),
-              ]);
+              ]));
             }
           }
         }
@@ -498,12 +517,12 @@ function emitInstruction(
       runtimeHelpers.add('escapeText');
       runtimeHelpers.add('selectSimplePathText');
       const startNode = simplePath.absolute ? 'document' : contextNodeIdentifier;
-      return tsCallExpression('escapeText', [
+      return annotateInstruction(tsCallExpression('escapeText', [
         tsCallExpression('selectSimplePathText', [
           tsRawExpression(startNode),
           tsRawExpression(JSON.stringify(simplePath.segments)),
         ]),
-      ]);
+      ]));
     }
     case 'if': {
       const testExpression = emitTestExpression(
@@ -521,9 +540,13 @@ function emitInstruction(
         return undefined;
       }
 
-      return tsConditionalExpression(testExpression, body, tsStringLiteral(''));
+      return annotateInstruction(tsConditionalExpression(testExpression, body, tsStringLiteral('')));
     }
     case 'choose': {
+      const annotateBranchBody = (comment: string, body: TsExpression): TsExpression => tsRawExpression(`(
+  ${comment}
+  ${body.code}
+)`);
       const branches: Array<{ readonly test: TsExpression; readonly body: TsExpression }> = [];
 
       for (const branch of instruction.whenBranches) {
@@ -542,7 +565,10 @@ function emitInstruction(
           return undefined;
         }
 
-        branches.push({ test: testExpression, body: bodyExpression });
+        branches.push({
+          test: testExpression,
+          body: annotateBranchBody(renderWhenProvenanceComment(branch, options.sourcePath), bodyExpression),
+        });
       }
 
       if (branches.length === 0) {
@@ -559,6 +585,13 @@ function emitInstruction(
         return undefined;
       }
 
+      if (instruction.otherwiseBody !== undefined) {
+        otherwiseExpression = annotateBranchBody(
+          renderOtherwiseProvenanceComment(instruction.otherwiseLocation, options.sourcePath),
+          otherwiseExpression,
+        );
+      }
+
       for (let index = branches.length - 1; index >= 0; index -= 1) {
         const branch = branches[index];
         if (branch === undefined) {
@@ -568,7 +601,7 @@ function emitInstruction(
         otherwiseExpression = tsConditionalExpression(branch.test, branch.body, otherwiseExpression);
       }
 
-      return otherwiseExpression;
+      return annotateInstruction(otherwiseExpression);
     }
     case 'forEach': {
       const simplePath = tryGetSimpleChildPath(instruction.select);
@@ -587,9 +620,9 @@ function emitInstruction(
       const callbackParameters = body.code.includes('currentIndex') || body.code.includes('currentNodes.length')
         ? '(currentNode, currentIndex, currentNodes)'
         : '(currentNode)';
-      return tsRawExpression(
+      return annotateInstruction(tsRawExpression(
         `selectSimplePathNodes(${startNode}, ${JSON.stringify(simplePath.segments)}).map(${callbackParameters} => ${body.code}).join("")`,
-      );
+      ));
     }
     case 'callTemplate': {
       if (instruction.withParams.length > 0) {
@@ -620,16 +653,16 @@ function emitInstruction(
         return undefined;
       }
 
-      return tsRawExpression(
+      return annotateInstruction(tsRawExpression(
         `(${renderCommentedArrowFunction(
           renderTemplateProvenanceComment(namedTemplate, options.sourcePath),
           '()',
           body.code,
         )})()`,
-      );
+      ));
     }
     case 'applyTemplates':
-      return options.renderApplyTemplates?.(instruction, contextNodeIdentifier);
+      return annotateInstruction(options.renderApplyTemplates?.(instruction, contextNodeIdentifier));
     default:
       return undefined;
   }

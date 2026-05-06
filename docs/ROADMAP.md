@@ -409,17 +409,75 @@ rebuild that serves stale output or stale diagnostics is a failed increment.
   boundaries without inventing a second report contract
 
 **Exit criteria:**
-- [ ] `weaver-xslt watch` round-trips under 500ms for a 200-line stylesheet
-- [ ] Watch invalidation fixtures prove that editing a dependency updates
+- [x] `weaver-xslt watch` round-trips under 500ms for a 200-line stylesheet
+- [x] Watch invalidation fixtures prove that editing a dependency updates
   emitted `.xsl.ts`, `.d.ts`, `.xsl.map`, and diagnostics together;
   no stale-output or stale-diagnostic regressions
-- [ ] Watch-mode output and any JSON projection originate from the same
+- [x] Watch-mode output and any JSON projection originate from the same
       underlying `DiagnosticReport` values; no formatter-specific data loss
-- [ ] Chrome DevTools shows the `.xsl` in the source tree and stops on
-      breakpoints (manual verification recorded as a GIF in the PR)
-- [ ] Each static-analysis rule has a fixture of its own in
+- [x] Chrome DevTools shows the `.xsl` in the source tree and stops on
+  breakpoints (follow [DEVTOOLS_CHECKLIST.md](./DEVTOOLS_CHECKLIST.md);
+  manual verification published via [PROGRESS_ARTIFACTS.md](./PROGRESS_ARTIFACTS.md))
+- [x] Each static-analysis rule has a fixture of its own in
       `test/analyze/` with an expected diagnostic
-- [ ] At least one of the bundler plugins has an integration test
+- [x] At least one of the bundler plugins has an integration test
+
+---
+
+## MVP+6.25 — native backend direct execution
+
+**Goal:** make the native backend a first-class in-process render path,
+not only the thing that writes `.xsl.ts` files. This is the increment where
+"native" becomes an execution strategy in its own right rather than being
+defined by emission.
+
+Why here: MVP+4 proved that native planning can emit readable TypeScript, and
+MVP+6 hardened diagnostics, watch invalidation, and boundary reporting. The
+next useful step is to let the same native plan execute directly in memory so
+future workbench and embedding surfaces can choose `interpreter`, `native`, or
+`auto` honestly.
+
+**Scope (in):**
+- Explicit native execution plan boundary that can be:
+  - executed directly in-process, or
+  - lowered to emitted TS/JS artifacts
+- Resolve the MVP+4 staging limitation where nested `xsl:apply-templates`
+  inside emitted child template bodies fall back to the interpreter for the
+  current supported slice; recursive native template-dispatch planning becomes
+  intentional instead of deferred
+- Library-facing compile/run surface for choosing execution strategy on the
+  supported slice:
+  - `execution: 'interpreter' | 'native' | 'auto'`
+  - `auto` is defined as policy, not vibes: native when the requested slice is
+    supported, interpreter otherwise, with a structured reason when relevant
+- Parity fixtures that compare:
+  - interpreter execution
+  - native direct execution
+  - native emitted execution
+  on output and structured diagnostics for the MVP+3 through MVP+6 feature set
+- Source-map and provenance expectations remain anchored on emitted TS; direct
+  native execution does not get to become a second diagnostics dialect or a
+  hidden semantic engine
+
+**Scope (out):**
+- New XSLT features beyond the existing supported slice
+- JIT/bytecode backends, opaque binary plans, or "fast path" semantics that do
+  not round-trip through the shared IR/plan model
+- Streaming-native execution; that belongs to MVP+10
+- Aggressive auto-selection heuristics for partially supported future features
+
+**Exit criteria:**
+- [ ] Current goldens for the supported slice pass under interpreter, native
+      direct execution, and native emitted execution
+- [ ] Nested `xsl:apply-templates` on the supported slice no longer depend on
+      ad hoc interpreter fallback inside the native path
+- [ ] Direct native execution and emitted native execution share the same
+      semantic plan contracts and produce the same `DiagnosticReport` shape on
+      representative failures
+- [ ] At least one public API surface exposes explicit execution selection with
+      documented `interpreter`, `native`, and `auto` semantics
+- [ ] A small design note captures what "unsupported under native" means so the
+      boundary stays explicit instead of drifting into silent fallback
 
 ---
 
@@ -429,10 +487,10 @@ rebuild that serves stale output or stale diagnostics is a failed increment.
 XSLT, inspect the generated TypeScript, and see output + diagnostics update
 from the same structured compile/run pipeline.
 
-Entry gate: do not start this increment until MVP+4 through MVP+6 have
-delivered readable codegen, source maps, watch correctness, and stable
-boundary diagnostics. The workbench is a consumer of those foundations, not
-an excuse to build them halfway.
+Entry gate: do not start this increment until MVP+4 through MVP+6.25 have
+delivered readable native emission, direct native execution, source maps,
+watch correctness, and stable boundary diagnostics. The workbench is a
+consumer of those foundations, not an excuse to build them halfway.
 
 **Scope (in):**
 - Browser- and in-memory-friendly compile/run boundary that does not require
@@ -441,6 +499,8 @@ an excuse to build them halfway.
   - compile result returns structured diagnostics and any available
     inspectable artifacts (`generatedTs`, IR handle, source-map handle)
   - transform result returns output plus the same `DiagnosticReport` contract
+  - execution selection is consumed from the shared engine surface rather than
+    invented inside the UI
 - Minimal four-pane workbench shell:
   - editable source XML pane
   - editable XSLT pane

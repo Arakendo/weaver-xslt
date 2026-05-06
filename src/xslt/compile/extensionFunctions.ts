@@ -1,5 +1,5 @@
 import { XPST0017, XPST0081, XPTY0004 } from '../../errors/codes.js';
-import type { ErrorFrame, SourceLocation } from '../../errors/index.js';
+import type { ErrorFrame, ErrorSuggestion, SourceLocation } from '../../errors/index.js';
 import type { SourceSpan } from '../../xpath/lex/lexer.js';
 import type {
   FilterExpression,
@@ -15,7 +15,8 @@ import type {
   XPathAst,
 } from '../../xpath/parse/ast.js';
 import { createXsltStaticError } from './compilerSupport.js';
-import { lookupFunctionArityRequirement, matchesArityRequirement } from '../../xpath/eval/arityValidation.js';
+import { listKnownFunctionNames, lookupFunctionArityRequirement, matchesArityRequirement } from '../../xpath/eval/arityValidation.js';
+import { computeLevenshteinDistance } from '../diagnostics.js';
 
 const PREDEFINED_NAMESPACE_PREFIXES = new Map<string, string>([
   ['array', 'http://www.w3.org/2005/xpath-functions/array'],
@@ -176,6 +177,7 @@ function validateFunctionCall(ast: FunctionCallExpression, options: XPathFunctio
   if (resolved.kind === 'builtin') {
     const arityRequirement = lookupFunctionArityRequirement(resolved.name);
     if (arityRequirement === undefined) {
+      const suggestion = createFunctionNameSuggestion(ast.callee, resolved, options);
       throwFunctionValidationError(
         XPST0017,
         `Unknown function ${ast.callee} with arity ${ast.arguments.length}.`,
@@ -185,6 +187,7 @@ function validateFunctionCall(ast: FunctionCallExpression, options: XPathFunctio
           functionName: ast.callee,
           actualArity: ast.arguments.length,
         },
+        suggestion,
       );
     }
 
@@ -207,6 +210,7 @@ function validateFunctionCall(ast: FunctionCallExpression, options: XPathFunctio
 
   const signature = options.extensionFunctions.get(resolved.normalizedName);
   if (signature === undefined) {
+    const suggestion = createFunctionNameSuggestion(ast.callee, resolved, options);
     throwFunctionValidationError(
       XPST0017,
       `Unknown function ${ast.callee} with arity ${ast.arguments.length}.`,
@@ -216,6 +220,7 @@ function validateFunctionCall(ast: FunctionCallExpression, options: XPathFunctio
         functionName: ast.callee,
         actualArity: ast.arguments.length,
       },
+      suggestion,
     );
   }
 
@@ -269,7 +274,7 @@ function validateFunctionCall(ast: FunctionCallExpression, options: XPathFunctio
 function resolveFunctionName(
   callee: string,
   options: XPathFunctionValidationOptions,
-): { kind: 'builtin'; readonly name: string } | { kind: 'extension'; readonly normalizedName: string } {
+): { kind: 'builtin'; readonly name: string } | { kind: 'extension'; readonly normalizedName: string; readonly prefix: string; readonly namespaceUri: string } {
   if (!callee.includes(':')) {
     return { kind: 'builtin', name: `fn:${callee}` };
   }
@@ -298,7 +303,55 @@ function resolveFunctionName(
   return {
     kind: 'extension',
     normalizedName: `{${namespaceUri}}${localName}`,
+    prefix,
+    namespaceUri,
   };
+}
+
+function createFunctionNameSuggestion(
+  callee: string,
+  resolved: ReturnType<typeof resolveFunctionName>,
+  options: XPathFunctionValidationOptions,
+): ErrorSuggestion | undefined {
+  const candidateNames = resolved.kind === 'builtin'
+    ? listKnownFunctionNames().filter((name) => name.startsWith(resolved.name.startsWith('map:') ? 'map:' : 'fn:'))
+    : [...options.extensionFunctions.values()]
+      .filter((signature) => signature.namespaceUri === resolved.namespaceUri)
+      .map((signature) => `${resolved.prefix}:${signature.localName}`);
+
+  const nearest = candidateNames
+    .map((candidateName) => {
+      const displayCandidate = toSuggestedFunctionDisplayName(candidateName, callee, resolved.kind);
+      return {
+        candidateName,
+        displayCandidate,
+        distance: computeLevenshteinDistance(callee, displayCandidate),
+      };
+    })
+    .sort((left, right) => left.distance - right.distance)[0];
+
+  if (nearest === undefined || nearest.distance > 2) {
+    return undefined;
+  }
+
+  return {
+    kind: 'fix',
+    label: `did you mean ${nearest.displayCandidate}(...)?`,
+    replacement: nearest.displayCandidate,
+    confidence: nearest.distance === 0 ? 1 : 1 - (nearest.distance / nearest.displayCandidate.length),
+  };
+}
+
+function toSuggestedFunctionDisplayName(
+  candidateName: string,
+  callee: string,
+  kind: ReturnType<typeof resolveFunctionName>['kind'],
+): string {
+  if (kind === 'builtin' && !callee.includes(':') && candidateName.startsWith('fn:')) {
+    return candidateName.slice(3);
+  }
+
+  return candidateName;
 }
 
 function inferXPathAstType(ast: XPathAst): { kind: InferredXPathType; display: string } {
@@ -349,6 +402,7 @@ function throwFunctionValidationError(
   span: SourceSpan,
   options: XPathFunctionValidationOptions,
   details: Readonly<Record<string, string | number | boolean>>,
+  suggestion?: ErrorSuggestion,
 ): never {
   const primaryLocation = mapXPathSpanToSourceLocation(options.expressionLocation, span);
   const frameKind = options.frameKind ?? 'instruction';
@@ -366,6 +420,7 @@ function throwFunctionValidationError(
         label: frameLabel,
         ...(options.expressionLocation === undefined ? {} : { location: options.expressionLocation }),
       }],
+      ...(suggestion === undefined ? {} : { suggestions: [suggestion] }),
       ...(primaryLocation !== undefined && options.expressionLocation !== undefined && primaryLocation.offset !== options.expressionLocation.offset
         ? {
             related: [{

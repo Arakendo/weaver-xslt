@@ -9,15 +9,25 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const document = createCompiledDocument(sourceXml);
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(document, ["root","item"]).map((templateNode) => (
+      (
+  /** literal items (apply-templates-dot.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:apply-templates (apply-templates-dot.xsl:1) */
+  selectSimplePathNodes(document, ["root","item"]).map((templateNode) => (
   /** match="item" (apply-templates-dot.xsl:1) */
+  (
+  /** literal item (apply-templates-dot.xsl:1) */
   "<item>" +
     escapeText(stringValueOfNode(templateNode)) +
     "</item>"
-)).join("") +
-    "</items>",
+)
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=apply-templates-dot.xsl.map

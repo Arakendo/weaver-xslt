@@ -9,15 +9,28 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const document = createCompiledDocument(sourceXml);
   return {
     output:
-      "<items>" +
-    applyBuiltInTemplatesByPath(document, ["root","section","item"], (templateNode) => (
+      (
+  /** literal items (apply-templates-absolute-nested-match-default.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:apply-templates (apply-templates-absolute-nested-match-default.xsl:1) */
+  applyBuiltInTemplatesByPath(document, ["root","section","item"], (templateNode) => (
   /** match="/root/section/item" (apply-templates-absolute-nested-match-default.xsl:1) */
+  (
+  /** literal item (apply-templates-absolute-nested-match-default.xsl:1) */
   "<item>" +
-    escapeText(selectSimplePathText(templateNode, ["name"])) +
+    (
+  /** xsl:value-of (apply-templates-absolute-nested-match-default.xsl:1) */
+  escapeText(selectSimplePathText(templateNode, ["name"]))
+) +
     "</item>"
-), true) +
-    "</items>",
+)
+), true)
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=apply-templates-absolute-nested-match-default.xsl.map

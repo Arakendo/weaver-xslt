@@ -12,19 +12,22 @@
 ## 1. Goals & non-goals
 
 ### Thesis (one sentence)
-Weaver (`@arakendo/weaver-xslt`) is a **TypeScript-native XSLT compiler** that emits
-inspectable, typed, debuggable transform modules. An interpreter backend
-exists for conformance testing and dynamic features; the codegen backend
-is the product.
+Weaver (`@arakendo/weaver-xslt`) is a **TypeScript-native XSLT platform** with
+two first-class execution backends: interpreter and native. The native backend
+can execute in-process or emit inspectable, typed, debuggable TS/JS transform
+modules; emitted TypeScript is the first delivery mode, not the definition of
+native execution.
 
 ### Goals
 - **XSLT 3.0** basic-conformance engine in TypeScript
 - **XPath 3.1** engine written from scratch (no external XPath dependency)
-- **Two backends**: interpreter (reference) and codegen (product), sharing
-  one IR
+- **Two execution backends**: interpreter (reference) and native
+  (first-class product execution path), sharing one IR
+- **Native delivery modes**: direct in-process execution and emitted
+  inspectable TS/JS artifacts from the same native planning pipeline
 - **Debuggability first**: every IR + AST node carries source locations;
   every error names the file, line, column, and stylesheet context; the
-  codegen emits human-readable TS with source maps
+  native emission produces human-readable TS with source maps
 - **Compile-time diagnostics** over runtime surprises wherever possible
 - **Typed integration**: typed params, typed extension functions, typed
   result shapes when feasible
@@ -40,7 +43,7 @@ is the product.
 - XQuery 3.1
 - XSLT 1.0 bug-compat mode
 - Extension instructions / vendor extensions
-- `xsl:evaluate` under the codegen backend (supported under interpreter only)
+- `xsl:evaluate` under the native backend (supported under interpreter only)
 - Saxon-compatibility as a marketing promise
 
 ## 2. High-level layers
@@ -66,18 +69,18 @@ is the product.
    ┌────────────────────┴────────────────┐
    ▼                                         ▼
  ┌─────────────────────┐                 ┌──────────────────────┐
- │ 3a. Interpreter     │                 │ 3b. Codegen backend    │
- │     backend         │                 │     IR → TypeScript     │
- │   (reference impl)  │                 │   (product output)     │
+ │ 3a. Interpreter     │                 │ 3b. Native backend   │
+ │     backend         │                 │  IR → RuntimePlan    │
+ │   (reference impl)  │                 │  (product execution) │
  └─────────────────────┘                 └──────────────────────┘
-           │                                         │
-   both call into XPath engine                  generated code calls
-           │                                  shared runtime helpers
-           ▼                                         │
- ┌─────────────────────┐                                    │
- │ XPath 3.1 Engine    │  ◄───────────────────────────────────────┘
- │ (lex → parse → eval)│
- └─────────────────────┘
+     │                                         │
+   both call into XPath engine              direct execute or emit
+     │                              TS/JS render artifacts
+     ▼                                         │
+ ┌─────────────────────┐                 ┌──────────────────────┐
+ │ XPath 3.1 Engine    │  ◄───────────── │ emitted TS/JS modules │
+ │ (lex → parse → eval)│                 │ call shared runtime   │
+ └─────────────────────┘                 └──────────────────────┘
            │
            ▼
  ┌─────────────────────┐
@@ -171,7 +174,8 @@ Stylesheet compilation produces a `StylesheetIR`: a plain-data tree of
 `'apply-templates'`, `'value-of'`, `'choose'`, `'for-each'`, …).
 
 The IR is the contract between the compiler and **all backends**
-(interpreter, codegen, future optimizers, debugger tooling).
+(interpreter, native execution, native emission, future optimizers,
+debugger tooling).
 It must be:
 
 1. **Pure, JSON-serializable data.** No DOM refs, no closures, no cycles.
@@ -193,7 +197,7 @@ It must be:
   `RuntimePlan` / `EmitPlan` overlay keyed off the IR, not on IR nodes
   themselves.
 
-If the codegen backend can't be written as a (mostly) pure function
+If the native emitter can't be written as a (mostly) pure function
 `IR → string`, the IR is doing too little. Fix the IR, not the backend.
 
 If the interpreter needs richer runtime toys (resolved QNames, compiled
@@ -300,7 +304,9 @@ An error message is not considered acceptable unless it identifies:
 - where possible, the caller chain (which `apply-templates` invoked this)
 - where possible, a "did you mean" suggestion
 
-See DEC-013 and [DIFFERENTIATORS.md](./DIFFERENTIATORS.md) D1.
+See DEC-013, [DIFFERENTIATORS.md](./DIFFERENTIATORS.md) D1, and
+[DIAGNOSTIC_INTRINSICS.md](./DIAGNOSTIC_INTRINSICS.md) for the narrow
+compiler-recognized observability/intrinsics surface.
 
 ### DEC-013 — Diagnostics-first, always
 This project's reason to exist is better XSLT ergonomics. Therefore:
@@ -323,14 +329,17 @@ This project's reason to exist is better XSLT ergonomics. Therefore:
   analysis, runtime failures, serialization failures, watch-mode output,
   and codegen diagnostics all project to the same `DiagnosticReport`
   shape. Different renderers are allowed; different meanings are not.
+  Canonical ordering and shared presentation policy belong at this
+  boundary layer (shared diagnostics helpers / boundary adapters), not
+  inside individual analysis passes.
 7. **Parity is semantic, not cosmetic.** Where interpreter and codegen
   both implement a feature, diagnostics match on code, phase, category,
   severity, primary span when source is available, and relevant details.
   Minor wording drift in formatted text is secondary.
 
-### DEC-014 — Codegen backend: TypeScript source, not bytecode
-The codegen backend emits **plain TypeScript source** (`.xsl.ts`) plus a
-`.d.ts`. Rejected alternatives:
+### DEC-014 — Native emission path: TypeScript source, not bytecode
+One delivery mode of the native backend emits **plain TypeScript source**
+(`.xsl.ts`) plus a `.d.ts`. Rejected alternatives:
 
 - **Bytecode / SEF-style binary** — opaque, unreviewable in PRs, needs
   a VM. Good for Saxon-JS's use case (hide the IR). Bad for ours.
@@ -345,7 +354,9 @@ The codegen backend emits **plain TypeScript source** (`.xsl.ts`) plus a
 Generated code imports from `@arakendo/weaver-xslt/runtime` for shared helpers
 (writer, XPath primitives, template dispatcher, XDM operations). The
 runtime is a separate subpath export so projects can bundle *only* the
-runtime without the compiler.
+runtime without the compiler. Direct native execution and emitted TS/JS should
+share the same semantic plan and helper contracts; emission is a delivery
+choice, not a separate semantic engine.
 
 Even before we adopt `ts.factory.*`, emission should not be raw string
 concatenation everywhere. A tiny output-node layer is worth it for name
@@ -400,6 +411,13 @@ evaluation-order bugs, and diagnostic drift early.
 Diagnostic ordering must also be stable and deterministic. "Same set of
 errors in a different order" is still parity drift once tests, watch mode,
 or editor tooling consume the report stream.
+The north-star rule is: diagnostics are first-class product artifacts,
+not incidental log output. Discovery belongs in analyzers and runtimes;
+canonical ordering and renderer-shared presentation policy belong in the
+diagnostics boundary so every surface exposes the same meaning.
+Use [DIAGNOSTIC_INTRINSICS.md](./DIAGNOSTIC_INTRINSICS.md) when the work
+crosses from baseline diagnostics into compiler-recognized `wx:*`
+observability or assertion surface.
 
 ### DEC-011 — Module layout
 ESM only. Everything under `src/`:
@@ -543,7 +561,8 @@ Everything else is internal. No deep imports from consumers.
 
 Ordering reflects the thesis (DIFFERENTIATORS): interpreter backend
 first (fastest path to working code + reference semantics), then
-diagnostics polish, then the codegen backend which is the product.
+diagnostics polish, then the native backend with readable TS as its first
+delivery mode.
 
 | M | Goal | Exit criteria |
 |---|------|---------------|
@@ -551,7 +570,7 @@ diagnostics polish, then the codegen backend which is the product.
 | **M1** | XPath vertical slice + diagnostic bones | Parse & evaluate `1 + 2`, `//foo`, `foo/bar[1]`; all AST nodes source-located; errors print file:line:col with source snippet + caret |
 | **M2** | XPath core on interpreter | All axes, predicates, value/general/node comparisons, `if/for/let/some/every`, ~40 fn:* functions. Target: 20% of QT3 passing. |
 | **M3** | XSLT MVP on interpreter | `xsl:template`, `xsl:apply-templates`, `xsl:value-of`, `xsl:for-each`, `xsl:choose`, `xsl:variable`, `xsl:param`, literal result elements. First golden test green. |
-| **M4** | **Codegen backend (v1)** | IR → readable TypeScript for M3 features; golden + parity fixtures compare output and structured diagnostics under both backends; M3 conformance slice passes under codegen; generated output committed to a fixtures folder for review |
+| **M4** | **Native backend (v1 TypeScript emission)** | IR → readable TypeScript for M3 features; golden + parity fixtures compare output and structured diagnostics under both backends; M3 conformance slice passes under native emission; generated output committed to a fixtures folder for review |
 | **M5** | Typed params + typed extension functions | `.d.ts` emission; `defineXsltFunctions` with compile-time signature checking; CLI `weaver-xslt compile` |
 | **M6** | Watch mode + source maps + diagnostics v2 | `weaver-xslt watch`; Vite/esbuild plugin; `.xsl.map` output; static-analysis pass for unreachable templates, unused vars, priority conflicts, "did you mean" suggestions |
 | **M6.5** | Live workbench / playground | four-pane XML + XSLT + generated TS + output loop over in-memory sources; generated TS stays read-only; linked highlighting consumes source-map and diagnostic artifacts rather than screen-scraped text |

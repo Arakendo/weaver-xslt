@@ -13,12 +13,25 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   }
   return {
     output:
-      "<items>" +
-    selectSimplePathNodes(currentNode, ["item"]).map((currentNode) => "<item>" +
-    escapeText(selectSimplePathText(currentNode, ["name"])) +
-    "</item>").join("") +
-    "</items>",
+      (
+  /** literal items (matched-root-for-each.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:for-each (matched-root-for-each.xsl:1) */
+  selectSimplePathNodes(currentNode, ["item"]).map((currentNode) => (
+  /** literal item (matched-root-for-each.xsl:1) */
+  "<item>" +
+    (
+  /** xsl:value-of (matched-root-for-each.xsl:1) */
+  escapeText(selectSimplePathText(currentNode, ["name"]))
+) +
+    "</item>"
+)).join("")
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=matched-root-for-each.xsl.map

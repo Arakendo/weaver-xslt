@@ -10,15 +10,37 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const currentNode = document;
   return {
     output:
-      "<out>" +
-    ((!selectSimplePathExists(currentNode, ["root","flag"])) ? "<missing>" +
-    "</missing>" : "") +
-    (true ? "<always>" +
-    "</always>" : "") +
-    (false ? "<never>" +
-    "</never>" : "") +
-    "</out>",
+      (
+  /** literal out (boolean-helpers.xsl:4) */
+  "<out>" +
+    (
+  /** xsl:if (boolean-helpers.xsl:5) */
+  ((!selectSimplePathExists(currentNode, ["root","flag"])) ? (
+  /** literal missing (boolean-helpers.xsl:5) */
+  "<missing>" +
+    "</missing>"
+) : "")
+) +
+    (
+  /** xsl:if (boolean-helpers.xsl:6) */
+  (true ? (
+  /** literal always (boolean-helpers.xsl:6) */
+  "<always>" +
+    "</always>"
+) : "")
+) +
+    (
+  /** xsl:if (boolean-helpers.xsl:7) */
+  (false ? (
+  /** literal never (boolean-helpers.xsl:7) */
+  "<never>" +
+    "</never>"
+) : "")
+) +
+    "</out>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=boolean-helpers.xsl.map

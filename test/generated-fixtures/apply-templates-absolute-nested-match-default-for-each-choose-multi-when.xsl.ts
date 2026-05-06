@@ -9,21 +9,61 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   const document = createCompiledDocument(sourceXml);
   return {
     output:
-      "<items>" +
-    applyBuiltInTemplatesByPath(document, ["root","section","item"], (templateNode) => (
+      (
+  /** literal items (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
+  "<items>" +
+    (
+  /** xsl:apply-templates (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
+  applyBuiltInTemplatesByPath(document, ["root","section","item"], (templateNode) => (
   /** match="/root/section/item" (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
+  (
+  /** literal item (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
   "<item>" +
-    escapeText(selectSimplePathText(templateNode, ["name"])) +
-    "<details>" +
-    selectSimplePathNodes(templateNode, ["detail"]).map((currentNode) => (selectSimplePathExists(currentNode, ["flag"]) ? "<flagged>" +
-    "</flagged>" : (selectSimplePathExists(currentNode, ["vip"]) ? "<vip>" +
-    "</vip>" : "<plain>" +
-    "</plain>"))).join("") +
-    "</details>" +
+    (
+  /** xsl:value-of (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
+  escapeText(selectSimplePathText(templateNode, ["name"]))
+) +
+    (
+  /** literal details (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
+  "<details>" +
+    (
+  /** xsl:for-each (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
+  selectSimplePathNodes(templateNode, ["detail"]).map((currentNode) => (
+  /** xsl:choose (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
+  (selectSimplePathExists(currentNode, ["flag"]) ? (
+  /** xsl:when (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
+  (
+  /** literal flagged (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
+  "<flagged>" +
+    "</flagged>"
+)
+) : (selectSimplePathExists(currentNode, ["vip"]) ? (
+  /** xsl:when (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
+  (
+  /** literal vip (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
+  "<vip>" +
+    "</vip>"
+)
+) : (
+  /** xsl:otherwise (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
+  (
+  /** literal plain (apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl:1) */
+  "<plain>" +
+    "</plain>"
+)
+)))
+)).join("")
+) +
+    "</details>"
+) +
     "</item>"
-), true) +
-    "</items>",
+)
+), true)
+) +
+    "</items>"
+),
   };
 }
 
 export default { source, transform };
+//# sourceMappingURL=apply-templates-absolute-nested-match-default-for-each-choose-multi-when.xsl.map

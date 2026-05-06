@@ -31,6 +31,18 @@
     "./runtime": {
       "types": "./dist/runtime/index.d.ts",
       "import": "./dist/runtime/index.js"
+    },
+    "./diagnostics": {
+      "types": "./dist/diagnostics.d.ts",
+      "import": "./dist/diagnostics.js"
+    },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js"
+    },
+    "./esbuild": {
+      "types": "./dist/esbuild.d.ts",
+      "import": "./dist/esbuild.js"
     }
   },
   "files": [
@@ -44,10 +56,12 @@
     "clean": "rimraf dist",
     "dev": "tsx watch src/index.ts",
     "test": "vitest run",
+    "devtools:fixture": "npx --yes vite@7.1.12 --config devtools-fixture/vite.config.ts --host 127.0.0.1 --port 4173",
     "test:packaging": "npm run build && npm pack --json --dry-run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:conformance": "vitest run test/conformance",
+    "benchmark:watch": "tsx scripts/benchmark-watch.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
@@ -64,6 +78,7 @@
   "license": "MIT",
   "dependencies": {
     "@xmldom/xmldom": "^0.9.5",
+    "chokidar": "^4.0.3",
     "typescript": "^5.7.2"
   },
   "devDependencies": {
@@ -71,6 +86,7 @@
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
     "@vitest/coverage-v8": "^2.1.8",
+    "esbuild": "^0.27.7",
     "eslint": "^9.17.0",
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",

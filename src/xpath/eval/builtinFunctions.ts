@@ -10,6 +10,7 @@ import {
 } from '../../xdm/types.js';
 import type { XPathAst } from '../parse/ast.js';
 import { createBuiltinFunctionSupport } from './builtinFunctionSupport.js';
+import { createFunctionNameSuggestion } from './arityValidation.js';
 import { createBuiltinNodeFunctionEvaluator } from './builtinNodeFunctions.js';
 import { createBuiltinNumericFunctionEvaluator } from './builtinNumericFunctions.js';
 import { createBuiltinSequenceFunctionEvaluator } from './builtinSequenceFunctions.js';
@@ -31,7 +32,13 @@ type BuiltinFunctionHelpers = {
   evaluateExpression(ast: XPathAst, context: DynamicContext): XdmItem[];
   requireArity(name: string, args: readonly XPathAst[], expected: number, span: SpanLike): void;
   throwArityError(name: string, actualArity: number, arityRequirement: string, span: SpanLike): never;
-  createXPathError(code: string, message: string, span: SpanLike, details?: Readonly<Record<string, unknown>>): Error;
+  createXPathError(
+    code: string,
+    message: string,
+    span: SpanLike,
+    details?: Readonly<Record<string, unknown>>,
+    context?: { readonly suggestions?: readonly { readonly kind: 'fix' | 'hint' | 'alternative'; readonly label: string; readonly replacement?: string; readonly confidence?: number }[] },
+  ): Error;
   describeItemsType(items: readonly XdmItem[]): string;
   describeItemType(item: XdmItem): string;
   effectiveBooleanValue(items: readonly XdmItem[], span: SpanLike): boolean;
@@ -148,11 +155,13 @@ export function createBuiltinFunctionEvaluator(helpers: BuiltinFunctionHelpers):
       case 'fn:false':
         helpers.requireArity(normalized, args, 0, span);
         return [createXdmBoolean(false)];
-      default:
+      default: {
+        const suggestion = createFunctionNameSuggestion(callee);
         throw helpers.createXPathError(XPST0017, `Unknown function ${callee} with arity ${args.length}.`, span, {
           functionName: callee,
           actualArity: args.length,
-        });
+        }, suggestion === undefined ? undefined : { suggestions: [suggestion] });
+      }
     }
   }
 
