@@ -2,7 +2,7 @@ import type { Node } from '@xmldom/xmldom';
 
 import type { TransformOptions, TransformResult } from '../processor/types.js';
 import { XTDE0640 } from '../errors/codes.js';
-import { XsltError } from '../errors/index.js';
+import { XdmError, XsltError, type ErrorFrame, type RelatedLocation, type SourceLocation } from '../errors/index.js';
 import { parseXml, type Document } from '../xml/parse.js';
 import { runTransform } from '../xslt/eval/transform.js';
 import type { StylesheetIR } from '../xslt/compile/ir.js';
@@ -127,12 +127,55 @@ export function transformCompiledStylesheet(
   return runTransform(ir, sourceXml, context);
 }
 
-export function throwCircularNativeGlobalBinding(bindingKind: 'param' | 'variable', variableName: string): never {
+export function throwCircularNativeGlobalBinding(
+  bindingKind: 'param' | 'variable',
+  variableName: string,
+  location?: SourceLocation,
+): never {
   throw new XsltError(
     XTDE0640,
     `Circular top-level ${bindingKind} dependency involving $${variableName}.`,
-    undefined,
+    location,
     { variableName },
+  );
+}
+
+export function prependNativeGlobalBindingError(
+  error: unknown,
+  bindingKind: 'param' | 'variable',
+  variableName: string,
+  selectText?: string,
+  location?: SourceLocation,
+): unknown {
+  if (!(error instanceof XdmError)) {
+    return error;
+  }
+
+  const frame: ErrorFrame = {
+    kind: 'instruction',
+    label: selectText === undefined
+      ? `xsl:${bindingKind} name="${variableName}"`
+      : `xsl:${bindingKind} name="${variableName}" select="${selectText}"`,
+    ...(location === undefined ? {} : { location }),
+  };
+  const related: RelatedLocation | undefined = location === undefined
+    ? undefined
+    : {
+        label: `top-level ${bindingKind}`,
+        location,
+      };
+
+  return new XsltError(
+    error.code,
+    error.detailMessage,
+    error.location,
+    error.details,
+    {
+      related: related === undefined ? error.related : [related, ...error.related],
+      frames: [frame, ...error.frames],
+      suggestions: error.suggestions,
+      causes: error.causes.length === 0 ? [error] : error.causes,
+    },
   );
 }
 

@@ -292,6 +292,7 @@ function tryCreateGlobalBindingSetup(
     }
   }
 
+  runtimeHelpers.add('prependNativeGlobalBindingError');
   runtimeHelpers.add('throwCircularNativeGlobalBinding');
 
   for (const plan of bindingPlans) {
@@ -311,7 +312,7 @@ function tryCreateGlobalBindingSetup(
     setupStatements.push(`let ${cacheIdentifier};`);
     setupStatements.push(`function ${getterIdentifier}() {`);
     setupStatements.push(`  if (${stateIdentifier} === 2) { return ${cacheIdentifier}; }`);
-    setupStatements.push(`  if (${stateIdentifier} === 1) { throwCircularNativeGlobalBinding(${JSON.stringify(binding.kind)}, ${JSON.stringify(binding.name)}); }`);
+    setupStatements.push(`  if (${stateIdentifier} === 1) { throwCircularNativeGlobalBinding(${JSON.stringify(binding.kind)}, ${JSON.stringify(binding.name)}, ${JSON.stringify(binding.location)}); }`);
     setupStatements.push(`  ${stateIdentifier} = 1;`);
     setupStatements.push('  try {');
 
@@ -330,7 +331,7 @@ function tryCreateGlobalBindingSetup(
     setupStatements.push(`    return ${cacheIdentifier};`);
     setupStatements.push('  } catch (error) {');
     setupStatements.push(`    ${stateIdentifier} = 0;`);
-    setupStatements.push('    throw error;');
+    setupStatements.push(`    throw prependNativeGlobalBindingError(error, ${JSON.stringify(binding.kind)}, ${JSON.stringify(binding.name)}, ${JSON.stringify(binding.selectText)}, ${JSON.stringify(binding.location)});`);
     setupStatements.push('  }');
     setupStatements.push('}');
   }

@@ -4,7 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
+import { diagnosticReportFromError } from '../../src/diagnostics/index.js';
 import { XsltProcessor, type TransformOptions } from '../../src/index.js';
+import { captureError } from '../helpers/captureError.js';
 
 import { compileAndLoadGeneratedModule } from './compile.support.js';
 
@@ -43,6 +45,15 @@ function normalizeXml(value: string): string {
 }
 
 const cases = discoverCases();
+const NATIVE_SUPPORTED_GOLDEN_CASES = new Set([
+  'hello',
+  'value-of-basic',
+  'invoice-simple',
+]);
+const NATIVE_UNSUPPORTED_GOLDEN_CASES = new Set([
+  'priority-name-over-wildcard',
+  'priority-later-template-wins',
+]);
 
 describe('codegen golden runtime parity', () => {
   if (cases.length === 0) {
@@ -65,12 +76,63 @@ describe('codegen golden runtime parity', () => {
       const generatedModule = exports as {
         readonly transform: (source: string, context?: TransformOptions) => ReturnType<XsltProcessor['transform']>;
       };
-      const interpreterResult = new XsltProcessor(stylesheet).transform(input, options);
+      const processor = new XsltProcessor(stylesheet);
+      const interpreterResult = processor.transform(input, options);
       const generatedResult = generatedModule.transform(input, options);
 
       expect(normalizeXml(generatedResult.output)).toBe(normalizeXml(expected));
       expect(normalizeXml(generatedResult.output)).toBe(normalizeXml(interpreterResult.output));
       expect(generatedResult.secondaryOutputs ?? {}).toEqual(interpreterResult.secondaryOutputs ?? {});
+
+      if (NATIVE_SUPPORTED_GOLDEN_CASES.has(goldenCase.name)) {
+        const nativeResult = processor.transform(input, {
+          ...options,
+          execution: 'native',
+        });
+
+        expect(normalizeXml(nativeResult.output)).toBe(normalizeXml(expected));
+        expect(normalizeXml(nativeResult.output)).toBe(normalizeXml(interpreterResult.output));
+        expect(nativeResult.secondaryOutputs ?? {}).toEqual(interpreterResult.secondaryOutputs ?? {});
+        expect(nativeResult.execution).toEqual({
+          requested: 'native',
+          resolved: 'native',
+        });
+      }
+
+      if (NATIVE_UNSUPPORTED_GOLDEN_CASES.has(goldenCase.name)) {
+        const autoResult = processor.transform(input, {
+          ...options,
+          execution: 'auto',
+        });
+        const nativeError = captureError(() => {
+          processor.transform(input, {
+            ...options,
+            execution: 'native',
+          });
+        });
+        const nativeReport = diagnosticReportFromError(nativeError);
+
+        expect(nativeReport).toMatchObject({
+          code: 'WEAVER_XSLT_NATIVE_UNSUPPORTED',
+          phase: 'runtime',
+          category: 'execution',
+          details: [
+            { key: 'requestedExecution', value: 'native' },
+            { key: 'fallbackCode', value: 'unsupported_stylesheet' },
+          ],
+        });
+        expect(normalizeXml(autoResult.output)).toBe(normalizeXml(expected));
+        expect(normalizeXml(autoResult.output)).toBe(normalizeXml(interpreterResult.output));
+        expect(autoResult.secondaryOutputs ?? {}).toEqual(interpreterResult.secondaryOutputs ?? {});
+        expect(autoResult.execution).toEqual({
+          requested: 'auto',
+          resolved: 'interpreter',
+          fallbackReason: {
+            code: 'unsupported_stylesheet',
+            message: 'The current stylesheet is outside the native-supported slice for M6.25.',
+          },
+        });
+      }
     });
   }
 });

@@ -4,7 +4,7 @@ import { transformCompiledStylesheet } from '../../src/runtime/index.js';
 import { compileStylesheet } from '../../src/xslt/compile/compiler.js';
 import { XsltProcessor } from '../../src/index.js';
 
-import { compileAndLoadGeneratedModule, expectRuntimeModuleToMatchInterpreter } from './compile.support.js';
+import { compileAndLoadGeneratedModule, expectNativeRuntimeParity, expectRuntimeModuleToMatchInterpreter } from './compile.support.js';
 
 const HELLO_FIXTURE_STYLESHEET = `
       <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -44,6 +44,14 @@ const MODULE_RUNTIME_CASES = [
   { name: 'apply-templates-default', path: 'apply-templates-default.xsl', stylesheet: APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, sourceXml: '<invoice><item>apple</item><note>carry</note><section><item>pear</item></section></invoice>' },
 ] as const;
 
+const NATIVE_RUNTIME_CASES = [
+  { name: 'conditional', path: 'conditional.xsl', stylesheet: CONDITIONAL_FIXTURE_STYLESHEET, sourceXml: '<root><name>world</name><role>admin</role></root>' },
+  { name: 'relative', path: 'relative.xsl', stylesheet: RELATIVE_FIXTURE_STYLESHEET, sourceXml: '<root><name>world</name><flag/></root>' },
+  { name: 'boolean-helpers', path: 'boolean-helpers.xsl', stylesheet: BOOLEAN_HELPERS_FIXTURE_STYLESHEET, sourceXml: '<root><name>world</name></root>' },
+  { name: 'apply-templates', path: 'apply-templates.xsl', stylesheet: APPLY_TEMPLATES_FIXTURE_STYLESHEET, sourceXml: '<root><item><name>apple</name></item><item><name>pear</name></item></root>' },
+  { name: 'apply-templates-default', path: 'apply-templates-default.xsl', stylesheet: APPLY_TEMPLATES_DEFAULT_FIXTURE_STYLESHEET, sourceXml: '<invoice><item>apple</item><note>carry</note><section><item>pear</item></section></invoice>' },
+] as const;
+
 describe('XSLT codegen core runtime surface', () => {
   it('executes compiled IR through the runtime helper with interpreter-equivalent output', () => {
     const sourceXml = '<root><name>world</name></root>';
@@ -73,6 +81,12 @@ describe('XSLT codegen core runtime surface', () => {
   for (const { name, path, stylesheet, sourceXml } of MODULE_RUNTIME_CASES) {
     it(`executes the ${name} module through the runtime surface`, () => {
       expectRuntimeModuleToMatchInterpreter(stylesheet, path, sourceXml);
+    });
+  }
+
+  for (const { name, path, stylesheet, sourceXml } of NATIVE_RUNTIME_CASES) {
+    it(`preserves interpreter/direct-native/emitted parity for ${name}`, () => {
+      expectNativeRuntimeParity(stylesheet, path, sourceXml);
     });
   }
 });

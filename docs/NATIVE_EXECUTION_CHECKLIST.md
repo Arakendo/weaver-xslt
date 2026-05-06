@@ -22,6 +22,15 @@ Current progress as of 2026-05-06:
       `auto` fallback metadata
 - a targeted parity helper now checks interpreter, direct native, and emitted
       native behavior together for the supported top-level global-binding slice
+- that targeted parity surface also now covers the current core runtime fixtures
+      for conditional logic, relative paths, boolean helpers, and the supported
+      apply-templates cases
+- the first three-way diagnostic parity case now locks XTDE0640 structure and
+      formatter text across interpreter, direct native, and emitted native
+- the first golden subset now under three-way parity is `hello`,
+      `value-of-basic`, and `invoice-simple`
+- the remaining current goldens now also lock the unsupported-native contract:
+      explicit `native` rejection plus `auto` fallback metadata
 
 Still open:
 
@@ -71,7 +80,7 @@ fuzzy, the rest of the increment becomes surface churn over divergent engines.
 
 ### 0. Lock the comparison target
 
-- [ ] Identify the smallest current golden set that must pass under all three
+- [x] Identify the smallest current golden set that must pass under all three
       execution strategies
 - [x] Add or extend a parity harness that can run:
       - interpreter
@@ -138,11 +147,11 @@ Outcome:
 
 ### 4. Prove semantic parity
 
-- [ ] Compare output parity on the supported goldens
+- [x] Compare output parity on the supported goldens
 - [ ] Compare `DiagnosticReport` parity on representative failures
 - [ ] Confirm that direct native execution does not invent a second
       diagnostics/provenance dialect
-- [ ] Add at least one representative failure where all three strategies are
+- [x] Add at least one representative failure where all three strategies are
       asserted on structure first and formatter text second
 
 Outcome:

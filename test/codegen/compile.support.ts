@@ -18,6 +18,7 @@ import {
   selectSimplePathNodes,
   selectSimplePathText,
   stringValueOfNode,
+  prependNativeGlobalBindingError,
   throwCircularNativeGlobalBinding,
   transformCompiledStylesheet,
 } from '../../src/runtime/index.js';
@@ -35,6 +36,7 @@ const GENERATED_RUNTIME_MODULE = {
   selectSimplePathNodes,
   selectSimplePathText,
   stringValueOfNode,
+  prependNativeGlobalBindingError,
   throwCircularNativeGlobalBinding,
   transformCompiledStylesheet,
 };
