@@ -6,7 +6,7 @@ debuggers, and generated-artifact workflows.
 
 <sub>package: `@arakendo/weaver-xslt` · repo: `weaver-xslt`</sub>
 
-> Status: **MVP+5 complete, MVP+6 in progress** — typed params, typed extension functions, CLI compile/run/watch, source maps, diagnostics v2, and thin Vite/esbuild plugin wrappers are in place; broader watch and debugger polish is still landing.
+> Status: **MVP+6 complete** — typed params, typed extension functions, CLI compile/run/watch, source maps, diagnostics v2, watch invalidation coverage, static analysis, and thin Vite/esbuild plugin wrappers are in place. Next planned increments are native direct execution and the live workbench boundary.
 
 > **Open source, closed contributions.** This project is MIT licensed — fork
 > and use it however you like. External pull requests and issues are not
@@ -198,7 +198,9 @@ plan with scope and exit criteria per increment. High-level milestones:
 - [x] M3 — XSLT MVP on interpreter
 - [x] M4 — **Codegen backend v1** (IR → readable TypeScript)
 - [x] M5 — Typed params, typed extension functions, CLI
-- [ ] M6 — Watch mode, source maps, static-analysis diagnostics v2, bundler polish
+- [x] M6 — Watch mode, source maps, static-analysis diagnostics v2, bundler polish
+- [ ] M6.25 — Native backend direct execution
+- [ ] M6.5 — Live workbench / playground
 - [ ] M7 — XPath type system, maps/arrays, higher-order functions
 - [ ] M8 — XSLT 3.0 feature-complete (non-streaming)
 - [ ] M9 — Conformance push (≥70% under both backends)
