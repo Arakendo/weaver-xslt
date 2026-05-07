@@ -34,21 +34,61 @@ directly from this document.
 
 ### MVP+6.5 Workbench embed
 
-When the public workbench page or supporting media exists, record it here.
+The public workbench prototype is now live on `weaverxslt.org`, with the GIF
+capture retained as supporting media.
 
-Preferred proof:
+Current proof:
 
 - live public page on `weaverxslt.org`
+- supporting GIF stored under `docs/assets/progress/`
 
-Fallback proof:
+Live URL:
 
-- short `webm`, `mp4`, GIF, or screenshot stored under `docs/assets/progress/`
+- [MVP+6.5 Workbench live page](https://weaverxslt.org/WORKBENCH/)
+
+Direct link:
+
+- [MVP+6.5 Workbench verification GIF](./assets/progress/mvp65-workbench-live-page.gif)
 
 Checklist reference:
 
 - [WORKBENCH_EVIDENCE.md](./WORKBENCH_EVIDENCE.md)
 
 ## Current artifacts
+
+### MVP+6.5 Workbench embed
+
+The live public workbench is available here:
+
+- [MVP+6.5 Workbench live page](https://weaverxslt.org/WORKBENCH/)
+
+Supporting media is also stored in-repo for milestone evidence. This GIF shows
+the public workbench prototype running with prefilled XML and XSLT, visible
+generated TypeScript, and the rendered output pane updating on the same page.
+
+Asset path in repo:
+
+```text
+docs/assets/progress/mvp65-workbench-live-page.gif
+```
+
+Published URL:
+
+```text
+https://weaverxslt.org/assets/progress/mvp65-workbench-live-page.gif
+```
+
+Direct link:
+
+- [MVP+6.5 Workbench verification GIF](./assets/progress/mvp65-workbench-live-page.gif)
+
+Preview:
+
+![MVP+6.5 Workbench verification GIF](./assets/progress/mvp65-workbench-live-page.gif)
+
+Checklist reference:
+
+- [WORKBENCH_EVIDENCE.md](./WORKBENCH_EVIDENCE.md)
 
 ### MVP+6 DevTools source-map verification
 
