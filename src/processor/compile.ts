@@ -50,8 +50,14 @@ export function compileStylesheetArtifacts(
   stylesheetSource: string,
   options: CompileStylesheetToTsOptions = {},
 ): CompileStylesheetArtifacts {
-  const { ir: _ir, ...artifacts } = compileStylesheetRuntimeArtifacts(stylesheetSource, options);
-  return artifacts;
+  const artifacts = compileStylesheetRuntimeArtifacts(stylesheetSource, options);
+  return {
+    module: artifacts.module,
+    declaration: artifacts.declaration,
+    digest: artifacts.digest,
+    sourceMap: artifacts.sourceMap,
+    diagnostics: artifacts.diagnostics,
+  };
 }
 
 export function compileStylesheetRuntimeArtifacts(
