@@ -13822,8 +13822,8 @@ function emitInstruction(instruction, runtimeHelpers, contextNodeIdentifier, opt
       if (instruction.select.kind === "functionCall" && instruction.select.arguments.length === 1) {
         const [argument] = instruction.select.arguments;
         if (argument !== void 0 && argument.kind === "path") {
-          const simplePath2 = tryResolveSimpleChildPath(argument, contextNodeIdentifier, options.variableBindings);
-          if (simplePath2 !== void 0) {
+          const simplePath = tryResolveSimpleChildPath(argument, contextNodeIdentifier, options.variableBindings);
+          if (simplePath !== void 0) {
             if (instruction.select.callee === "name") {
               runtimeHelpers.add("escapeText");
               runtimeHelpers.add("nameOfNode");
@@ -13831,8 +13831,8 @@ function emitInstruction(instruction, runtimeHelpers, contextNodeIdentifier, opt
               return annotateInstruction(tsCallExpression("escapeText", [
                 tsCallExpression("nameOfNode", [
                   tsCallExpression("selectSimplePathNode", [
-                    simplePath2.startNodeExpression,
-                    tsRawExpression(JSON.stringify(simplePath2.segments))
+                    simplePath.startNodeExpression,
+                    tsRawExpression(JSON.stringify(simplePath.segments))
                   ])
                 ])
               ]));
@@ -13844,8 +13844,8 @@ function emitInstruction(instruction, runtimeHelpers, contextNodeIdentifier, opt
               return annotateInstruction(tsCallExpression("escapeText", [
                 tsCallExpression("localNameOfNode", [
                   tsCallExpression("selectSimplePathNode", [
-                    simplePath2.startNodeExpression,
-                    tsRawExpression(JSON.stringify(simplePath2.segments))
+                    simplePath.startNodeExpression,
+                    tsRawExpression(JSON.stringify(simplePath.segments))
                   ])
                 ])
               ]));
@@ -13854,7 +13854,7 @@ function emitInstruction(instruction, runtimeHelpers, contextNodeIdentifier, opt
               runtimeHelpers.add("escapeText");
               runtimeHelpers.add("selectSimplePathNodes");
               return annotateInstruction(tsCallExpression("escapeText", [
-                tsRawExpression(`String(selectSimplePathNodes(${simplePath2.startNodeExpression.code}, ${JSON.stringify(simplePath2.segments)}).length)`)
+                tsRawExpression(`String(selectSimplePathNodes(${simplePath.startNodeExpression.code}, ${JSON.stringify(simplePath.segments)}).length)`)
               ]));
             }
           }
@@ -13863,18 +13863,17 @@ function emitInstruction(instruction, runtimeHelpers, contextNodeIdentifier, opt
       if (instruction.select.kind !== "path") {
         return void 0;
       }
-      const simplePath = tryResolveSimpleChildPath(instruction.select, contextNodeIdentifier, options.variableBindings);
-      if (simplePath === void 0) {
+      const pathValue = emitPathStringValueExpression(
+        instruction.select,
+        runtimeHelpers,
+        contextNodeIdentifier,
+        options.variableBindings
+      );
+      if (pathValue === void 0) {
         return void 0;
       }
       runtimeHelpers.add("escapeText");
-      runtimeHelpers.add("selectSimplePathText");
-      return annotateInstruction(tsCallExpression("escapeText", [
-        tsCallExpression("selectSimplePathText", [
-          simplePath.startNodeExpression,
-          tsRawExpression(JSON.stringify(simplePath.segments))
-        ])
-      ]));
+      return annotateInstruction(tsCallExpression("escapeText", [pathValue]));
     }
     case "if": {
       const testExpression = emitTestExpression(
@@ -14098,18 +14097,13 @@ function emitComparisonOperand(ast, runtimeHelpers, contextNodeIdentifier, posit
         expression: tsStringLiteral(ast.value)
       };
     case "path": {
-      const simplePath = tryGetSimpleChildPath(ast);
-      if (simplePath === void 0) {
+      const pathValue = emitPathStringValueExpression(ast, runtimeHelpers, contextNodeIdentifier);
+      if (pathValue === void 0) {
         return void 0;
       }
-      runtimeHelpers.add("selectSimplePathText");
-      const startNode = simplePath.absolute ? "document" : contextNodeIdentifier;
       return {
         kind: "string",
-        expression: tsCallExpression("selectSimplePathText", [
-          tsRawExpression(startNode),
-          tsRawExpression(JSON.stringify(simplePath.segments))
-        ])
+        expression: pathValue
       };
     }
     case "functionCall":
@@ -14230,6 +14224,49 @@ function tryGetSimpleChildSegments(ast) {
   }
   return names;
 }
+function emitPathStringValueExpression(ast, runtimeHelpers, contextNodeIdentifier, variableBindings) {
+  if (variableBindings === void 0) {
+    const simplePath = tryGetSimpleChildPath(ast);
+    if (simplePath !== void 0) {
+      runtimeHelpers.add("selectSimplePathText");
+      return tsCallExpression("selectSimplePathText", [
+        tsRawExpression(simplePath.absolute ? "document" : contextNodeIdentifier),
+        tsRawExpression(JSON.stringify(simplePath.segments))
+      ]);
+    }
+  } else {
+    const simplePath = tryResolveSimpleChildPath(ast, contextNodeIdentifier, variableBindings);
+    if (simplePath !== void 0) {
+      runtimeHelpers.add("selectSimplePathText");
+      return tsCallExpression("selectSimplePathText", [
+        simplePath.startNodeExpression,
+        tsRawExpression(JSON.stringify(simplePath.segments))
+      ]);
+    }
+  }
+  const descendantPath = tryGetSimpleDescendantNamePath(ast);
+  if (descendantPath === void 0) {
+    return void 0;
+  }
+  runtimeHelpers.add("selectDescendantElementTextByName");
+  return tsCallExpression("selectDescendantElementTextByName", [
+    tsRawExpression(descendantPath.absolute ? "document" : contextNodeIdentifier),
+    tsStringLiteral(descendantPath.localName)
+  ]);
+}
+function tryGetSimpleDescendantNamePath(ast) {
+  if (ast.base !== void 0 || ast.steps.length !== 2) {
+    return void 0;
+  }
+  const [leadingStep, terminalStep] = ast.steps;
+  if (leadingStep === void 0 || leadingStep.kind !== "step" || leadingStep.axis !== "descendant-or-self" || leadingStep.predicates.length > 0 || leadingStep.nodeTest.kind !== "kindTest" || leadingStep.nodeTest.name !== "node" || terminalStep === void 0 || terminalStep.kind !== "step" || terminalStep.axis !== "child" || terminalStep.predicates.length > 0 || terminalStep.nodeTest.kind !== "nameTest" || terminalStep.nodeTest.name.includes(":")) {
+    return void 0;
+  }
+  return {
+    absolute: ast.absolute,
+    localName: terminalStep.nodeTest.name
+  };
+}
 function escapeTextLiteral(value) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
@@ -14270,16 +14307,11 @@ function emitVariableValueExpression(ast, runtimeHelpers, contextNodeIdentifier,
     case "variable":
       return resolveVariableBindingExpression(ast.name, options.variableBindings);
     case "path": {
-      const simplePath = tryGetSimpleChildPath(ast);
-      if (simplePath === void 0) {
+      const pathValue = emitPathStringValueExpression(ast, runtimeHelpers, contextNodeIdentifier);
+      if (pathValue === void 0) {
         return void 0;
       }
-      runtimeHelpers.add("selectSimplePathText");
-      const startNode = simplePath.absolute ? "document" : contextNodeIdentifier;
-      return tsCallExpression("selectSimplePathText", [
-        tsRawExpression(startNode),
-        tsRawExpression(JSON.stringify(simplePath.segments))
-      ]);
+      return pathValue;
     }
     case "functionCall": {
       if (ast.arguments.length === 0) {
@@ -18885,6 +18917,13 @@ function selectDescendantElementsByName(startNode, localName) {
   collectDescendantElementsByName(startNode, localName, matches);
   return matches;
 }
+function selectDescendantElementTextByName(startNode, localName) {
+  const node = selectDescendantElementsByName(startNode, localName)[0];
+  if (node === void 0) {
+    return "";
+  }
+  return collectStringValue(node);
+}
 function matchesTemplatePath(node, path, absolute = false) {
   let current = node;
   for (let index = path.length - 1; index >= 0; index -= 1) {
@@ -19390,6 +19429,7 @@ var NATIVE_RUNTIME_HELPERS = {
   escapeText: escapeText2,
   localNameOfNode,
   matchesTemplatePath,
+  selectDescendantElementTextByName,
   nameOfNode,
   selectDescendantElementsByName,
   selectSimplePathExists,
