@@ -9,7 +9,8 @@ import type { Node } from '@xmldom/xmldom';
 
 import { XTDE0040, XTDE0050, XTDE0640, XTDE0700, XTSE0010, XTSE0650, XPTY0004 } from '../../errors/codes.js';
 import { XsltError, type ErrorFrame, type ErrorSuggestion, type RelatedLocation } from '../../errors/index.js';
-import type { TransformOptions, TransformResult } from '../../processor/types.js';
+import type { TransformOptions, TransformResult, TransformTraceOptions, XmlTraceEvent } from '../../processor/types.js';
+import { createXmlNodeHandle } from '../../runtime/xmlNodeHandles.js';
 import { parseXml } from '../../xml/parse.js';
 import { createXdmNode, createXdmString, type XdmAtomicValue, type XdmItem, type XdmNode } from '../../xdm/types.js';
 import { evaluate, evaluateEffectiveBooleanValue } from '../../xpath/eval/evaluator.js';
@@ -40,6 +41,9 @@ export function runTransform(
   sourceXml: string,
   options: TransformOptions,
 ): TransformResult {
+  const trace = options.trace;
+  const sourceDocumentUri = trace?.documentUri ?? '<source-xml>';
+
   if (options.initialMode !== undefined) {
     throw new XsltError(
       XTDE0040,
@@ -69,7 +73,7 @@ export function runTransform(
   if (options.initialTemplate !== undefined) {
     const initialContext = createContext(createXdmNode(sourceDocument), staticContext, 1, 1, globalVariables);
     return {
-      output: renderInitialTemplate(options.initialTemplate, ir, initialContext),
+      output: renderInitialTemplate(options.initialTemplate, ir, initialContext, trace, sourceDocumentUri),
     };
   }
 
@@ -79,6 +83,8 @@ export function runTransform(
       ir,
       staticContext,
       globalVariables,
+      trace,
+      sourceDocumentUri,
     ),
   };
 }
@@ -112,6 +118,8 @@ function applyTemplatesToItems(
   ir: StylesheetIR,
   staticContext: DynamicContext['staticContext'],
   variables: ReadonlyMap<string, unknown> = new Map(),
+  trace?: TransformTraceOptions,
+  sourceDocumentUri = '<source-xml>',
   location?: TemplateRule['location'],
   withParams: readonly WithParam[] = [],
 ): string {
@@ -122,7 +130,11 @@ function applyTemplatesToItems(
   return items.map((item, index) => {
     const nodeItem = item as XdmNode;
     const context = createContext(nodeItem, staticContext, index + 1, items.length, variables);
-    return applyTemplateToNode(nodeItem.node, ir, context, withParams);
+    emitTraceEvent(trace, {
+      kind: 'focus-enter',
+      node: createXmlNodeHandle(nodeItem.node, sourceDocumentUri),
+    });
+    return applyTemplateToNode(nodeItem.node, ir, context, withParams, trace, sourceDocumentUri);
   }).join('');
 }
 
@@ -131,11 +143,22 @@ function applyTemplateToNode(
   ir: StylesheetIR,
   context: DynamicContext,
   withParams: readonly WithParam[] = [],
+  trace?: TransformTraceOptions,
+  sourceDocumentUri = '<source-xml>',
 ): string {
   const template = findBestMatchingTemplate(node, ir.templates, context.staticContext);
   if (template !== undefined) {
+    emitTraceEvent(trace, {
+      kind: 'template-enter',
+      node: createXmlNodeHandle(node, sourceDocumentUri),
+      template: {
+        ...(template.matchText === undefined ? {} : { match: template.matchText }),
+        ...(template.name === undefined ? {} : { name: template.name }),
+        ...(template.location === undefined ? {} : { location: template.location }),
+      },
+    });
     try {
-      return renderTemplate(template, withParams, ir, context);
+      return renderTemplate(template, withParams, ir, context, trace, sourceDocumentUri);
     } catch (error) {
       throw withPrependedFrame(
         error,
@@ -145,10 +168,16 @@ function applyTemplateToNode(
     }
   }
 
-  return renderBuiltInTemplate(node, ir, context.staticContext, context.variables);
+  return renderBuiltInTemplate(node, ir, context.staticContext, context.variables, trace, sourceDocumentUri);
 }
 
-function renderInitialTemplate(name: string, ir: StylesheetIR, context: DynamicContext): string {
+function renderInitialTemplate(
+  name: string,
+  ir: StylesheetIR,
+  context: DynamicContext,
+  trace?: TransformTraceOptions,
+  sourceDocumentUri = '<source-xml>',
+): string {
   const normalizedName = normalizeTemplateName(name, context.staticContext);
   const template = findNamedTemplate(normalizedName, ir.templates);
   if (template === undefined) {
@@ -172,8 +201,21 @@ function renderInitialTemplate(name: string, ir: StylesheetIR, context: DynamicC
     );
   }
 
+  const contextNode = asXdmNode(context.contextItem)?.node;
+  if (contextNode !== undefined) {
+    emitTraceEvent(trace, {
+      kind: 'template-enter',
+      node: createXmlNodeHandle(contextNode, sourceDocumentUri),
+      template: {
+        ...(template.matchText === undefined ? {} : { match: template.matchText }),
+        ...(template.name === undefined ? {} : { name: template.name }),
+        ...(template.location === undefined ? {} : { location: template.location }),
+      },
+    });
+  }
+
   try {
-    return renderTemplate(template, [], ir, context);
+    return renderTemplate(template, [], ir, context, trace, sourceDocumentUri);
   } catch (error) {
     throw withPrependedFrame(
       error,
@@ -183,39 +225,51 @@ function renderInitialTemplate(name: string, ir: StylesheetIR, context: DynamicC
   }
 }
 
-function renderInstructions(instructions: readonly Instruction[], ir: StylesheetIR, context: DynamicContext): string {
+function renderInstructions(
+  instructions: readonly Instruction[],
+  ir: StylesheetIR,
+  context: DynamicContext,
+  trace?: TransformTraceOptions,
+  sourceDocumentUri = '<source-xml>',
+): string {
   let output = '';
   let currentContext = context;
 
   for (const instruction of instructions) {
     if (instruction.kind === 'variable') {
-      currentContext = bindVariableInstruction(instruction, ir, currentContext);
+      currentContext = bindVariableInstruction(instruction, ir, currentContext, trace, sourceDocumentUri);
       continue;
     }
 
-    output += renderInstruction(instruction, ir, currentContext);
+    output += renderInstruction(instruction, ir, currentContext, trace, sourceDocumentUri);
   }
 
   return output;
 }
 
-function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: DynamicContext): string {
+function renderInstruction(
+  instruction: Instruction,
+  ir: StylesheetIR,
+  context: DynamicContext,
+  trace?: TransformTraceOptions,
+  sourceDocumentUri = '<source-xml>',
+): string {
   switch (instruction.kind) {
     case 'literalText':
       return escapeText(instruction.text);
     case 'comment':
-      return `<!--${renderInstructions(instruction.body, ir, context)}-->`;
+      return `<!--${renderInstructions(instruction.body, ir, context, trace, sourceDocumentUri)}-->`;
     case 'variable':
       return '';
     case 'literalElement': {
       const attributes = instruction.attributes.map((attribute) => ` ${attribute.name}="${escapeAttribute(attribute.value)}"`).join('');
-      const body = renderInstructions(instruction.body, ir, context);
+      const body = renderInstructions(instruction.body, ir, context, trace, sourceDocumentUri);
       return `<${instruction.name}${attributes}>${body}</${instruction.name}>`;
     }
     case 'if': {
       try {
         return evaluateEffectiveBooleanValue(instruction.test, context)
-          ? renderInstructions(instruction.body, ir, context)
+          ? renderInstructions(instruction.body, ir, context, trace, sourceDocumentUri)
           : '';
       } catch (error) {
         throw withPrependedFrame(
@@ -229,7 +283,7 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
       for (const branch of instruction.whenBranches) {
         try {
           if (evaluateEffectiveBooleanValue(branch.test, context)) {
-            return renderInstructions(branch.body, ir, context);
+            return renderInstructions(branch.body, ir, context, trace, sourceDocumentUri);
           }
         } catch (error) {
           throw withPrependedFrame(
@@ -242,7 +296,7 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
 
       return instruction.otherwiseBody === undefined
         ? ''
-        : renderInstructions(instruction.otherwiseBody, ir, context);
+        : renderInstructions(instruction.otherwiseBody, ir, context, trace, sourceDocumentUri);
     }
     case 'forEach': {
       try {
@@ -256,6 +310,8 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
             contextPosition: index + 1,
             contextSize: items.length,
           },
+          trace,
+          sourceDocumentUri,
         )).join('');
       } catch (error) {
         throw withPrependedFrame(
@@ -281,7 +337,7 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
       }
 
       try {
-        return renderTemplate(template, instruction.withParams, ir, context);
+        return renderTemplate(template, instruction.withParams, ir, context, trace, sourceDocumentUri);
       } catch (error) {
         throw withPrependedFrame(
           error,
@@ -313,6 +369,8 @@ function renderInstruction(instruction: Instruction, ir: StylesheetIR, context: 
           ir,
           context.staticContext,
           context.variables,
+          trace,
+          sourceDocumentUri,
           instruction.location,
           instruction.withParams,
         );
@@ -336,9 +394,11 @@ function bindVariableInstruction(
   instruction: Extract<Instruction, { readonly kind: 'variable' }>,
   ir: StylesheetIR,
   context: DynamicContext,
+  trace?: TransformTraceOptions,
+  sourceDocumentUri = '<source-xml>',
 ): DynamicContext {
   try {
-    const value = evaluateBindingValue(instruction, ir, context);
+    const value = evaluateBindingValue(instruction, ir, context, trace, sourceDocumentUri);
     const variables = new Map(context.variables);
     variables.set(instruction.name, value);
     variables.set(`{}${instruction.name}`, value);
@@ -365,12 +425,14 @@ function renderTemplate(
   withParams: readonly WithParam[],
   ir: StylesheetIR,
   context: DynamicContext,
+  trace?: TransformTraceOptions,
+  sourceDocumentUri = '<source-xml>',
 ): string {
-  const variables = bindTemplateParams(template.params, withParams, ir, context);
+  const variables = bindTemplateParams(template.params, withParams, ir, context, trace, sourceDocumentUri);
   return renderInstructions(template.body, ir, {
     ...context,
     variables,
-  });
+  }, trace, sourceDocumentUri);
 }
 
 function bindTemplateParams(
@@ -378,6 +440,8 @@ function bindTemplateParams(
   withParams: readonly WithParam[],
   ir: StylesheetIR,
   context: DynamicContext,
+  trace?: TransformTraceOptions,
+  sourceDocumentUri = '<source-xml>',
 ): ReadonlyMap<string, unknown> {
   if (params.length === 0 && withParams.length === 0) {
     return context.variables;
@@ -385,7 +449,7 @@ function bindTemplateParams(
 
   const provided = new Map<string, unknown>();
   for (const withParam of withParams) {
-    provided.set(withParam.name, evaluateBindingValue(withParam, ir, context));
+    provided.set(withParam.name, evaluateBindingValue(withParam, ir, context, trace, sourceDocumentUri));
   }
 
   const variables = new Map(context.variables);
@@ -397,7 +461,7 @@ function bindTemplateParams(
         : evaluateBindingValue(param, ir, {
             ...context,
             variables,
-          });
+          }, trace, sourceDocumentUri);
     variables.set(param.name, value);
     variables.set(`{}${param.name}`, value);
   }
@@ -412,6 +476,8 @@ function evaluateBindingValue(
     | Pick<GlobalBinding, 'select' | 'body'>,
   ir: StylesheetIR,
   context: DynamicContext,
+  trace?: TransformTraceOptions,
+  sourceDocumentUri = '<source-xml>',
 ): unknown {
   if (binding.select !== undefined) {
     return [...evaluate(binding.select, context)];
@@ -421,15 +487,17 @@ function evaluateBindingValue(
     return [createXdmString('')];
   }
 
-  return evaluateTemporaryTree(binding.body, ir, context);
+  return evaluateTemporaryTree(binding.body, ir, context, trace, sourceDocumentUri);
 }
 
 function evaluateTemporaryTree(
   body: readonly Instruction[],
   ir: StylesheetIR,
   context: DynamicContext,
+  trace?: TransformTraceOptions,
+  sourceDocumentUri = '<source-xml>',
 ): readonly XdmItem[] {
-  return [buildTemporaryTree(renderInstructions(body, ir, context))];
+  return [buildTemporaryTree(renderInstructions(body, ir, context, trace, sourceDocumentUri))];
 }
 
 function throwMissingTemplateParam(
@@ -470,9 +538,11 @@ function renderBuiltInTemplate(
   ir: StylesheetIR,
   staticContext: DynamicContext['staticContext'],
   variables: ReadonlyMap<string, unknown>,
+  trace?: TransformTraceOptions,
+  sourceDocumentUri = '<source-xml>',
 ): string {
   if (node.nodeType === node.DOCUMENT_NODE || node.nodeType === node.ELEMENT_NODE) {
-    return applyTemplatesToItems(getChildNodeItems(createXdmNode(node)), ir, staticContext, variables);
+    return applyTemplatesToItems(getChildNodeItems(createXdmNode(node)), ir, staticContext, variables, trace, sourceDocumentUri);
   }
 
   if (
@@ -484,6 +554,10 @@ function renderBuiltInTemplate(
   }
 
   return '';
+}
+
+function emitTraceEvent(trace: TransformTraceOptions | undefined, event: XmlTraceEvent): void {
+  trace?.onEvent?.(event);
 }
 
 function itemToStringValue(item: XdmItem): string {

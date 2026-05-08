@@ -7,10 +7,15 @@
 
 export { XsltProcessor } from './processor/XsltProcessor.js';
 export type {
+	XmlNodeHandle,
+	XmlTraceBreakpoint,
+	XmlTraceEvent,
+	XmlTraceEventKind,
 	TransformExecutionFallbackReason,
 	TransformExecutionFallbackReasonCode,
 	TransformExecutionInfo,
 	TransformExecutionMode,
+	TransformTraceOptions,
 	TransformOptions,
 	TransformResult,
 } from './processor/types.js';

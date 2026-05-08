@@ -1,4 +1,4 @@
-import type { ErrorSuggestion } from '../errors/index.js';
+import type { ErrorSuggestion, SourceLocation } from '../errors/index.js';
 
 /**
  * Options accepted by {@link XsltProcessor.transform}.
@@ -6,6 +6,46 @@ import type { ErrorSuggestion } from '../errors/index.js';
 export type TransformExecutionMode = 'interpreter' | 'native' | 'auto';
 
 export type TransformExecutionFallbackReasonCode = 'unsupported_stylesheet' | 'native_runtime_unavailable';
+
+export interface XmlNodeHandle {
+  documentUri: string;
+  kind: 'document' | 'element' | 'attribute' | 'text' | 'comment' | 'pi';
+  path: string;
+}
+
+export type XmlTraceEventKind = 'focus-enter' | 'template-enter' | 'instruction-select' | 'value-read';
+
+export interface XmlTraceTemplateInfo {
+  match?: string;
+  name?: string;
+  location?: SourceLocation;
+}
+
+export interface XmlTraceInstructionInfo {
+  kind: string;
+  location?: SourceLocation;
+}
+
+export interface XmlTraceEvent {
+  kind: XmlTraceEventKind;
+  node: XmlNodeHandle;
+  template?: XmlTraceTemplateInfo;
+  instruction?: XmlTraceInstructionInfo;
+}
+
+export interface XmlTraceBreakpoint {
+  node: XmlNodeHandle;
+  on: readonly XmlTraceEventKind[];
+}
+
+export interface TransformTraceOptions {
+  /** Stable document identity for trace events within the current transform session. */
+  documentUri?: string;
+  /** Optional future-facing breakpoint predicates over node identity and event kinds. */
+  breakpoints?: readonly XmlTraceBreakpoint[];
+  /** Optional event sink for hosts that want runtime node-trace notifications. */
+  onEvent?: (event: XmlTraceEvent) => void;
+}
 
 export interface TransformExecutionFallbackReason {
   /** Stable machine-readable reason for leaving the native path. */
@@ -36,6 +76,8 @@ export interface TransformOptions {
   parameters?: Readonly<Record<string, unknown>>;
   /** Base URI used to resolve document() / doc() calls. */
   baseUri?: string;
+  /** Optional runtime XML node trace configuration for hosts/debug tooling. */
+  trace?: TransformTraceOptions;
 }
 
 /**

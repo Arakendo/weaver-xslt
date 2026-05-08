@@ -1,9 +1,10 @@
 import type { Node } from '@xmldom/xmldom';
 
-import type { TransformOptions, TransformResult } from '../processor/types.js';
+import type { TransformOptions, TransformResult, XmlNodeHandle } from '../processor/types.js';
 import { XTDE0040, XTDE0050, XTDE0640, XTDE0700, XTSE0010 } from '../errors/codes.js';
 import { XdmError, XsltError, type ErrorFrame, type ErrorSuggestion, type RelatedLocation, type SourceLocation } from '../errors/index.js';
 import { parseXml, type Document } from '../xml/parse.js';
+import { createXmlNodeHandle } from './xmlNodeHandles.js';
 import { computeLevenshteinDistance } from '../xslt/diagnostics.js';
 import { normalizeTemplateName } from '../xslt/eval/templateDispatch.js';
 import { runTransform } from '../xslt/eval/transform.js';
@@ -11,11 +12,13 @@ import type { StylesheetIR } from '../xslt/compile/ir.js';
 
 export type TransformContext = TransformOptions;
 
-export type { TransformOptions, TransformResult, StylesheetIR };
+export type { TransformOptions, TransformResult, StylesheetIR, XmlNodeHandle };
 
 export function createCompiledDocument(sourceXml: string): Document {
   return parseXml(sourceXml, { role: 'source-document', sourceName: '<source-xml>' });
 }
+
+export { createXmlNodeHandle };
 
 export function createTemporaryTreeNode(serializedContent: string): Node {
   const temporaryDocument = parseXml(`<temporary-root>${serializedContent}</temporary-root>`);
@@ -825,3 +828,4 @@ function collectStringValue(node: Node): string {
 
   return value;
 }
+
