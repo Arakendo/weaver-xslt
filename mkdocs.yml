@@ -41,6 +41,7 @@ nav:
   - Errors: ERRORS.md
   - XPath: XPATH.md
   - Semantic Boundaries: SEMANTIC_BOUNDARIES.md
+  - Security Boundaries: SECURITY_BOUNDARIES.md
   - URI Resolution: URI_RESOLUTION.md
   - Native Execution Boundary: NATIVE_EXECUTION_BOUNDARY.md
   - Native Plan Boundary: NATIVE_PLAN_BOUNDARY.md

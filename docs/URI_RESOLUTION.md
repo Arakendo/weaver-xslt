@@ -13,7 +13,9 @@ XPath static-context `baseUri`, and [ERRORS.md](./ERRORS.md) for how
 resolution failures surface diagnostically, plus
 [SEMANTIC_BOUNDARIES.md](./SEMANTIC_BOUNDARIES.md) for the broader rule
 that lexical references, resolved identity, and host-policy boundaries
-must not be collapsed into one vague helper.
+must not be collapsed into one vague helper, and
+[SECURITY_BOUNDARIES.md](./SECURITY_BOUNDARIES.md) for the higher-level rule
+that authored content requests capability but does not grant itself authority.
 
 ## Goals
 

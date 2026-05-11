@@ -10,7 +10,8 @@ inputs, that decision must be explicit, host-controlled, and diagnosable.
 
 It complements [ARCHITECTURE.md](./ARCHITECTURE.md),
 [SEMANTIC_BOUNDARIES.md](./SEMANTIC_BOUNDARIES.md),
-[ERRORS.md](./ERRORS.md), and [URI_RESOLUTION.md](./URI_RESOLUTION.md).
+[ERRORS.md](./ERRORS.md), [URI_RESOLUTION.md](./URI_RESOLUTION.md), and
+[SECURITY_BOUNDARIES.md](./SECURITY_BOUNDARIES.md).
 
 ## Goals
 

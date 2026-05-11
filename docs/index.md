@@ -49,6 +49,7 @@ codegen backend slice, and the initial typed CLI and extension-function surface.
 - [WeaverPDF Architecture](WEAVERPDF_ARCHITECTURE.md) for the owned document AST and layout IR contracts
 - [WeaverPDF Syntax Profile](WEAVERPDF_SYNTAX_PROFILE.md) for what the EzPDF language seed is adopted, normalized, deferred, or banned
 - [Practical Streaming](STREAMING.md) for the tracked-later streaming design direction
+- [Security Boundaries](SECURITY_BOUNDARIES.md) for capability ownership and untrusted-content policy
 - [XSD Validation Design](XSD_VALIDATION.md) for the proposed preflight-validation boundary and placement
 - [DevTools Checklist](DEVTOOLS_CHECKLIST.md) for manual `.xsl` source-map and breakpoint verification
 - [Progress Artifacts](PROGRESS_ARTIFACTS.md) for public milestone evidence published on `weaverxslt.org`
