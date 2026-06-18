@@ -2,7 +2,7 @@ import type { Attr, Element, Node } from '@xmldom/xmldom';
 
 import { XPST0081 } from '../../errors/codes.js';
 import type { ErrorFrame } from '../../errors/index.js';
-import type { PathExpression, StepExpression, XPathAst } from '../../xpath/parse/ast.js';
+import type { XPathAst } from '../../xpath/parse/ast.js';
 import { parseXPath } from '../../xpath/parse/parser.js';
 import { getAttributeValueSourceLocation, getNodeSourceLocation } from '../../xml/parse.js';
 import { prependXsltErrorFrame as withPrependedCompileFrame } from '../diagnostics.js';
@@ -32,8 +32,12 @@ export function normalizeXsltQName(
   if (namespaceUri === undefined) {
     throw createXsltStaticError(
       `Unknown namespace prefix ${JSON.stringify(prefix)} in ${ownerName} ${attributeName}.`,
-      getAttributeValueSourceLocation(stylesheetXml, element, attributeName, STYLESHEET_SOURCE_NAME)
-        ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
+      getAttributeValueSourceLocation(
+        stylesheetXml,
+        element,
+        attributeName,
+        STYLESHEET_SOURCE_NAME,
+      ) ?? getNodeSourceLocation(stylesheetXml, element, STYLESHEET_SOURCE_NAME),
       {
         namespacePrefix: prefix,
         qName: name,
@@ -55,9 +59,10 @@ export function parseXPathInContext(
   try {
     return parseXPath(expression);
   } catch (error) {
-    const frameLabel = frameKind === 'template'
-      ? `${attributeName}="${expression}"`
-      : `${ownerName} ${attributeName}="${expression}"`;
+    const frameLabel =
+      frameKind === 'template'
+        ? `${attributeName}="${expression}"`
+        : `${ownerName} ${attributeName}="${expression}"`;
     throw withPrependedCompileFrame(
       error,
       {
@@ -75,32 +80,10 @@ export function parseXPathInContext(
   }
 }
 
-export function isSupportedTemplateMatch(ast: XPathAst): boolean {
-  if (ast.kind !== 'path') {
-    return false;
-  }
-
-  const path = ast as PathExpression;
-  if (path.base !== undefined) {
-    return false;
-  }
-
-  if (path.absolute && path.steps.length === 0) {
-    return true;
-  }
-
-  if (path.steps.length === 0) {
-    return false;
-  }
-
-  for (const step of path.steps) {
-    if (step?.kind !== 'step' || !isSupportedTemplateStep(step as StepExpression)) {
-      return false;
+    export function isSupportedTemplateMatch(ast: XPathAst): boolean {
+      void ast;
+      return true;
     }
-  }
-
-  return true;
-}
 
 function tryNormalizeEqName(name: string): string | undefined {
   if (!name.startsWith('Q{')) {
@@ -137,15 +120,4 @@ function lookupNamespaceUri(element: Element, prefix: string): string | undefine
   }
 
   return undefined;
-}
-
-function isSupportedTemplateStep(step: StepExpression): boolean {
-  if (step.axis !== 'child' || step.predicates.length > 0) {
-    return false;
-  }
-
-  return step.nodeTest.kind === 'nameTest'
-    || step.nodeTest.kind === 'wildcardTest'
-    || (step.nodeTest.kind === 'kindTest' && step.nodeTest.name === 'node')
-    || (step.nodeTest.kind === 'kindTest' && step.nodeTest.name === 'text');
 }

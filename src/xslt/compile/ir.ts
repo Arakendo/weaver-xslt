@@ -103,8 +103,17 @@ export type Instruction =
       readonly location?: SourceLocation;
     }
   | {
+      readonly kind: 'attribute';
+      readonly name: string;
+      readonly select?: XPathAst;
+      readonly selectText?: string;
+      readonly body?: readonly Instruction[];
+      readonly location?: SourceLocation;
+    }
+  | {
       readonly kind: 'literalText';
       readonly text: string;
+      readonly disableOutputEscaping?: boolean;
       readonly location?: SourceLocation;
     }
   | {
@@ -153,10 +162,26 @@ export type Instruction =
       readonly selectText: string;
       readonly location?: SourceLocation;
       readonly separator?: string;
+      readonly disableOutputEscaping?: boolean;
+    }
+  | {
+      readonly kind: 'copyOf';
+      readonly select: XPathAst;
+      readonly selectText: string;
+      readonly location?: SourceLocation;
+    }
+  | {
+      readonly kind: 'number';
+      readonly count: XPathAst;
+      readonly countText: string;
+      readonly level: 'single' | 'multiple' | 'any';
+      readonly format: string;
+      readonly location?: SourceLocation;
     }
   | {
       readonly kind: 'applyTemplates';
       readonly withParams: readonly WithParam[];
+      readonly modes: readonly string[];
       readonly selectText?: string;
       readonly select?: XPathAst;
       readonly location?: SourceLocation;

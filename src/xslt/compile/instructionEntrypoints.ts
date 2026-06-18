@@ -2,13 +2,20 @@ import type { Element, Node } from '@xmldom/xmldom';
 
 import type { ErrorContext, ErrorSuggestion } from '../../errors/index.js';
 import type { XPathAst } from '../../xpath/parse/ast.js';
-import { getAttributeValueSourceLocation, getElementNameSourceLocation, getNodeSourceLocation } from '../../xml/parse.js';
 import {
+  getAttributeValueSourceLocation,
+  getElementNameSourceLocation,
+  getNodeSourceLocation,
+} from '../../xml/parse.js';
+import {
+  compileAttributeInstruction,
   compileApplyTemplatesInstruction,
   compileCallTemplateInstruction,
   compileChooseInstruction,
+  compileCopyOfInstruction,
   compileForEachInstruction,
   compileIfInstruction,
+  compileNumberInstruction,
   compileValueOfInstruction,
   compileVariableInstruction,
   type InstructionCompilerHelpers,
@@ -78,7 +85,12 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
   compileInstruction(node: Node, stylesheetXml: string): Instruction | undefined;
 } {
   function compileWithParam(element: Element, stylesheetXml: string): WithParam {
-    helpers.assertAllowedXsltAttributes(element, stylesheetXml, 'xsl:with-param', ['as', 'name', 'select', 'tunnel']);
+    helpers.assertAllowedXsltAttributes(element, stylesheetXml, 'xsl:with-param', [
+      'as',
+      'name',
+      'select',
+      'tunnel',
+    ]);
 
     const rawName = element.getAttribute('name');
     if (rawName === null || rawName.length === 0) {
@@ -86,12 +98,14 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
         'xsl:with-param requires a name attribute.',
         getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName),
         {
-          suggestions: [{
-            kind: 'fix',
-            label: 'add a name="..." attribute to xsl:with-param',
-            replacement: 'name="..."',
-            confidence: 1,
-          }],
+          suggestions: [
+            {
+              kind: 'fix',
+              label: 'add a name="..." attribute to xsl:with-param',
+              replacement: 'name="..."',
+              confidence: 1,
+            },
+          ],
         },
       );
     }
@@ -105,21 +119,42 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
       'paramName',
       rawName,
     );
-    const body = select === undefined && helpers.hasMeaningfulTemplateContent(element)
-      ? compileInstructions(element.childNodes, stylesheetXml)
-      : undefined;
-    const selectLocation = select === undefined
-      ? undefined
-      : getAttributeValueSourceLocation(stylesheetXml, element, 'select', helpers.stylesheetSourceName)
-        ?? getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
+    const body =
+      select === undefined && helpers.hasMeaningfulTemplateContent(element)
+        ? compileInstructions(element.childNodes, stylesheetXml)
+        : undefined;
+    const selectLocation =
+      select === undefined
+        ? undefined
+        : (getAttributeValueSourceLocation(
+            stylesheetXml,
+            element,
+            'select',
+            helpers.stylesheetSourceName,
+          ) ?? getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName));
 
-    const location = getAttributeValueSourceLocation(stylesheetXml, element, 'name', helpers.stylesheetSourceName)
-      ?? getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
-    const name = helpers.normalizeXsltQName(rawName, element, stylesheetXml, 'name', 'xsl:with-param');
+    const location =
+      getAttributeValueSourceLocation(
+        stylesheetXml,
+        element,
+        'name',
+        helpers.stylesheetSourceName,
+      ) ?? getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
+    const name = helpers.normalizeXsltQName(
+      rawName,
+      element,
+      stylesheetXml,
+      'name',
+      'xsl:with-param',
+    );
 
     return {
       name,
-      ...(select === undefined ? {} : { select: helpers.parseXPathInContext(select, selectLocation, 'xsl:with-param', 'select') }),
+      ...(select === undefined
+        ? {}
+        : {
+            select: helpers.parseXPathInContext(select, selectLocation, 'xsl:with-param', 'select'),
+          }),
       ...(select === undefined ? {} : { selectText: select }),
       ...(body === undefined ? {} : { body }),
       ...(location === undefined ? {} : { location }),
@@ -181,6 +216,10 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
       return compileApplyTemplatesInstruction(element, stylesheetXml, instructionCompilerHelpers);
     }
 
+    if (helpers.isXsltElement(element, 'attribute')) {
+      return compileAttributeInstruction(element, stylesheetXml, instructionCompilerHelpers);
+    }
+
     if (helpers.isXsltElement(element, 'call-template')) {
       return compileCallTemplateInstruction(element, stylesheetXml, instructionCompilerHelpers);
     }
@@ -217,14 +256,57 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
       return compileValueOfInstruction(element, stylesheetXml, instructionCompilerHelpers);
     }
 
-    if (helpers.isXsltElement(element, 'text')) {
-      helpers.assertAllowedXsltAttributes(element, stylesheetXml, 'xsl:text', []);
+    if (helpers.isXsltElement(element, 'copy-of')) {
+      return compileCopyOfInstruction(element, stylesheetXml, instructionCompilerHelpers);
+    }
+
+    if (helpers.isXsltElement(element, 'number')) {
+      return compileNumberInstruction(element, stylesheetXml, instructionCompilerHelpers);
+    }
+
+    if (helpers.isXsltElement(element, 'element')) {
+      helpers.assertAllowedXsltAttributes(element, stylesheetXml, 'xsl:element', ['name']);
+
+      const rawName = element.getAttribute('name');
+      if (rawName === null || rawName.length === 0) {
+        throw helpers.createXsltStaticError(
+          'xsl:element requires a name attribute.',
+          getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName),
+          {
+            suggestions: [
+              {
+                kind: 'fix',
+                label: 'add name="..." to xsl:element',
+                replacement: 'name="..."',
+                confidence: 1,
+              },
+            ],
+          },
+        );
+      }
 
       const location = getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
+      return {
+        kind: 'literalElement',
+        name: rawName,
+        attributes: [],
+        body: compileInstructions(element.childNodes, stylesheetXml),
+        ...(location === undefined ? {} : { location }),
+      };
+    }
+
+    if (helpers.isXsltElement(element, 'text')) {
+      helpers.assertAllowedXsltAttributes(element, stylesheetXml, 'xsl:text', [
+        'disable-output-escaping',
+      ]);
+
+      const location = getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
+      const disableOutputEscaping = element.getAttribute('disable-output-escaping') === 'yes';
 
       return {
         kind: 'literalText',
         text: element.textContent ?? '',
+        ...(disableOutputEscaping ? { disableOutputEscaping: true } : {}),
         ...(location === undefined ? {} : { location }),
       };
     }
@@ -233,8 +315,8 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
       const suggestion = helpers.createInstructionSuggestion(element);
       throw helpers.createXsltStaticError(
         `Unsupported XSLT instruction ${element.nodeName} in current MVP+3 slice.`,
-        getElementNameSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName)
-          ?? getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName),
+        getElementNameSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName) ??
+          getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName),
         {
           instructionName: element.nodeName,
         },

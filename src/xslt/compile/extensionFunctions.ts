@@ -15,7 +15,11 @@ import type {
   XPathAst,
 } from '../../xpath/parse/ast.js';
 import { createXsltStaticError } from './compilerSupport.js';
-import { listKnownFunctionNames, lookupFunctionArityRequirement, matchesArityRequirement } from '../../xpath/eval/arityValidation.js';
+import {
+  listKnownFunctionNames,
+  lookupFunctionArityRequirement,
+  matchesArityRequirement,
+} from '../../xpath/eval/arityValidation.js';
 import { computeLevenshteinDistance } from '../diagnostics.js';
 
 const PREDEFINED_NAMESPACE_PREFIXES = new Map<string, string>([
@@ -23,6 +27,7 @@ const PREDEFINED_NAMESPACE_PREFIXES = new Map<string, string>([
   ['fn', 'http://www.w3.org/2005/xpath-functions'],
   ['map', 'http://www.w3.org/2005/xpath-functions/map'],
   ['math', 'http://www.w3.org/2005/xpath-functions/math'],
+  ['msxsl', 'urn:schemas-microsoft-com:xslt'],
   ['xml', 'http://www.w3.org/XML/1998/namespace'],
   ['xs', 'http://www.w3.org/2001/XMLSchema'],
 ]);
@@ -57,7 +62,10 @@ export interface XPathFunctionValidationOptions {
   readonly extensionFunctions: ExtensionFunctionCatalog;
 }
 
-export function validateXPathFunctionCalls(ast: XPathAst, options: XPathFunctionValidationOptions): void {
+export function validateXPathFunctionCalls(
+  ast: XPathAst,
+  options: XPathFunctionValidationOptions,
+): void {
   walkXPathAst(ast, options);
 }
 
@@ -110,7 +118,10 @@ function walkXPathAst(ast: XPathAst, options: XPathFunctionValidationOptions): v
   }
 }
 
-function walkFilterExpression(ast: FilterExpression, options: XPathFunctionValidationOptions): void {
+function walkFilterExpression(
+  ast: FilterExpression,
+  options: XPathFunctionValidationOptions,
+): void {
   walkXPathAst(ast.base, options);
   for (const predicate of ast.predicates) {
     walkXPathAst(predicate, options);
@@ -133,18 +144,27 @@ function walkLetExpression(ast: LetExpression, options: XPathFunctionValidationO
   walkXPathAst(ast.returnExpr, options);
 }
 
-function walkQuantifiedExpression(ast: QuantifiedExpression, options: XPathFunctionValidationOptions): void {
+function walkQuantifiedExpression(
+  ast: QuantifiedExpression,
+  options: XPathFunctionValidationOptions,
+): void {
   walkBindings(ast.bindings, options);
   walkXPathAst(ast.satisfiesExpr, options);
 }
 
-function walkSequenceExpression(ast: SequenceExpression, options: XPathFunctionValidationOptions): void {
+function walkSequenceExpression(
+  ast: SequenceExpression,
+  options: XPathFunctionValidationOptions,
+): void {
   for (const item of ast.items) {
     walkXPathAst(item, options);
   }
 }
 
-function walkBindings(bindings: readonly FlowBinding[], options: XPathFunctionValidationOptions): void {
+function walkBindings(
+  bindings: readonly FlowBinding[],
+  options: XPathFunctionValidationOptions,
+): void {
   for (const binding of bindings) {
     walkXPathAst(binding.value, options);
   }
@@ -171,8 +191,32 @@ function walkStepExpression(step: StepExpression, options: XPathFunctionValidati
   }
 }
 
-function validateFunctionCall(ast: FunctionCallExpression, options: XPathFunctionValidationOptions): void {
+function validateFunctionCall(
+  ast: FunctionCallExpression,
+  options: XPathFunctionValidationOptions,
+): void {
   const resolved = resolveFunctionName(ast.callee, options);
+
+  if (
+    resolved.kind === 'extension' &&
+    resolved.normalizedName === '{urn:schemas-microsoft-com:xslt}node-set'
+  ) {
+    if (ast.arguments.length !== 1) {
+      throwFunctionValidationError(
+        XPST0017,
+        `Function ${ast.callee} expects 1 argument but got ${ast.arguments.length}.`,
+        ast.span,
+        options,
+        {
+          functionName: ast.callee,
+          actualArity: ast.arguments.length,
+          arityRequirement: '1',
+        },
+      );
+    }
+
+    return;
+  }
 
   if (resolved.kind === 'builtin') {
     const arityRequirement = lookupFunctionArityRequirement(resolved.name);
@@ -224,12 +268,16 @@ function validateFunctionCall(ast: FunctionCallExpression, options: XPathFunctio
     );
   }
 
-  if (ast.arguments.length < signature.minimumArity || (signature.maximumArity !== undefined && ast.arguments.length > signature.maximumArity)) {
-    const arityRequirement = signature.maximumArity === undefined
-      ? `>=${signature.minimumArity}`
-      : signature.minimumArity === signature.maximumArity
-        ? String(signature.minimumArity)
-        : `${signature.minimumArity}..${signature.maximumArity}`;
+  if (
+    ast.arguments.length < signature.minimumArity ||
+    (signature.maximumArity !== undefined && ast.arguments.length > signature.maximumArity)
+  ) {
+    const arityRequirement =
+      signature.maximumArity === undefined
+        ? `>=${signature.minimumArity}`
+        : signature.minimumArity === signature.maximumArity
+          ? String(signature.minimumArity)
+          : `${signature.minimumArity}..${signature.maximumArity}`;
     throwFunctionValidationError(
       XPST0017,
       `Function ${ast.callee} expects ${formatArityRequirement(arityRequirement)} arguments but got ${ast.arguments.length}.`,
@@ -244,7 +292,11 @@ function validateFunctionCall(ast: FunctionCallExpression, options: XPathFunctio
     );
   }
 
-  for (let index = 0; index < ast.arguments.length && index < signature.parameters.length; index += 1) {
+  for (
+    let index = 0;
+    index < ast.arguments.length && index < signature.parameters.length;
+    index += 1
+  ) {
     const parameter = signature.parameters[index]!;
     if (parameter.inferredTypes.length === 0 || parameter.inferredTypes.includes('unknown')) {
       continue;
@@ -274,7 +326,14 @@ function validateFunctionCall(ast: FunctionCallExpression, options: XPathFunctio
 function resolveFunctionName(
   callee: string,
   options: XPathFunctionValidationOptions,
-): { kind: 'builtin'; readonly name: string } | { kind: 'extension'; readonly normalizedName: string; readonly prefix: string; readonly namespaceUri: string } {
+):
+  | { kind: 'builtin'; readonly name: string }
+  | {
+      kind: 'extension';
+      readonly normalizedName: string;
+      readonly prefix: string;
+      readonly namespaceUri: string;
+    } {
   if (!callee.includes(':')) {
     return { kind: 'builtin', name: `fn:${callee}` };
   }
@@ -313,11 +372,14 @@ function createFunctionNameSuggestion(
   resolved: ReturnType<typeof resolveFunctionName>,
   options: XPathFunctionValidationOptions,
 ): ErrorSuggestion | undefined {
-  const candidateNames = resolved.kind === 'builtin'
-    ? listKnownFunctionNames().filter((name) => name.startsWith(resolved.name.startsWith('map:') ? 'map:' : 'fn:'))
-    : [...options.extensionFunctions.values()]
-      .filter((signature) => signature.namespaceUri === resolved.namespaceUri)
-      .map((signature) => `${resolved.prefix}:${signature.localName}`);
+  const candidateNames =
+    resolved.kind === 'builtin'
+      ? listKnownFunctionNames().filter((name) =>
+          name.startsWith(resolved.name.startsWith('map:') ? 'map:' : 'fn:'),
+        )
+      : [...options.extensionFunctions.values()]
+          .filter((signature) => signature.namespaceUri === resolved.namespaceUri)
+          .map((signature) => `${resolved.prefix}:${signature.localName}`);
 
   const nearest = candidateNames
     .map((candidateName) => {
@@ -338,7 +400,7 @@ function createFunctionNameSuggestion(
     kind: 'fix',
     label: `did you mean ${nearest.displayCandidate}(...)?`,
     replacement: nearest.displayCandidate,
-    confidence: nearest.distance === 0 ? 1 : 1 - (nearest.distance / nearest.displayCandidate.length),
+    confidence: nearest.distance === 0 ? 1 : 1 - nearest.distance / nearest.displayCandidate.length,
   };
 }
 
@@ -361,10 +423,36 @@ function inferXPathAstType(ast: XPathAst): { kind: InferredXPathType; display: s
     case 'string':
       return { kind: 'string', display: 'string' };
     case 'binary':
-      if (ast.operator === '+' || ast.operator === '-' || ast.operator === '*' || ast.operator === 'div' || ast.operator === 'idiv' || ast.operator === 'mod' || ast.operator === 'to') {
+      if (
+        ast.operator === '+' ||
+        ast.operator === '-' ||
+        ast.operator === '*' ||
+        ast.operator === 'div' ||
+        ast.operator === 'idiv' ||
+        ast.operator === 'mod' ||
+        ast.operator === 'to'
+      ) {
         return { kind: 'number', display: 'number' };
       }
-      if (ast.operator === 'and' || ast.operator === 'or' || ast.operator === '=' || ast.operator === '!=' || ast.operator === '<' || ast.operator === '<=' || ast.operator === '>' || ast.operator === '>=' || ast.operator === 'eq' || ast.operator === 'ne' || ast.operator === 'lt' || ast.operator === 'le' || ast.operator === 'gt' || ast.operator === 'ge' || ast.operator === 'is' || ast.operator === '<<' || ast.operator === '>>') {
+      if (
+        ast.operator === 'and' ||
+        ast.operator === 'or' ||
+        ast.operator === '=' ||
+        ast.operator === '!=' ||
+        ast.operator === '<' ||
+        ast.operator === '<=' ||
+        ast.operator === '>' ||
+        ast.operator === '>=' ||
+        ast.operator === 'eq' ||
+        ast.operator === 'ne' ||
+        ast.operator === 'lt' ||
+        ast.operator === 'le' ||
+        ast.operator === 'gt' ||
+        ast.operator === 'ge' ||
+        ast.operator === 'is' ||
+        ast.operator === '<<' ||
+        ast.operator === '>>'
+      ) {
         return { kind: 'boolean', display: 'boolean' };
       }
       if (ast.operator === '||') {
@@ -373,13 +461,42 @@ function inferXPathAstType(ast: XPathAst): { kind: InferredXPathType; display: s
       return { kind: 'unknown', display: 'unknown' };
     case 'functionCall': {
       const normalized = ast.callee.includes(':') ? ast.callee : `fn:${ast.callee}`;
-      if (normalized === 'fn:true' || normalized === 'fn:false' || normalized === 'fn:boolean' || normalized === 'fn:not' || normalized === 'fn:exists' || normalized === 'fn:empty' || normalized === 'fn:deep-equal') {
+      if (
+        normalized === 'fn:true' ||
+        normalized === 'fn:false' ||
+        normalized === 'fn:boolean' ||
+        normalized === 'fn:not' ||
+        normalized === 'fn:exists' ||
+        normalized === 'fn:empty' ||
+        normalized === 'fn:deep-equal'
+      ) {
         return { kind: 'boolean', display: 'boolean' };
       }
-      if (normalized === 'fn:count' || normalized === 'fn:last' || normalized === 'fn:position' || normalized === 'fn:string-length' || normalized === 'fn:number' || normalized === 'fn:sum' || normalized === 'fn:min' || normalized === 'fn:max' || normalized === 'fn:avg') {
+      if (
+        normalized === 'fn:count' ||
+        normalized === 'fn:last' ||
+        normalized === 'fn:position' ||
+        normalized === 'fn:string-length' ||
+        normalized === 'fn:number' ||
+        normalized === 'fn:sum' ||
+        normalized === 'fn:min' ||
+        normalized === 'fn:max' ||
+        normalized === 'fn:avg'
+      ) {
         return { kind: 'number', display: 'number' };
       }
-      if (normalized === 'fn:string' || normalized === 'fn:normalize-space' || normalized === 'fn:upper-case' || normalized === 'fn:lower-case' || normalized === 'fn:concat' || normalized === 'fn:substring' || normalized === 'fn:translate' || normalized === 'fn:name' || normalized === 'fn:local-name' || normalized === 'fn:namespace-uri') {
+      if (
+        normalized === 'fn:string' ||
+        normalized === 'fn:normalize-space' ||
+        normalized === 'fn:upper-case' ||
+        normalized === 'fn:lower-case' ||
+        normalized === 'fn:concat' ||
+        normalized === 'fn:substring' ||
+        normalized === 'fn:translate' ||
+        normalized === 'fn:name' ||
+        normalized === 'fn:local-name' ||
+        normalized === 'fn:namespace-uri'
+      ) {
         return { kind: 'string', display: 'string' };
       }
       return { kind: 'unknown', display: 'unknown' };
@@ -406,27 +523,36 @@ function throwFunctionValidationError(
 ): never {
   const primaryLocation = mapXPathSpanToSourceLocation(options.expressionLocation, span);
   const frameKind = options.frameKind ?? 'instruction';
-  const frameLabel = frameKind === 'template'
-    ? `${options.attributeName}="${options.expressionText}"`
-    : `${options.ownerName} ${options.attributeName}="${options.expressionText}"`;
+  const frameLabel =
+    frameKind === 'template'
+      ? `${options.attributeName}="${options.expressionText}"`
+      : `${options.ownerName} ${options.attributeName}="${options.expressionText}"`;
 
   throw createXsltStaticError(
     message,
     primaryLocation ?? options.expressionLocation,
     details,
     {
-      frames: [{
-        kind: frameKind,
-        label: frameLabel,
-        ...(options.expressionLocation === undefined ? {} : { location: options.expressionLocation }),
-      }],
+      frames: [
+        {
+          kind: frameKind,
+          label: frameLabel,
+          ...(options.expressionLocation === undefined
+            ? {}
+            : { location: options.expressionLocation }),
+        },
+      ],
       ...(suggestion === undefined ? {} : { suggestions: [suggestion] }),
-      ...(primaryLocation !== undefined && options.expressionLocation !== undefined && primaryLocation.offset !== options.expressionLocation.offset
+      ...(primaryLocation !== undefined &&
+      options.expressionLocation !== undefined &&
+      primaryLocation.offset !== options.expressionLocation.offset
         ? {
-            related: [{
-              label: frameKind === 'template' ? 'containing template' : 'containing instruction',
-              location: options.expressionLocation,
-            }],
+            related: [
+              {
+                label: frameKind === 'template' ? 'containing template' : 'containing instruction',
+                location: options.expressionLocation,
+              },
+            ],
           }
         : {}),
     },
@@ -439,9 +565,9 @@ function mapXPathSpanToSourceLocation(
   span: SourceSpan,
 ): SourceLocation | undefined {
   if (
-    expressionLocation?.line === undefined
-    || expressionLocation.column === undefined
-    || expressionLocation.offset === undefined
+    expressionLocation?.line === undefined ||
+    expressionLocation.column === undefined ||
+    expressionLocation.offset === undefined
   ) {
     return undefined;
   }

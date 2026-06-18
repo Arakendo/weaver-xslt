@@ -5,11 +5,29 @@
  * built-in root/element/text behavior needed for early apply-templates flows.
  */
 
-import type { Node } from '@xmldom/xmldom';
+import { XMLSerializer, type Node } from '@xmldom/xmldom';
 
-import { XTDE0040, XTDE0050, XTDE0640, XTDE0700, XTSE0010, XTSE0650, XPTY0004 } from '../../errors/codes.js';
-import { XsltError, type ErrorFrame, type ErrorSuggestion, type RelatedLocation } from '../../errors/index.js';
-import type { TransformOptions, TransformResult, TransformTraceOptions, XmlTraceEvent } from '../../processor/types.js';
+import {
+  XTDE0040,
+  XTDE0050,
+  XTDE0640,
+  XTDE0700,
+  XTSE0010,
+  XTSE0650,
+  XPTY0004,
+} from '../../errors/codes.js';
+import {
+  XsltError,
+  type ErrorFrame,
+  type ErrorSuggestion,
+  type RelatedLocation,
+} from '../../errors/index.js';
+import type {
+  TransformOptions,
+  TransformResult,
+  TransformTraceOptions,
+  XmlTraceEvent,
+} from '../../processor/types.js';
 import { createXmlNodeHandle } from '../../runtime/xmlNodeHandles.js';
 import {
   emitTraceEvent as publishTraceEvent,
@@ -18,11 +36,28 @@ import {
   resetRecordedTracePause,
 } from '../../runtime/tracePause.js';
 import { parseXml } from '../../xml/parse.js';
-import { createXdmNode, createXdmString, type XdmAtomicValue, type XdmItem, type XdmNode } from '../../xdm/types.js';
+import {
+  createXdmNode,
+  createXdmString,
+  type XdmAtomicValue,
+  type XdmItem,
+  type XdmNode,
+} from '../../xdm/types.js';
 import { evaluate, evaluateEffectiveBooleanValue } from '../../xpath/eval/evaluator.js';
 import type { DynamicContext } from '../../xpath/eval/context.js';
-import type { GlobalBinding, Instruction, StylesheetIR, TemplateParam, TemplateRule, WithParam } from '../compile/ir.js';
-import { computeLevenshteinDistance, prependXsltErrorFrame as withPrependedFrame } from '../diagnostics.js';
+import type { XPathAst } from '../../xpath/parse/ast.js';
+import type {
+  GlobalBinding,
+  Instruction,
+  StylesheetIR,
+  TemplateParam,
+  TemplateRule,
+  WithParam,
+} from '../compile/ir.js';
+import {
+  computeLevenshteinDistance,
+  prependXsltErrorFrame as withPrependedFrame,
+} from '../diagnostics.js';
 import {
   createInitialTemplateSuggestion,
   createNamedTemplateCallSuggestion,
@@ -33,9 +68,13 @@ import {
 } from './templateDispatch.js';
 import { buildTemporaryTree } from './temporaryTree.js';
 
+const xmlSerializer = new XMLSerializer();
+
 type DeferredVariableBinding = {
   readonly evaluate: () => unknown;
 };
+
+type AttributeCollector = Map<string, string>;
 
 type ExternalParameters = {
   readonly values: ReadonlyMap<string, unknown>;
@@ -58,16 +97,21 @@ export function runTransform(
       undefined,
       { mode: options.initialMode },
       {
-        suggestions: [{
-          kind: 'fix',
-          label: 'omit initialMode and use the default mode in the current MVP+3 slice',
-          confidence: 1,
-        }],
+        suggestions: [
+          {
+            kind: 'fix',
+            label: 'omit initialMode and use the default mode in the current MVP+3 slice',
+            confidence: 1,
+          },
+        ],
       },
     );
   }
 
-  const sourceDocument = parseXml(sourceXml, { role: 'source-document', sourceName: '<source-xml>' });
+  const sourceDocument = parseXml(sourceXml, {
+    role: 'source-document',
+    sourceName: '<source-xml>',
+  });
   const staticContext = createStaticContext(ir, options);
   const globalVariables = evaluateGlobalBindings(
     ir,
@@ -78,8 +122,20 @@ export function runTransform(
   );
 
   if (options.initialTemplate !== undefined) {
-    const initialContext = createContext(createXdmNode(sourceDocument), staticContext, 1, 1, globalVariables);
-    const output = renderInitialTemplate(options.initialTemplate, ir, initialContext, trace, sourceDocumentUri);
+    const initialContext = createContext(
+      createXdmNode(sourceDocument),
+      staticContext,
+      1,
+      1,
+      globalVariables,
+    );
+    const output = renderInitialTemplate(
+      options.initialTemplate,
+      ir,
+      initialContext,
+      trace,
+      sourceDocumentUri,
+    );
     const pause = getRecordedTracePause(trace);
     return {
       output,
@@ -94,6 +150,8 @@ export function runTransform(
     globalVariables,
     trace,
     sourceDocumentUri,
+    undefined,
+    [],
   );
   const pause = getRecordedTracePause(trace);
   return {
@@ -102,7 +160,10 @@ export function runTransform(
   };
 }
 
-function createStaticContext(ir: StylesheetIR, options: TransformOptions): DynamicContext['staticContext'] {
+function createStaticContext(
+  ir: StylesheetIR,
+  options: TransformOptions,
+): DynamicContext['staticContext'] {
   return {
     namespaces: new Map(Object.entries(ir.namespaces)),
     defaultElementNamespace: ir.defaultElementNamespace,
@@ -135,23 +196,36 @@ function applyTemplatesToItems(
   sourceDocumentUri = '<source-xml>',
   location?: TemplateRule['location'],
   withParams: readonly WithParam[] = [],
+  modes: readonly string[] = [],
+  attributeCollector?: AttributeCollector,
 ): string {
   if (items.some((item) => asXdmNode(item) === undefined)) {
     throw createApplyTemplatesNodeSequenceError(items, location);
   }
 
-  return items.map((item, index) => {
-    const nodeItem = item as XdmNode;
-    const context = createContext(nodeItem, staticContext, index + 1, items.length, variables);
-    const handle = tryCreateTraceNodeHandle(nodeItem.node, trace, sourceDocumentUri);
-    if (handle !== undefined) {
-      emitTraceEvent(trace, {
-        kind: 'focus-enter',
-        node: handle,
-      });
-    }
-    return applyTemplateToNode(nodeItem.node, ir, context, withParams, trace, sourceDocumentUri);
-  }).join('');
+  return items
+    .map((item, index) => {
+      const nodeItem = item as XdmNode;
+      const context = createContext(nodeItem, staticContext, index + 1, items.length, variables);
+      const handle = tryCreateTraceNodeHandle(nodeItem.node, trace, sourceDocumentUri);
+      if (handle !== undefined) {
+        emitTraceEvent(trace, {
+          kind: 'focus-enter',
+          node: handle,
+        });
+      }
+      return applyTemplateToNode(
+        nodeItem.node,
+        ir,
+        context,
+        withParams,
+        trace,
+        sourceDocumentUri,
+        modes,
+        attributeCollector,
+      );
+    })
+    .join('');
 }
 
 function applyTemplateToNode(
@@ -161,8 +235,10 @@ function applyTemplateToNode(
   withParams: readonly WithParam[] = [],
   trace?: TransformTraceOptions,
   sourceDocumentUri = '<source-xml>',
+  modes: readonly string[] = [],
+  attributeCollector?: AttributeCollector,
 ): string {
-  const template = findBestMatchingTemplate(node, ir.templates, context.staticContext);
+  const template = findBestMatchingTemplate(node, ir.templates, context.staticContext, modes);
   if (template !== undefined) {
     const handle = tryCreateTraceNodeHandle(node, trace, sourceDocumentUri);
     if (handle !== undefined) {
@@ -177,7 +253,15 @@ function applyTemplateToNode(
       });
     }
     try {
-      return renderTemplate(template, withParams, ir, context, trace, sourceDocumentUri);
+      return renderTemplate(
+        template,
+        withParams,
+        ir,
+        context,
+        trace,
+        sourceDocumentUri,
+        attributeCollector,
+      );
     } catch (error) {
       throw withPrependedFrame(
         error,
@@ -187,7 +271,15 @@ function applyTemplateToNode(
     }
   }
 
-  return renderBuiltInTemplate(node, ir, context.staticContext, context.variables, trace, sourceDocumentUri);
+  return renderBuiltInTemplate(
+    node,
+    ir,
+    context.staticContext,
+    context.variables,
+    trace,
+    sourceDocumentUri,
+    modes,
+  );
 }
 
 function renderInitialTemplate(
@@ -210,11 +302,13 @@ function renderInitialTemplate(
       },
       suggestion === undefined
         ? {
-            suggestions: [{
-              kind: 'fix',
-              label: `declare xsl:template name="${name}" or omit initialTemplate`,
-              confidence: 1,
-            }],
+            suggestions: [
+              {
+                kind: 'fix',
+                label: `declare xsl:template name="${name}" or omit initialTemplate`,
+                confidence: 1,
+              },
+            ],
           }
         : { suggestions: [suggestion] },
     );
@@ -253,17 +347,31 @@ function renderInstructions(
   context: DynamicContext,
   trace?: TransformTraceOptions,
   sourceDocumentUri = '<source-xml>',
+  attributeCollector?: AttributeCollector,
 ): string {
   let output = '';
   let currentContext = context;
 
   for (const instruction of instructions) {
     if (instruction.kind === 'variable') {
-      currentContext = bindVariableInstruction(instruction, ir, currentContext, trace, sourceDocumentUri);
+      currentContext = bindVariableInstruction(
+        instruction,
+        ir,
+        currentContext,
+        trace,
+        sourceDocumentUri,
+      );
       continue;
     }
 
-    output += renderInstruction(instruction, ir, currentContext, trace, sourceDocumentUri);
+    output += renderInstruction(
+      instruction,
+      ir,
+      currentContext,
+      trace,
+      sourceDocumentUri,
+      attributeCollector,
+    );
   }
 
   return output;
@@ -275,23 +383,73 @@ function renderInstruction(
   context: DynamicContext,
   trace?: TransformTraceOptions,
   sourceDocumentUri = '<source-xml>',
+  attributeCollector?: AttributeCollector,
 ): string {
   switch (instruction.kind) {
     case 'literalText':
-      return escapeText(instruction.text);
+      return instruction.disableOutputEscaping === true
+        ? instruction.text
+        : escapeText(instruction.text);
     case 'comment':
       return `<!--${renderInstructions(instruction.body, ir, context, trace, sourceDocumentUri)}-->`;
     case 'variable':
       return '';
     case 'literalElement': {
-      const attributes = instruction.attributes.map((attribute) => ` ${attribute.name}="${escapeAttribute(attribute.value)}"`).join('');
-      const body = renderInstructions(instruction.body, ir, context, trace, sourceDocumentUri);
+      const collectedAttributes = new Map<string, string>();
+      for (const attribute of instruction.attributes) {
+        collectedAttributes.set(attribute.name, attribute.value);
+      }
+
+      const body = renderInstructions(
+        instruction.body,
+        ir,
+        context,
+        trace,
+        sourceDocumentUri,
+        collectedAttributes,
+      );
+      const attributes = [...collectedAttributes.entries()]
+        .map(([name, value]) => ` ${name}="${escapeAttribute(value)}"`)
+        .join('');
       return `<${instruction.name}${attributes}>${body}</${instruction.name}>`;
+    }
+    case 'attribute': {
+      if (attributeCollector === undefined) {
+        throw new XsltError(
+          XTSE0010,
+          'xsl:attribute is only supported inside a literal result element in the current MVP+3 slice.',
+          instruction.location,
+          undefined,
+          {
+            suggestions: [
+              {
+                kind: 'fix',
+                label: 'move xsl:attribute into a literal result element body',
+                confidence: 1,
+              },
+            ],
+          },
+        );
+      }
+
+      const value =
+        instruction.select === undefined
+          ? renderInstructions(instruction.body ?? [], ir, context, trace, sourceDocumentUri)
+          : [...evaluate(instruction.select, context)].map(itemToStringValue).join(' ');
+      attributeCollector.set(instruction.name, value);
+      return '';
     }
     case 'if': {
       try {
         return evaluateEffectiveBooleanValue(instruction.test, context)
-          ? renderInstructions(instruction.body, ir, context, trace, sourceDocumentUri)
+          ? renderInstructions(
+              instruction.body,
+              ir,
+              context,
+              trace,
+              sourceDocumentUri,
+              attributeCollector,
+            )
           : '';
       } catch (error) {
         throw withPrependedFrame(
@@ -305,7 +463,14 @@ function renderInstruction(
       for (const branch of instruction.whenBranches) {
         try {
           if (evaluateEffectiveBooleanValue(branch.test, context)) {
-            return renderInstructions(branch.body, ir, context, trace, sourceDocumentUri);
+            return renderInstructions(
+              branch.body,
+              ir,
+              context,
+              trace,
+              sourceDocumentUri,
+              attributeCollector,
+            );
           }
         } catch (error) {
           throw withPrependedFrame(
@@ -318,28 +483,49 @@ function renderInstruction(
 
       return instruction.otherwiseBody === undefined
         ? ''
-        : renderInstructions(instruction.otherwiseBody, ir, context, trace, sourceDocumentUri);
+        : renderInstructions(
+            instruction.otherwiseBody,
+            ir,
+            context,
+            trace,
+            sourceDocumentUri,
+            attributeCollector,
+          );
     }
     case 'forEach': {
       try {
         const items = [...evaluate(instruction.select, context)];
-        emitInstructionSelectEvents(items, trace, sourceDocumentUri, 'xsl:for-each', instruction.location);
-        return items.map((item, index) => renderInstructions(
-          instruction.body,
-          ir,
-          {
-            ...context,
-            contextItem: item,
-            contextPosition: index + 1,
-            contextSize: items.length,
-          },
+        emitInstructionSelectEvents(
+          items,
           trace,
           sourceDocumentUri,
-        )).join('');
+          'xsl:for-each',
+          instruction.location,
+        );
+        return items
+          .map((item, index) =>
+            renderInstructions(
+              instruction.body,
+              ir,
+              {
+                ...context,
+                contextItem: item,
+                contextPosition: index + 1,
+                contextSize: items.length,
+              },
+              trace,
+              sourceDocumentUri,
+              attributeCollector,
+            ),
+          )
+          .join('');
       } catch (error) {
         throw withPrependedFrame(
           error,
-          createInstructionFrame(`xsl:for-each select="${instruction.selectText}"`, instruction.location),
+          createInstructionFrame(
+            `xsl:for-each select="${instruction.selectText}"`,
+            instruction.location,
+          ),
           createRelatedLocation('containing instruction', instruction.location),
         );
       }
@@ -360,7 +546,15 @@ function renderInstruction(
       }
 
       try {
-        return renderTemplate(template, instruction.withParams, ir, context, trace, sourceDocumentUri);
+        return renderTemplate(
+          template,
+          instruction.withParams,
+          ir,
+          context,
+          trace,
+          sourceDocumentUri,
+          attributeCollector,
+        );
       } catch (error) {
         throw withPrependedFrame(
           error,
@@ -372,24 +566,83 @@ function renderInstruction(
     case 'valueOf': {
       try {
         const items = [...evaluate(instruction.select, context)];
-        emitInstructionSelectEvents(items, trace, sourceDocumentUri, 'xsl:value-of', instruction.location);
+        emitInstructionSelectEvents(
+          items,
+          trace,
+          sourceDocumentUri,
+          'xsl:value-of',
+          instruction.location,
+        );
         emitValueReadEvents(items, trace, sourceDocumentUri, instruction.location);
         const separator = instruction.separator ?? ' ';
-        return escapeText(items.map(itemToStringValue).join(separator));
+        const output = items.map(itemToStringValue).join(separator);
+        return instruction.disableOutputEscaping === true ? output : escapeText(output);
       } catch (error) {
         throw withPrependedFrame(
           error,
-          createInstructionFrame(`xsl:value-of select="${instruction.selectText}"`, instruction.location),
+          createInstructionFrame(
+            `xsl:value-of select="${instruction.selectText}"`,
+            instruction.location,
+          ),
+          createRelatedLocation('containing instruction', instruction.location),
+        );
+      }
+    }
+    case 'copyOf': {
+      try {
+        const items = [...evaluate(instruction.select, context)];
+        emitInstructionSelectEvents(
+          items,
+          trace,
+          sourceDocumentUri,
+          'xsl:copy-of',
+          instruction.location,
+        );
+        return items
+          .map((item) =>
+            asXdmNode(item) !== undefined
+              ? xmlSerializer.serializeToString(asXdmNode(item)!.node)
+              : escapeText(itemToStringValue(item)),
+          )
+          .join('');
+      } catch (error) {
+        throw withPrependedFrame(
+          error,
+          createInstructionFrame(
+            `xsl:copy-of select="${instruction.selectText}"`,
+            instruction.location,
+          ),
+          createRelatedLocation('containing instruction', instruction.location),
+        );
+      }
+    }
+    case 'number': {
+      try {
+        return renderNumberInstruction(instruction, context);
+      } catch (error) {
+        throw withPrependedFrame(
+          error,
+          createInstructionFrame(
+            `xsl:number count="${instruction.countText}"`,
+            instruction.location,
+          ),
           createRelatedLocation('containing instruction', instruction.location),
         );
       }
     }
     case 'applyTemplates': {
       try {
-        const items = instruction.select === undefined
-          ? getChildNodeItems(context.contextItem)
-          : [...evaluate(instruction.select, context)];
-        emitInstructionSelectEvents(items, trace, sourceDocumentUri, 'xsl:apply-templates', instruction.location);
+        const items =
+          instruction.select === undefined
+            ? getChildNodeItems(context.contextItem)
+            : [...evaluate(instruction.select, context)];
+        emitInstructionSelectEvents(
+          items,
+          trace,
+          sourceDocumentUri,
+          'xsl:apply-templates',
+          instruction.location,
+        );
         return applyTemplatesToItems(
           items,
           ir,
@@ -399,6 +652,8 @@ function renderInstruction(
           sourceDocumentUri,
           instruction.location,
           instruction.withParams,
+          instruction.modes,
+          attributeCollector,
         );
       } catch (error) {
         throw withPrependedFrame(
@@ -453,12 +708,27 @@ function renderTemplate(
   context: DynamicContext,
   trace?: TransformTraceOptions,
   sourceDocumentUri = '<source-xml>',
+  attributeCollector?: AttributeCollector,
 ): string {
-  const variables = bindTemplateParams(template.params, withParams, ir, context, trace, sourceDocumentUri);
-  return renderInstructions(template.body, ir, {
-    ...context,
-    variables,
-  }, trace, sourceDocumentUri);
+  const variables = bindTemplateParams(
+    template.params,
+    withParams,
+    ir,
+    context,
+    trace,
+    sourceDocumentUri,
+  );
+  return renderInstructions(
+    template.body,
+    ir,
+    {
+      ...context,
+      variables,
+    },
+    trace,
+    sourceDocumentUri,
+    attributeCollector,
+  );
 }
 
 function bindTemplateParams(
@@ -475,7 +745,10 @@ function bindTemplateParams(
 
   const provided = new Map<string, unknown>();
   for (const withParam of withParams) {
-    provided.set(withParam.name, evaluateBindingValue(withParam, ir, context, trace, sourceDocumentUri));
+    provided.set(
+      withParam.name,
+      evaluateBindingValue(withParam, ir, context, trace, sourceDocumentUri),
+    );
   }
 
   const variables = new Map(context.variables);
@@ -484,10 +757,16 @@ function bindTemplateParams(
       ? provided.get(param.name)
       : param.required
         ? throwMissingTemplateParam(param, [...provided.keys()])
-        : evaluateBindingValue(param, ir, {
-            ...context,
-            variables,
-          }, trace, sourceDocumentUri);
+        : evaluateBindingValue(
+            param,
+            ir,
+            {
+              ...context,
+              variables,
+            },
+            trace,
+            sourceDocumentUri,
+          );
     variables.set(param.name, value);
     variables.set(`{}${param.name}`, value);
   }
@@ -496,7 +775,8 @@ function bindTemplateParams(
 }
 
 function evaluateBindingValue(
-  binding: Pick<TemplateParam, 'select' | 'body'>
+  binding:
+    | Pick<TemplateParam, 'select' | 'body'>
     | Pick<WithParam, 'select' | 'body'>
     | Pick<Extract<Instruction, { readonly kind: 'variable' }>, 'select' | 'body'>
     | Pick<GlobalBinding, 'select' | 'body'>,
@@ -566,15 +846,26 @@ function renderBuiltInTemplate(
   variables: ReadonlyMap<string, unknown>,
   trace?: TransformTraceOptions,
   sourceDocumentUri = '<source-xml>',
+  modes: readonly string[] = [],
 ): string {
   if (node.nodeType === node.DOCUMENT_NODE || node.nodeType === node.ELEMENT_NODE) {
-    return applyTemplatesToItems(getChildNodeItems(createXdmNode(node)), ir, staticContext, variables, trace, sourceDocumentUri);
+    return applyTemplatesToItems(
+      getChildNodeItems(createXdmNode(node)),
+      ir,
+      staticContext,
+      variables,
+      trace,
+      sourceDocumentUri,
+      undefined,
+      [],
+      modes,
+    );
   }
 
   if (
-    node.nodeType === node.TEXT_NODE
-    || node.nodeType === node.CDATA_SECTION_NODE
-    || node.nodeType === node.ATTRIBUTE_NODE
+    node.nodeType === node.TEXT_NODE ||
+    node.nodeType === node.CDATA_SECTION_NODE ||
+    node.nodeType === node.ATTRIBUTE_NODE
   ) {
     return escapeText(node.nodeValue ?? '');
   }
@@ -682,6 +973,208 @@ function itemToStringValue(item: XdmItem): string {
   return String((item as XdmAtomicValue).value);
 }
 
+function renderNumberInstruction(
+  instruction: Extract<Instruction, { readonly kind: 'number' }>,
+  context: DynamicContext,
+): string {
+  const node = asXdmNode(context.contextItem)?.node;
+  if (node === undefined) {
+    return '';
+  }
+
+  const counts = getNumberingCounts(
+    node,
+    instruction.count,
+    context.staticContext,
+    instruction.level,
+  );
+  if (counts.length === 0) {
+    return '';
+  }
+
+  return formatNumberCounts(counts, instruction.format);
+}
+
+function getNumberingCounts(
+  node: Node,
+  countPattern: XPathAst,
+  staticContext: DynamicContext['staticContext'],
+  level: 'single' | 'multiple' | 'any',
+): readonly number[] {
+  if (level === 'any') {
+    return [countAnyPreceding(node, countPattern, staticContext) + 1];
+  }
+
+  if (level === 'multiple') {
+    const chain: Node[] = [];
+    for (let current: Node | null = node; current !== null; current = current.parentNode) {
+      if (matchesNumberPattern(current, countPattern, staticContext)) {
+        chain.push(current);
+      }
+    }
+
+    chain.reverse();
+    return chain.map((current) => countSinglePosition(current, countPattern, staticContext));
+  }
+
+  return [countSinglePosition(node, countPattern, staticContext)];
+}
+
+function countSinglePosition(
+  node: Node,
+  countPattern: XPathAst,
+  staticContext: DynamicContext['staticContext'],
+): number {
+  const parent = node.parentNode;
+  if (parent === null) {
+    return 1;
+  }
+
+  let position = 0;
+  for (const sibling of getChildNodes(parent)) {
+    if (!matchesNumberPattern(sibling, countPattern, staticContext)) {
+      continue;
+    }
+
+    position += 1;
+    if (sibling === node) {
+      return position;
+    }
+  }
+
+  return position === 0 ? 1 : position;
+}
+
+function countAnyPreceding(
+  node: Node,
+  countPattern: XPathAst,
+  staticContext: DynamicContext['staticContext'],
+): number {
+  const root = node.nodeType === node.DOCUMENT_NODE ? node : (node.ownerDocument ?? node);
+  let count = 0;
+  let finished = false;
+
+  const visit = (current: Node): void => {
+    if (finished) {
+      return;
+    }
+
+    if (current === node) {
+      finished = true;
+      return;
+    }
+
+    if (matchesNumberPattern(current, countPattern, staticContext)) {
+      count += 1;
+    }
+
+    for (const child of getChildNodes(current)) {
+      visit(child);
+      if (finished) {
+        return;
+      }
+    }
+  };
+
+  visit(root);
+  return count;
+}
+
+function matchesNumberPattern(
+  node: Node,
+  pattern: XPathAst,
+  staticContext: DynamicContext['staticContext'],
+): boolean {
+  const contextNode =
+    node.nodeType === node.DOCUMENT_NODE ? node : (node.parentNode ?? node.ownerDocument ?? node);
+  const context = {
+    staticContext,
+    contextItem: createXdmNode(contextNode),
+    contextPosition: 1,
+    contextSize: 1,
+    variables: new Map(),
+  } satisfies DynamicContext;
+
+  try {
+    return [...evaluate(pattern, context)].some((item) => asXdmNode(item)?.node === node);
+  } catch {
+    return false;
+  }
+}
+
+function formatNumberCounts(counts: readonly number[], format: string): string {
+  if (counts.length === 0) {
+    return '';
+  }
+
+  if (counts.length === 1) {
+    return formatSingleCount(counts[0]!, format);
+  }
+
+  const formatParts = format.split('.').filter((part) => part.length > 0);
+  const parts = counts.map((count, index) =>
+    formatSingleCount(count, formatParts[index] ?? formatParts.at(-1) ?? '1'),
+  );
+  return parts.join('.');
+}
+
+function formatSingleCount(count: number, format: string): string {
+  if (format === 'i') {
+    return toRomanNumeral(count).toLowerCase();
+  }
+
+  if (format === 'I') {
+    return toRomanNumeral(count).toUpperCase();
+  }
+
+  return String(count);
+}
+
+function toRomanNumeral(value: number): string {
+  if (value <= 0) {
+    return '';
+  }
+
+  const symbols: readonly [number, string][] = [
+    [1000, 'M'],
+    [900, 'CM'],
+    [500, 'D'],
+    [400, 'CD'],
+    [100, 'C'],
+    [90, 'XC'],
+    [50, 'L'],
+    [40, 'XL'],
+    [10, 'X'],
+    [9, 'IX'],
+    [5, 'V'],
+    [4, 'IV'],
+    [1, 'I'],
+  ];
+
+  let remaining = Math.floor(value);
+  let result = '';
+  for (const [threshold, symbol] of symbols) {
+    while (remaining >= threshold) {
+      result += symbol;
+      remaining -= threshold;
+    }
+  }
+
+  return result;
+}
+
+function getChildNodes(node: Node): readonly Node[] {
+  const children: Node[] = [];
+  for (let index = 0; index < node.childNodes.length; index += 1) {
+    const child = node.childNodes.item(index);
+    if (child !== null) {
+      children.push(child);
+    }
+  }
+
+  return children;
+}
+
 function evaluateGlobalBindings(
   ir: StylesheetIR,
   bindings: readonly GlobalBinding[],
@@ -718,7 +1211,10 @@ function evaluateGlobalBindings(
           if (binding.kind === 'param' && externalParameters.values.has(binding.name)) {
             cachedValue = externalParameters.values.get(binding.name);
           } else if (binding.kind === 'param' && binding.required) {
-            const suggestion = createMissingStylesheetParameterSuggestion(binding.name, externalParameters.normalizedNames);
+            const suggestion = createMissingStylesheetParameterSuggestion(
+              binding.name,
+              externalParameters.normalizedNames,
+            );
             throw new XsltError(
               XTDE0050,
               `Required stylesheet parameter $${binding.name} was not supplied.`,
@@ -757,7 +1253,11 @@ function evaluateGlobalBindings(
 
   for (const binding of bindings) {
     const deferredBinding = runtimeBindings.get(binding.name) as DeferredVariableBinding | unknown;
-    if (typeof deferredBinding === 'object' && deferredBinding !== null && 'evaluate' in deferredBinding) {
+    if (
+      typeof deferredBinding === 'object' &&
+      deferredBinding !== null &&
+      'evaluate' in deferredBinding
+    ) {
       (deferredBinding as DeferredVariableBinding).evaluate();
     }
   }
@@ -797,7 +1297,9 @@ function createMissingStylesheetParameterSuggestion(
   expectedName: string,
   providedNames: readonly string[],
 ): ErrorSuggestion | undefined {
-  const expectedDisplayName = expectedName.startsWith('{') ? expectedName : formatTemplateSuggestionName(expectedName);
+  const expectedDisplayName = expectedName.startsWith('{')
+    ? expectedName
+    : formatTemplateSuggestionName(expectedName);
   const nearest = providedNames
     .map((candidate) => ({
       candidate,
@@ -816,7 +1318,10 @@ function createMissingStylesheetParameterSuggestion(
     kind: 'fix',
     label: `did you mean to pass parameters["${expectedDisplayName}"]?`,
     replacement: expectedDisplayName,
-    confidence: nearest.distance === 0 ? 1 : 1 - (nearest.distance / formatTemplateSuggestionName(expectedDisplayName).length),
+    confidence:
+      nearest.distance === 0
+        ? 1
+        : 1 - nearest.distance / formatTemplateSuggestionName(expectedDisplayName).length,
   };
 }
 
@@ -828,7 +1333,10 @@ function createMissingTemplateParamSuggestion(
   const nearest = providedNames
     .map((candidate) => ({
       candidate,
-      distance: computeLevenshteinDistance(expectedDisplayName, formatTemplateSuggestionName(candidate)),
+      distance: computeLevenshteinDistance(
+        expectedDisplayName,
+        formatTemplateSuggestionName(candidate),
+      ),
     }))
     .sort((left, right) => left.distance - right.distance)[0];
 
@@ -840,13 +1348,13 @@ function createMissingTemplateParamSuggestion(
     kind: 'fix',
     label: `did you mean xsl:with-param name="${expectedDisplayName}"?`,
     replacement: expectedDisplayName,
-    confidence: nearest.distance === 0 ? 1 : 1 - (nearest.distance / expectedDisplayName.length),
+    confidence: nearest.distance === 0 ? 1 : 1 - nearest.distance / expectedDisplayName.length,
   };
 }
 
 function asXdmNode(item: unknown): XdmNode | undefined {
   return typeof item === 'object' && item !== null && (item as XdmItem).xdmKind === 'node'
-    ? item as XdmNode
+    ? (item as XdmNode)
     : undefined;
 }
 
@@ -895,11 +1403,13 @@ function createApplyTemplatesNodeSequenceError(
       actualType: describeItemsType(items),
     },
     {
-      suggestions: [{
-        kind: 'fix',
-        label: 'use a node-selecting expression for xsl:apply-templates',
-        confidence: 1,
-      }],
+      suggestions: [
+        {
+          kind: 'fix',
+          label: 'use a node-selecting expression for xsl:apply-templates',
+          confidence: 1,
+        },
+      ],
     },
   );
 }
@@ -933,18 +1443,17 @@ function describeItemType(item: XdmItem): string {
   return (item as XdmAtomicValue).type;
 }
 
-function createRelatedLocation(label: string, location: TemplateRule['location']): RelatedLocation | undefined {
+function createRelatedLocation(
+  label: string,
+  location: TemplateRule['location'],
+): RelatedLocation | undefined {
   return location === undefined ? undefined : { label, location };
 }
 
 function escapeText(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
+  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
 
 function escapeAttribute(value: string): string {
-  return escapeText(value)
-    .replaceAll('"', '&quot;');
+  return escapeText(value).replaceAll('"', '&quot;');
 }

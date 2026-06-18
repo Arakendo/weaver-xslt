@@ -66,16 +66,19 @@ class Parser {
   }
 
   private parseExprSingle(): XPathAst {
-    if (this.current().kind === 'some' || this.current().kind === 'every') {
+    if (
+      (this.current().kind === 'some' || this.current().kind === 'every') &&
+      this.peek().kind === 'dollar'
+    ) {
       return this.parseQuantifiedExpression();
     }
-    if (this.current().kind === 'for') {
+    if (this.current().kind === 'for' && this.peek().kind === 'dollar') {
       return this.parseForExpression();
     }
-    if (this.current().kind === 'if') {
+    if (this.current().kind === 'if' && this.peek().kind === 'leftParen') {
       return this.parseIfExpression();
     }
-    if (this.current().kind === 'let') {
+    if (this.current().kind === 'let' && this.peek().kind === 'dollar') {
       return this.parseLetExpression();
     }
     return this.parseOrExpression();
@@ -151,7 +154,10 @@ class Parser {
 
     const right = this.parseStringConcatExpression();
     if (comparisonKinds.includes(this.current().kind)) {
-      throw createParseError('Only one comparison operator is allowed per expression unless parenthesized.', this.current().span);
+      throw createParseError(
+        'Only one comparison operator is allowed per expression unless parenthesized.',
+        this.current().span,
+      );
     }
 
     return {
@@ -176,7 +182,12 @@ class Parser {
   }
 
   private parseMultiplicativeExpression(): XPathAst {
-    return this.parseBinaryChain(this.parseUnaryExpression.bind(this), ['star', 'div', 'idiv', 'mod']);
+    return this.parseBinaryChain(this.parseUnaryExpression.bind(this), [
+      'star',
+      'div',
+      'idiv',
+      'mod',
+    ]);
   }
 
   private parseSimpleMapExpression(): XPathAst {
@@ -191,7 +202,10 @@ class Parser {
     return this.parseBinaryChain(this.parsePostfixExpression.bind(this), ['intersect', 'except']);
   }
 
-  private parseBinaryChain(parseOperand: () => XPathAst, operatorKinds: readonly TokenKind[]): XPathAst {
+  private parseBinaryChain(
+    parseOperand: () => XPathAst,
+    operatorKinds: readonly TokenKind[],
+  ): XPathAst {
     let expression = parseOperand();
 
     while (true) {
@@ -261,7 +275,10 @@ class Parser {
   private parseQuantifiedExpression(): QuantifiedExpression {
     const quantifierToken = this.matchAny(['some', 'every']);
     if (quantifierToken === undefined) {
-      throw createParseError('Expected some or every to start the quantified expression.', this.current().span);
+      throw createParseError(
+        'Expected some or every to start the quantified expression.',
+        this.current().span,
+      );
     }
 
     const bindings = this.parseFlowBindings('quantified');
@@ -276,7 +293,9 @@ class Parser {
     };
   }
 
-  private parseFlowBindings(kind: 'for' | 'quantified'): Array<{ name: string; value: XPathAst; span: SourceSpan }> {
+  private parseFlowBindings(
+    kind: 'for' | 'quantified',
+  ): Array<{ name: string; value: XPathAst; span: SourceSpan }> {
     const bindings: Array<{ name: string; value: XPathAst; span: SourceSpan }> = [];
 
     while (true) {
@@ -317,7 +336,7 @@ class Parser {
     }
 
     this.expect('return', 'Expected return after the let bindings.');
-  const returnExpr = this.parseExprSingle();
+    const returnExpr = this.parseExprSingle();
     return {
       kind: 'let',
       bindings,
@@ -358,6 +377,14 @@ class Parser {
         return this.parseStringLiteral();
       case 'dollar':
         return this.parseVariableReference();
+      case 'for':
+      case 'let':
+      case 'some':
+      case 'every':
+      case 'then':
+      case 'else':
+      case 'if':
+        return this.parsePathExpression();
       case 'name':
         if (this.peek().kind === 'leftParen' && !isKindTestName(token.value)) {
           return this.parseFunctionCallExpression();
@@ -640,7 +667,20 @@ class Parser {
       };
     }
 
-    const token = this.expect('name', 'Expected a node test.');
+    const token = this.current();
+    if (
+      token.kind !== 'name' &&
+      token.kind !== 'if' &&
+      token.kind !== 'for' &&
+      token.kind !== 'let' &&
+      token.kind !== 'some' &&
+      token.kind !== 'every' &&
+      token.kind !== 'then' &&
+      token.kind !== 'else'
+    ) {
+      throw createParseError('Expected a node test.', token.span);
+    }
+    this.index += 1;
     const colon = this.match('colon');
     if (colon !== undefined) {
       this.expect('star', 'Expected * after the node-test prefix and colon.');
@@ -676,7 +716,11 @@ class Parser {
       return this.parsePostfixExpression();
     }
 
-    if (this.current().kind === 'name' && this.peek().kind === 'leftParen' && !isKindTestName(this.current().value)) {
+    if (
+      this.current().kind === 'name' &&
+      this.peek().kind === 'leftParen' &&
+      !isKindTestName(this.current().value)
+    ) {
       return this.parseFunctionCallExpression();
     }
 
@@ -791,19 +835,40 @@ function unescapeStringLiteral(lexeme: string): string {
 }
 
 function isKindTestName(value: string): value is KindTest['name'] {
-  return value === 'comment' || value === 'node' || value === 'processing-instruction' || value === 'text';
+  return (
+    value === 'comment' ||
+    value === 'node' ||
+    value === 'processing-instruction' ||
+    value === 'text'
+  );
 }
 
 function isStepStart(token: Token): boolean {
-  return token.kind === 'dot' || token.kind === 'dotDot' || token.kind === 'at' || token.kind === 'name' || token.kind === 'star';
+  return (
+    token.kind === 'dot' ||
+    token.kind === 'dotDot' ||
+    token.kind === 'at' ||
+    token.kind === 'name' ||
+    token.kind === 'star'
+  );
 }
 
 function isPathSegmentStart(token: Token, next: Token): boolean {
-  return token.kind === 'leftParen' || isStepStart(token) || (token.kind === 'name' && next.kind === 'leftParen');
+  return (
+    token.kind === 'leftParen' ||
+    isStepStart(token) ||
+    (token.kind === 'name' && next.kind === 'leftParen')
+  );
 }
 
 function isInitialPathExpressionStart(token: Token, next: Token): boolean {
-  if (token.kind === 'slash' || token.kind === 'slashSlash' || token.kind === 'at' || token.kind === 'star' || token.kind === 'dotDot') {
+  if (
+    token.kind === 'slash' ||
+    token.kind === 'slashSlash' ||
+    token.kind === 'at' ||
+    token.kind === 'star' ||
+    token.kind === 'dotDot'
+  ) {
     return true;
   }
 

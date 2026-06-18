@@ -20,35 +20,67 @@ type CreateXPathError = (
 ) => Error;
 
 const EXACT_ARITY_NAMES = new Map<string, readonly string[]>([
-  ['0', ['fn:position', 'fn:last', 'fn:error', 'fn:true', 'fn:false']],
-  ['1', [
-    'fn:count',
-    'fn:exists',
-    'fn:empty',
-    'fn:exactly-one',
-    'fn:one-or-more',
-    'fn:zero-or-one',
-    'fn:boolean',
-    'fn:not',
-    'fn:codepoints-to-string',
-    'fn:upper-case',
-    'fn:lower-case',
-    'fn:min',
-    'fn:max',
-    'fn:avg',
-    'fn:distinct-values',
-    'fn:data',
-    'fn:reverse',
-    'fn:head',
-    'fn:tail',
-  ]],
-  ['2', ['fn:deep-equal', 'fn:QName', 'fn:trace', 'map:entry', 'fn:remove', 'fn:contains', 'fn:starts-with', 'fn:ends-with']],
+  ['0', ['fn:position', 'fn:last', 'fn:error', 'fn:true', 'fn:false', 'fn:current']],
+  [
+    '1',
+    [
+      'fn:count',
+      'fn:exists',
+      'fn:empty',
+      'fn:exactly-one',
+      'fn:one-or-more',
+      'fn:zero-or-one',
+      'fn:boolean',
+      'fn:not',
+      'fn:codepoints-to-string',
+      'fn:upper-case',
+      'fn:lower-case',
+      'fn:min',
+      'fn:max',
+      'fn:avg',
+      'fn:distinct-values',
+      'fn:data',
+      'fn:reverse',
+      'fn:head',
+      'fn:tail',
+      'fn:document',
+    ],
+  ],
+  [
+    '2',
+    [
+      'fn:deep-equal',
+      'fn:QName',
+      'fn:trace',
+      'map:entry',
+      'fn:remove',
+      'fn:contains',
+      'fn:starts-with',
+      'fn:ends-with',
+      'fn:substring-before',
+      'fn:substring-after',
+    ],
+  ],
   ['3', ['fn:translate']],
 ]);
 
 const RANGE_ARITY_NAMES = new Map<string, readonly string[]>([
   ['>=2', ['fn:concat']],
-  ['0..1', ['fn:string', 'fn:string-length', 'fn:normalize-space', 'fn:number', 'fn:name', 'fn:local-name', 'fn:namespace-uri', 'fn:generate-id', 'fn:node-name', 'fn:root']],
+  [
+    '0..1',
+    [
+      'fn:string',
+      'fn:string-length',
+      'fn:normalize-space',
+      'fn:number',
+      'fn:name',
+      'fn:local-name',
+      'fn:namespace-uri',
+      'fn:generate-id',
+      'fn:node-name',
+      'fn:root',
+    ],
+  ],
   ['1..2', ['fn:string-join', 'fn:sum']],
   ['1..3', ['fn:tokenize']],
   ['2..3', ['fn:substring', 'fn:subsequence', 'fn:matches']],
@@ -72,9 +104,19 @@ for (const [requirement, names] of RANGE_ARITY_NAMES) {
 export function createArityValidationHelpers(createXPathError: CreateXPathError): {
   requireArity(name: string, args: readonly XPathAst[], expected: number, span: SpanLike): void;
   validateFunctionCallSignature(name: string, actualArity: number, span: SpanLike): void;
-  throwArityError(name: string, actualArity: number, arityRequirement: string, span: SpanLike): never;
+  throwArityError(
+    name: string,
+    actualArity: number,
+    arityRequirement: string,
+    span: SpanLike,
+  ): never;
 } {
-  function requireArity(name: string, args: readonly XPathAst[], expected: number, span: SpanLike): void {
+  function requireArity(
+    name: string,
+    args: readonly XPathAst[],
+    expected: number,
+    span: SpanLike,
+  ): void {
     if (args.length !== expected) {
       throwArityError(name, args.length, String(expected), span);
     }
@@ -84,10 +126,16 @@ export function createArityValidationHelpers(createXPathError: CreateXPathError)
     const arityRequirement = FUNCTION_ARITY_REQUIREMENTS.get(name);
 
     if (arityRequirement === undefined) {
-      throw createXPathError(XPST0017, `Unknown function ${name}.`, span, {
-        functionName: name,
-        actualArity,
-      }, createFunctionSuggestionContext(name));
+      throw createXPathError(
+        XPST0017,
+        `Unknown function ${name}.`,
+        span,
+        {
+          functionName: name,
+          actualArity,
+        },
+        createFunctionSuggestionContext(name),
+      );
     }
 
     if (!matchesArityRequirement(actualArity, arityRequirement)) {
@@ -95,17 +143,27 @@ export function createArityValidationHelpers(createXPathError: CreateXPathError)
     }
   }
 
-  function throwArityError(name: string, actualArity: number, arityRequirement: string, span: SpanLike): never {
+  function throwArityError(
+    name: string,
+    actualArity: number,
+    arityRequirement: string,
+    span: SpanLike,
+  ): never {
     const requirementLabel = arityRequirement.includes('..')
       ? arityRequirement.replace('..', ' or ')
       : arityRequirement === '>=2'
         ? 'at least 2'
         : arityRequirement;
-    throw createXPathError(XPST0017, `Function ${name} expects ${requirementLabel} arguments but got ${actualArity}.`, span, {
-      functionName: name,
-      actualArity,
-      arityRequirement,
-    });
+    throw createXPathError(
+      XPST0017,
+      `Function ${name} expects ${requirementLabel} arguments but got ${actualArity}.`,
+      span,
+      {
+        functionName: name,
+        actualArity,
+        arityRequirement,
+      },
+    );
   }
 
   return {
@@ -126,14 +184,17 @@ export function listKnownFunctionNames(): readonly string[] {
 export function createFunctionNameSuggestion(name: string): ErrorSuggestion | undefined {
   const candidatePrefix = name.startsWith('map:') ? 'map:' : 'fn:';
   const hasExplicitPrefix = name.includes(':');
-  const displayName = hasExplicitPrefix ? name : candidatePrefix === 'fn:' ? name : `${candidatePrefix}${name}`;
+  const displayName = hasExplicitPrefix
+    ? name
+    : candidatePrefix === 'fn:'
+      ? name
+      : `${candidatePrefix}${name}`;
 
   const nearest = listKnownFunctionNames()
     .filter((candidate) => candidate.startsWith(candidatePrefix))
     .map((candidate) => {
-      const displayCandidate = hasExplicitPrefix || candidatePrefix !== 'fn:'
-        ? candidate
-        : candidate.slice(3);
+      const displayCandidate =
+        hasExplicitPrefix || candidatePrefix !== 'fn:' ? candidate : candidate.slice(3);
       return {
         displayCandidate,
         distance: computeLevenshteinDistance(displayName, displayCandidate),
@@ -149,7 +210,7 @@ export function createFunctionNameSuggestion(name: string): ErrorSuggestion | un
     kind: 'fix',
     label: `did you mean ${nearest.displayCandidate}(...)?`,
     replacement: nearest.displayCandidate,
-    confidence: nearest.distance === 0 ? 1 : 1 - (nearest.distance / nearest.displayCandidate.length),
+    confidence: nearest.distance === 0 ? 1 : 1 - nearest.distance / nearest.displayCandidate.length,
   };
 }
 

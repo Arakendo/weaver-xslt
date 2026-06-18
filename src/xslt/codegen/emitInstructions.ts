@@ -1,5 +1,19 @@
-import type { AttributeInstruction, GlobalBinding, Instruction, StylesheetIR, TemplateRule, TemplateParam, WithParam } from '../compile/ir.js';
-import type { BinaryExpression, FunctionCallExpression, PathExpression, StepExpression, XPathAst } from '../../xpath/parse/ast.js';
+import type {
+  AttributeInstruction,
+  GlobalBinding,
+  Instruction,
+  StylesheetIR,
+  TemplateRule,
+  TemplateParam,
+  WithParam,
+} from '../compile/ir.js';
+import type {
+  BinaryExpression,
+  FunctionCallExpression,
+  PathExpression,
+  StepExpression,
+  XPathAst,
+} from '../../xpath/parse/ast.js';
 import {
   tsBinaryExpression,
   tsCallExpression,
@@ -47,13 +61,19 @@ interface ApplyTemplatesRenderContext {
   readonly variableBindings?: ReadonlyMap<string, TsExpression>;
 }
 
-export function tryCreateNativeTransformPlan(ir: StylesheetIR, sourcePath?: string): NativeTransformPlan | undefined {
+export function tryCreateNativeTransformPlan(
+  ir: StylesheetIR,
+  sourcePath?: string,
+): NativeTransformPlan | undefined {
   const namedInitialTemplatePlan = tryCreateNamedInitialTemplateNativePlan(ir, sourcePath);
   if (namedInitialTemplatePlan !== undefined) {
     return namedInitialTemplatePlan;
   }
 
-  const mixedInitialTemplatePlan = tryCreateSingleTemplateWithNamedInitialTemplateNativePlan(ir, sourcePath);
+  const mixedInitialTemplatePlan = tryCreateSingleTemplateWithNamedInitialTemplateNativePlan(
+    ir,
+    sourcePath,
+  );
   if (mixedInitialTemplatePlan !== undefined) {
     return mixedInitialTemplatePlan;
   }
@@ -71,7 +91,10 @@ export function tryCreateNativeTransformPlan(ir: StylesheetIR, sourcePath?: stri
   return tryCreateMatchedTemplateApplyTemplatesNativePlan(ir, sourcePath);
 }
 
-function tryCreateNamedInitialTemplateNativePlan(ir: StylesheetIR, sourcePath?: string): NativeTransformPlan | undefined {
+function tryCreateNamedInitialTemplateNativePlan(
+  ir: StylesheetIR,
+  sourcePath?: string,
+): NativeTransformPlan | undefined {
   const runtimeHelpers = new Set<string>(['createCompiledDocument']);
   const globalBindingSetup = tryCreateGlobalBindingSetup(ir.globalBindings, runtimeHelpers);
   if (globalBindingSetup === undefined) {
@@ -84,10 +107,10 @@ function tryCreateNamedInitialTemplateNativePlan(ir: StylesheetIR, sourcePath?: 
 
   const [template] = ir.templates;
   if (
-    template === undefined
-    || template.name === undefined
-    || template.match !== undefined
-    || template.modes.length > 0
+    template === undefined ||
+    template.name === undefined ||
+    template.match !== undefined ||
+    template.modes.length > 0
   ) {
     return undefined;
   }
@@ -146,7 +169,10 @@ function tryCreateNamedInitialTemplateNativePlan(ir: StylesheetIR, sourcePath?: 
   };
 }
 
-function tryCreateSingleTemplateWithNamedInitialTemplateNativePlan(ir: StylesheetIR, sourcePath?: string): NativeTransformPlan | undefined {
+function tryCreateSingleTemplateWithNamedInitialTemplateNativePlan(
+  ir: StylesheetIR,
+  sourcePath?: string,
+): NativeTransformPlan | undefined {
   const runtimeHelpers = new Set<string>(['createCompiledDocument']);
   const globalBindingSetup = tryCreateGlobalBindingSetup(ir.globalBindings, runtimeHelpers);
   if (globalBindingSetup === undefined) {
@@ -156,10 +182,9 @@ function tryCreateSingleTemplateWithNamedInitialTemplateNativePlan(ir: Styleshee
     return undefined;
   }
 
-  const defaultTemplates = ir.templates.filter((template) =>
-    template.name === undefined
-    && template.modes.length === 0
-    && template.params.length === 0,
+  const defaultTemplates = ir.templates.filter(
+    (template) =>
+      template.name === undefined && template.modes.length === 0 && template.params.length === 0,
   );
   if (defaultTemplates.length !== 1) {
     return undefined;
@@ -168,11 +193,11 @@ function tryCreateSingleTemplateWithNamedInitialTemplateNativePlan(ir: Styleshee
   const [defaultTemplate] = defaultTemplates;
   const initialTemplate = ir.templates.find((template) => template !== defaultTemplate);
   if (
-    defaultTemplate === undefined
-    || initialTemplate === undefined
-    || initialTemplate.name === undefined
-    || initialTemplate.match !== undefined
-    || initialTemplate.modes.length > 0
+    defaultTemplate === undefined ||
+    initialTemplate === undefined ||
+    initialTemplate.name === undefined ||
+    initialTemplate.match !== undefined ||
+    initialTemplate.modes.length > 0
   ) {
     return undefined;
   }
@@ -223,7 +248,8 @@ function tryCreateSingleTemplateWithNamedInitialTemplateNativePlan(ir: Styleshee
     initialOutputExpression.code,
     ...templateParamSetup.setupStatements,
   ]);
-  const needsDefaultCurrentNodeBinding = defaultContext.currentNodeMayBeNull || defaultOutputExpression.code.includes('currentNode');
+  const needsDefaultCurrentNodeBinding =
+    defaultContext.currentNodeMayBeNull || defaultOutputExpression.code.includes('currentNode');
 
   const needsDocumentBinding = hasDocumentReference([
     ...(needsDefaultCurrentNodeBinding ? [defaultContext.currentNodeExpression.code] : []),
@@ -249,13 +275,19 @@ function tryCreateSingleTemplateWithNamedInitialTemplateNativePlan(ir: Styleshee
     initialTemplateCurrentNodeExpression: tsRawExpression('document'),
     initialTemplateCurrentNodeMayBeNull: false,
     initialTemplateNeedsCurrentNodeBinding: false,
-    initialTemplateSetupStatements: [...finalizedGlobalBindingSetup, ...templateParamSetup.setupStatements],
+    initialTemplateSetupStatements: [
+      ...finalizedGlobalBindingSetup,
+      ...templateParamSetup.setupStatements,
+    ],
     initialTemplateOutputExpression: initialOutputExpression,
     runtimeHelpers: [...runtimeHelpers].sort(),
   };
 }
 
-function tryCreateSingleTemplateNativePlan(ir: StylesheetIR, sourcePath?: string): NativeTransformPlan | undefined {
+function tryCreateSingleTemplateNativePlan(
+  ir: StylesheetIR,
+  sourcePath?: string,
+): NativeTransformPlan | undefined {
   const runtimeHelpers = new Set<string>(['createCompiledDocument']);
   const globalBindingSetup = tryCreateGlobalBindingSetup(ir.globalBindings, runtimeHelpers);
   if (globalBindingSetup === undefined) {
@@ -265,19 +297,16 @@ function tryCreateSingleTemplateNativePlan(ir: StylesheetIR, sourcePath?: string
     return undefined;
   }
 
-  const primaryTemplates = ir.templates.filter((template) =>
-    template.name === undefined
-    && template.modes.length === 0
-    && template.params.length === 0,
+  const primaryTemplates = ir.templates.filter(
+    (template) =>
+      template.name === undefined && template.modes.length === 0 && template.params.length === 0,
   );
   if (primaryTemplates.length !== 1) {
     return undefined;
   }
 
   const [template] = primaryTemplates;
-  if (
-    template === undefined
-  ) {
+  if (template === undefined) {
     return undefined;
   }
 
@@ -288,9 +317,9 @@ function tryCreateSingleTemplateNativePlan(ir: StylesheetIR, sourcePath?: string
     }
 
     if (
-      candidate.name === undefined
-      || candidate.match !== undefined
-      || candidate.modes.length > 0
+      candidate.name === undefined ||
+      candidate.match !== undefined ||
+      candidate.modes.length > 0
     ) {
       return undefined;
     }
@@ -303,16 +332,20 @@ function tryCreateSingleTemplateNativePlan(ir: StylesheetIR, sourcePath?: string
     return undefined;
   }
 
-  const outputExpression = emitInstructionSequence(template.body, runtimeHelpers, namedTemplates.size === 0
-    ? {
-        variableBindings: globalBindingSetup.variableBindings,
-      }
-    : {
-        namedTemplates,
-        activeNamedTemplateNames: [],
-        variableBindings: globalBindingSetup.variableBindings,
-        ...(sourcePath === undefined ? {} : { sourcePath }),
-      });
+  const outputExpression = emitInstructionSequence(
+    template.body,
+    runtimeHelpers,
+    namedTemplates.size === 0
+      ? {
+          variableBindings: globalBindingSetup.variableBindings,
+        }
+      : {
+          namedTemplates,
+          activeNamedTemplateNames: [],
+          variableBindings: globalBindingSetup.variableBindings,
+          ...(sourcePath === undefined ? {} : { sourcePath }),
+        },
+  );
   if (outputExpression === undefined) {
     return undefined;
   }
@@ -320,7 +353,8 @@ function tryCreateSingleTemplateNativePlan(ir: StylesheetIR, sourcePath?: string
     templateContext.currentNodeExpression.code,
     outputExpression.code,
   ]);
-  const needsCurrentNodeBinding = templateContext.currentNodeMayBeNull || outputExpression.code.includes('currentNode');
+  const needsCurrentNodeBinding =
+    templateContext.currentNodeMayBeNull || outputExpression.code.includes('currentNode');
 
   const needsDocumentBinding = hasDocumentReference([
     ...(needsCurrentNodeBinding ? [templateContext.currentNodeExpression.code] : []),
@@ -343,7 +377,10 @@ function tryCreateSingleTemplateNativePlan(ir: StylesheetIR, sourcePath?: string
   };
 }
 
-function tryCreateRootApplyTemplatesNativePlan(ir: StylesheetIR, sourcePath?: string): NativeTransformPlan | undefined {
+function tryCreateRootApplyTemplatesNativePlan(
+  ir: StylesheetIR,
+  sourcePath?: string,
+): NativeTransformPlan | undefined {
   const runtimeHelpers = new Set<string>(['createCompiledDocument']);
   const globalBindingSetup = tryCreateGlobalBindingSetup(ir.globalBindings, runtimeHelpers);
   if (globalBindingSetup === undefined) {
@@ -355,13 +392,16 @@ function tryCreateRootApplyTemplatesNativePlan(ir: StylesheetIR, sourcePath?: st
     return undefined;
   }
   const rootTemplate = shape?.rootTemplate ?? recursivePlan?.rootTemplate;
-  const childPlans: readonly ApplyTemplatesTemplatePlan[] | undefined = shape === undefined
-    ? recursivePlan?.childPlans
-    : [{
-        template: shape.childTemplate,
-        matchAbsolute: shape.childMatchAbsolute,
-        matchPath: shape.childMatchPath,
-      }];
+  const childPlans: readonly ApplyTemplatesTemplatePlan[] | undefined =
+    shape === undefined
+      ? recursivePlan?.childPlans
+      : [
+          {
+            template: shape.childTemplate,
+            matchAbsolute: shape.childMatchAbsolute,
+            matchPath: shape.childMatchPath,
+          },
+        ];
   if (rootTemplate === undefined || childPlans === undefined) {
     return undefined;
   }
@@ -369,22 +409,25 @@ function tryCreateRootApplyTemplatesNativePlan(ir: StylesheetIR, sourcePath?: st
   const outputExpression = emitInstructionSequence(rootTemplate.body, runtimeHelpers, {
     contextNodeIdentifier: 'document',
     variableBindings: globalBindingSetup.variableBindings,
-    renderApplyTemplates: (instruction, contextNodeIdentifier, context) => emitPlannedApplyTemplatesInstruction(
-      instruction,
-      childPlans,
-      contextNodeIdentifier,
-      runtimeHelpers,
-      emitInstructionSequence,
-      tryGetSimpleChildPath,
-      tryCreateTemplateInvocationSetup,
-      context,
-      sourcePath,
-    ),
+    renderApplyTemplates: (instruction, contextNodeIdentifier, context) =>
+      emitPlannedApplyTemplatesInstruction(
+        instruction,
+        childPlans,
+        contextNodeIdentifier,
+        runtimeHelpers,
+        emitInstructionSequence,
+        tryGetSimpleChildPath,
+        tryCreateTemplateInvocationSetup,
+        context,
+        sourcePath,
+      ),
   });
   if (outputExpression === undefined) {
     return undefined;
   }
-  const finalizedGlobalBindingSetup = finalizeGlobalBindingSetup(globalBindingSetup, [outputExpression.code]);
+  const finalizedGlobalBindingSetup = finalizeGlobalBindingSetup(globalBindingSetup, [
+    outputExpression.code,
+  ]);
 
   const needsDocumentBinding = hasDocumentReference([
     outputExpression.code,
@@ -406,7 +449,10 @@ function tryCreateRootApplyTemplatesNativePlan(ir: StylesheetIR, sourcePath?: st
   };
 }
 
-function tryCreateMatchedTemplateApplyTemplatesNativePlan(ir: StylesheetIR, sourcePath?: string): NativeTransformPlan | undefined {
+function tryCreateMatchedTemplateApplyTemplatesNativePlan(
+  ir: StylesheetIR,
+  sourcePath?: string,
+): NativeTransformPlan | undefined {
   const runtimeHelpers = new Set<string>(['createCompiledDocument']);
   const globalBindingSetup = tryCreateGlobalBindingSetup(ir.globalBindings, runtimeHelpers);
   if (globalBindingSetup === undefined) {
@@ -416,14 +462,15 @@ function tryCreateMatchedTemplateApplyTemplatesNativePlan(ir: StylesheetIR, sour
     return undefined;
   }
 
-  const primaryTemplate = ir.templates.find((template) =>
-    template.name === undefined
-    && template.modes.length === 0
-    && template.params.length === 0
-    && template.match !== undefined
-    && template.match.kind === 'path'
-    && template.match.absolute
-    && template.match.base === undefined,
+  const primaryTemplate = ir.templates.find(
+    (template) =>
+      template.name === undefined &&
+      template.modes.length === 0 &&
+      template.params.length === 0 &&
+      template.match !== undefined &&
+      template.match.kind === 'path' &&
+      template.match.absolute &&
+      template.match.base === undefined,
   );
   const childTemplate = ir.templates.find((template) => template !== primaryTemplate);
   if (primaryTemplate === undefined || childTemplate === undefined) {
@@ -431,30 +478,32 @@ function tryCreateMatchedTemplateApplyTemplatesNativePlan(ir: StylesheetIR, sour
   }
 
   if (
-    childTemplate.name !== undefined
-    || childTemplate.modes.length > 0
-    || childTemplate.match === undefined
-    || childTemplate.match.kind !== 'path'
-    || childTemplate.match.absolute
-    || childTemplate.match.base !== undefined
+    childTemplate.name !== undefined ||
+    childTemplate.modes.length > 0 ||
+    childTemplate.match === undefined ||
+    childTemplate.match.kind !== 'path' ||
+    childTemplate.match.absolute ||
+    childTemplate.match.base !== undefined
   ) {
     return undefined;
   }
 
   const childMatchSegments = childTemplate.match.steps.map((step) => {
     if (
-      step.kind !== 'step'
-      || step.axis !== 'child'
-      || step.predicates.length > 0
-      || step.nodeTest.kind !== 'nameTest'
-      || step.nodeTest.name.includes(':')
+      step.kind !== 'step' ||
+      step.axis !== 'child' ||
+      step.predicates.length > 0 ||
+      step.nodeTest.kind !== 'nameTest' ||
+      step.nodeTest.name.includes(':')
     ) {
       return undefined;
     }
 
     return step.nodeTest.name;
   });
-  const childMatchPath = childMatchSegments.filter((segment): segment is string => segment !== undefined);
+  const childMatchPath = childMatchSegments.filter(
+    (segment): segment is string => segment !== undefined,
+  );
   if (childMatchPath.length === 0 || childMatchPath.length !== childMatchSegments.length) {
     return undefined;
   }
@@ -466,21 +515,24 @@ function tryCreateMatchedTemplateApplyTemplatesNativePlan(ir: StylesheetIR, sour
 
   const outputExpression = emitInstructionSequence(primaryTemplate.body, runtimeHelpers, {
     variableBindings: globalBindingSetup.variableBindings,
-    renderApplyTemplates: (instruction, contextNodeIdentifier, context) => emitPlannedApplyTemplatesInstruction(
-      instruction,
-      [{
-        template: childTemplate,
-        matchAbsolute: false,
-        matchPath: childMatchPath,
-      }],
-      contextNodeIdentifier,
-      runtimeHelpers,
-      emitInstructionSequence,
-      tryGetSimpleChildPath,
-      tryCreateTemplateInvocationSetup,
-      context,
-      sourcePath,
-    ),
+    renderApplyTemplates: (instruction, contextNodeIdentifier, context) =>
+      emitPlannedApplyTemplatesInstruction(
+        instruction,
+        [
+          {
+            template: childTemplate,
+            matchAbsolute: false,
+            matchPath: childMatchPath,
+          },
+        ],
+        contextNodeIdentifier,
+        runtimeHelpers,
+        emitInstructionSequence,
+        tryGetSimpleChildPath,
+        tryCreateTemplateInvocationSetup,
+        context,
+        sourcePath,
+      ),
   });
   if (outputExpression === undefined) {
     return undefined;
@@ -489,7 +541,8 @@ function tryCreateMatchedTemplateApplyTemplatesNativePlan(ir: StylesheetIR, sour
     templateContext.currentNodeExpression.code,
     outputExpression.code,
   ]);
-  const needsCurrentNodeBinding = templateContext.currentNodeMayBeNull || outputExpression.code.includes('currentNode');
+  const needsCurrentNodeBinding =
+    templateContext.currentNodeMayBeNull || outputExpression.code.includes('currentNode');
 
   const needsDocumentBinding = hasDocumentReference([
     ...(needsCurrentNodeBinding ? [templateContext.currentNodeExpression.code] : []),
@@ -520,7 +573,12 @@ interface GlobalBindingSetupPlan {
 function tryCreateGlobalBindingSetup(
   bindings: readonly GlobalBinding[],
   runtimeHelpers: Set<string>,
-): { readonly bindingPlans: readonly GlobalBindingSetupPlan[]; readonly variableBindings: ReadonlyMap<string, TsExpression> } | undefined {
+):
+  | {
+      readonly bindingPlans: readonly GlobalBindingSetupPlan[];
+      readonly variableBindings: ReadonlyMap<string, TsExpression>;
+    }
+  | undefined {
   if (bindings.length === 0) {
     return {
       bindingPlans: [],
@@ -554,11 +612,16 @@ function tryCreateGlobalBindingSetup(
   for (const plan of bindingPlans) {
     const { binding, identifier, getterIdentifier, stateIdentifier, cacheIdentifier } = plan;
     const setupStatements: string[] = [];
-    const defaultValueExpression = binding.body !== undefined
-      ? emitTemporaryTreeBindingExpression(binding.body, runtimeHelpers, 'document', { variableBindings })
-      : binding.select === undefined
-        ? tsStringLiteral('')
-        : emitVariableValueExpression(binding.select, runtimeHelpers, 'document', { variableBindings });
+    const defaultValueExpression =
+      binding.body !== undefined
+        ? emitTemporaryTreeBindingExpression(binding.body, runtimeHelpers, 'document', {
+            variableBindings,
+          })
+        : binding.select === undefined
+          ? tsStringLiteral('')
+          : emitVariableValueExpression(binding.select, runtimeHelpers, 'document', {
+              variableBindings,
+            });
     if (defaultValueExpression === undefined) {
       return undefined;
     }
@@ -566,8 +629,12 @@ function tryCreateGlobalBindingSetup(
     setupStatements.push(`let ${stateIdentifier} = 0;`);
     setupStatements.push(`const ${cacheIdentifier} = new Map();`);
     setupStatements.push(`function ${getterIdentifier}() {`);
-    setupStatements.push(`  if (${stateIdentifier} === 2) { return ${cacheIdentifier}.get("value"); }`);
-    setupStatements.push(`  if (${stateIdentifier} === 1) { throwCircularNativeGlobalBinding(${JSON.stringify(binding.kind)}, ${JSON.stringify(binding.name)}, ${JSON.stringify(binding.location)}); }`);
+    setupStatements.push(
+      `  if (${stateIdentifier} === 2) { return ${cacheIdentifier}.get("value"); }`,
+    );
+    setupStatements.push(
+      `  if (${stateIdentifier} === 1) { throwCircularNativeGlobalBinding(${JSON.stringify(binding.kind)}, ${JSON.stringify(binding.name)}, ${JSON.stringify(binding.location)}); }`,
+    );
     setupStatements.push(`  ${stateIdentifier} = 1;`);
     setupStatements.push('  try {');
 
@@ -576,7 +643,9 @@ function tryCreateGlobalBindingSetup(
         `    const raw_${identifier} = ctx.parameters?.[${JSON.stringify(binding.name)}] ?? ctx.parameters?.[${JSON.stringify(binding.name.startsWith('{}') ? binding.name : `{}${binding.name}`)}];`,
       );
       if (binding.required) {
-        setupStatements.push(`    if (raw_${identifier} === undefined) { throwMissingNativeStylesheetParameter(${JSON.stringify(binding.name)}, Object.keys(ctx.parameters ?? {}), ${JSON.stringify(binding.location)}); }`);
+        setupStatements.push(
+          `    if (raw_${identifier} === undefined) { throwMissingNativeStylesheetParameter(${JSON.stringify(binding.name)}, Object.keys(ctx.parameters ?? {}), ${JSON.stringify(binding.location)}); }`,
+        );
         setupStatements.push(`    ${cacheIdentifier}.set("value", String(raw_${identifier}));`);
       } else {
         setupStatements.push(
@@ -591,7 +660,9 @@ function tryCreateGlobalBindingSetup(
     setupStatements.push(`    return ${cacheIdentifier}.get("value");`);
     setupStatements.push('  } catch (error) {');
     setupStatements.push(`    ${stateIdentifier} = 0;`);
-    setupStatements.push(`    throw prependNativeGlobalBindingError(error, ${JSON.stringify(binding.kind)}, ${JSON.stringify(binding.name)}, ${JSON.stringify(binding.selectText)}, ${JSON.stringify(binding.location)});`);
+    setupStatements.push(
+      `    throw prependNativeGlobalBindingError(error, ${JSON.stringify(binding.kind)}, ${JSON.stringify(binding.name)}, ${JSON.stringify(binding.selectText)}, ${JSON.stringify(binding.location)});`,
+    );
     setupStatements.push('  }');
     setupStatements.push('}');
     bindingSetupPlans.push({ getterIdentifier, setupStatements });
@@ -631,7 +702,9 @@ function finalizeGlobalBindingSetup(
 
   while (pendingGetters.length > 0) {
     const getterIdentifier = pendingGetters.pop();
-    const plan = setup.bindingPlans.find((candidate) => candidate.getterIdentifier === getterIdentifier);
+    const plan = setup.bindingPlans.find(
+      (candidate) => candidate.getterIdentifier === getterIdentifier,
+    );
     if (plan === undefined) {
       continue;
     }
@@ -658,7 +731,12 @@ function tryCreateTemplateParamSetup(
   runtimeHelpers: Set<string>,
   parentBindings: ReadonlyMap<string, TsExpression>,
   contextNodeIdentifier: string,
-): { readonly setupStatements: readonly string[]; readonly variableBindings: ReadonlyMap<string, TsExpression> } | undefined {
+):
+  | {
+      readonly setupStatements: readonly string[];
+      readonly variableBindings: ReadonlyMap<string, TsExpression>;
+    }
+  | undefined {
   if (params.length === 0) {
     return {
       setupStatements: [],
@@ -678,11 +756,16 @@ function tryCreateTemplateParamSetup(
         `const ${identifier} = (() => { throwMissingNativeTemplateParameter(${JSON.stringify(param.name)}, [], ${JSON.stringify(param.location)}); })();`,
       );
     } else {
-      const valueExpression = param.body !== undefined
-        ? emitTemporaryTreeBindingExpression(param.body, runtimeHelpers, contextNodeIdentifier, { variableBindings })
-        : param.select === undefined
-          ? tsStringLiteral('')
-          : emitVariableValueExpression(param.select, runtimeHelpers, contextNodeIdentifier, { variableBindings });
+      const valueExpression =
+        param.body !== undefined
+          ? emitTemporaryTreeBindingExpression(param.body, runtimeHelpers, contextNodeIdentifier, {
+              variableBindings,
+            })
+          : param.select === undefined
+            ? tsStringLiteral('')
+            : emitVariableValueExpression(param.select, runtimeHelpers, contextNodeIdentifier, {
+                variableBindings,
+              });
       if (valueExpression === undefined) {
         return undefined;
       }
@@ -714,7 +797,12 @@ function tryCreateTemplateInvocationSetup(
   callerLastExpression?: string,
   calleePositionExpression?: string,
   calleeLastExpression?: string,
-): { readonly setupStatements: readonly string[]; readonly variableBindings: ReadonlyMap<string, TsExpression> } | undefined {
+):
+  | {
+      readonly setupStatements: readonly string[];
+      readonly variableBindings: ReadonlyMap<string, TsExpression>;
+    }
+  | undefined {
   if (params.length === 0 && withParams.length === 0) {
     return {
       setupStatements: [],
@@ -730,19 +818,38 @@ function tryCreateTemplateInvocationSetup(
 
   for (const [index, withParam] of withParams.entries()) {
     const identifier = `call_template_param_${sanitizeIdentifierFragment(withParam.name)}_${index}`;
-    const valueExpression = withParam.body !== undefined
-      ? emitTemporaryTreeBindingExpression(withParam.body, runtimeHelpers, callerContextNodeIdentifier, {
-          ...(callerPositionExpression === undefined ? {} : { positionExpression: callerPositionExpression }),
-          ...(callerLastExpression === undefined ? {} : { lastExpression: callerLastExpression }),
-          ...(parentBindings === undefined ? {} : { variableBindings: parentBindings }),
-        })
-      : withParam.select === undefined
-        ? tsStringLiteral('')
-        : emitVariableValueExpression(withParam.select, runtimeHelpers, callerContextNodeIdentifier, {
-            ...(callerPositionExpression === undefined ? {} : { positionExpression: callerPositionExpression }),
-            ...(callerLastExpression === undefined ? {} : { lastExpression: callerLastExpression }),
-            ...(parentBindings === undefined ? {} : { variableBindings: parentBindings }),
-          });
+    const valueExpression =
+      withParam.body !== undefined
+        ? emitTemporaryTreeBindingExpression(
+            withParam.body,
+            runtimeHelpers,
+            callerContextNodeIdentifier,
+            {
+              ...(callerPositionExpression === undefined
+                ? {}
+                : { positionExpression: callerPositionExpression }),
+              ...(callerLastExpression === undefined
+                ? {}
+                : { lastExpression: callerLastExpression }),
+              ...(parentBindings === undefined ? {} : { variableBindings: parentBindings }),
+            },
+          )
+        : withParam.select === undefined
+          ? tsStringLiteral('')
+          : emitVariableValueExpression(
+              withParam.select,
+              runtimeHelpers,
+              callerContextNodeIdentifier,
+              {
+                ...(callerPositionExpression === undefined
+                  ? {}
+                  : { positionExpression: callerPositionExpression }),
+                ...(callerLastExpression === undefined
+                  ? {}
+                  : { lastExpression: callerLastExpression }),
+                ...(parentBindings === undefined ? {} : { variableBindings: parentBindings }),
+              },
+            );
     if (valueExpression === undefined) {
       return undefined;
     }
@@ -759,8 +866,9 @@ function tryCreateTemplateInvocationSetup(
 
   for (const [index, param] of params.entries()) {
     const identifier = `template_param_${sanitizeIdentifierFragment(param.name)}_${index}`;
-    const providedBinding = providedBindings.get(param.name)
-      ?? (param.name.startsWith('{}') ? undefined : providedBindings.get(`{}${param.name}`));
+    const providedBinding =
+      providedBindings.get(param.name) ??
+      (param.name.startsWith('{}') ? undefined : providedBindings.get(`{}${param.name}`));
 
     if (providedBinding !== undefined) {
       setupStatements.push(`const ${identifier} = ${providedBinding.code};`);
@@ -769,19 +877,38 @@ function tryCreateTemplateInvocationSetup(
         `const ${identifier} = (() => { throwMissingNativeTemplateParameter(${JSON.stringify(param.name)}, ${JSON.stringify(providedNames)}, ${JSON.stringify(param.location)}); })();`,
       );
     } else {
-      const valueExpression = param.body !== undefined
-        ? emitTemporaryTreeBindingExpression(param.body, runtimeHelpers, calleeContextNodeIdentifier, {
-            ...(calleePositionExpression === undefined ? {} : { positionExpression: calleePositionExpression }),
-            ...(calleeLastExpression === undefined ? {} : { lastExpression: calleeLastExpression }),
-            variableBindings,
-          })
-        : param.select === undefined
-          ? tsStringLiteral('')
-          : emitVariableValueExpression(param.select, runtimeHelpers, calleeContextNodeIdentifier, {
-              ...(calleePositionExpression === undefined ? {} : { positionExpression: calleePositionExpression }),
-              ...(calleeLastExpression === undefined ? {} : { lastExpression: calleeLastExpression }),
-              variableBindings,
-            });
+      const valueExpression =
+        param.body !== undefined
+          ? emitTemporaryTreeBindingExpression(
+              param.body,
+              runtimeHelpers,
+              calleeContextNodeIdentifier,
+              {
+                ...(calleePositionExpression === undefined
+                  ? {}
+                  : { positionExpression: calleePositionExpression }),
+                ...(calleeLastExpression === undefined
+                  ? {}
+                  : { lastExpression: calleeLastExpression }),
+                variableBindings,
+              },
+            )
+          : param.select === undefined
+            ? tsStringLiteral('')
+            : emitVariableValueExpression(
+                param.select,
+                runtimeHelpers,
+                calleeContextNodeIdentifier,
+                {
+                  ...(calleePositionExpression === undefined
+                    ? {}
+                    : { positionExpression: calleePositionExpression }),
+                  ...(calleeLastExpression === undefined
+                    ? {}
+                    : { lastExpression: calleeLastExpression }),
+                  variableBindings,
+                },
+              );
       if (valueExpression === undefined) {
         return undefined;
       }
@@ -805,12 +932,18 @@ function tryCreateTemplateInvocationSetup(
 function createTemplateContextPlan(
   template: TemplateRule,
   runtimeHelpers: Set<string>,
-): { readonly currentNodeExpression: TsExpression; readonly currentNodeMayBeNull: boolean } | undefined {
+):
+  | { readonly currentNodeExpression: TsExpression; readonly currentNodeMayBeNull: boolean }
+  | undefined {
   if (template.match === undefined || template.match.kind !== 'path') {
     return undefined;
   }
 
-  if (template.match.absolute && template.match.base === undefined && template.match.steps.length === 0) {
+  if (
+    template.match.absolute &&
+    template.match.base === undefined &&
+    template.match.steps.length === 0
+  ) {
     return {
       currentNodeExpression: tsRawExpression('document'),
       currentNodeMayBeNull: false,
@@ -855,7 +988,12 @@ function emitInstructionSequence(
 
   for (const instruction of instructions) {
     if (instruction.kind === 'variable') {
-      const bindingExpression = emitVariableBindingExpression(instruction, runtimeHelpers, contextNodeIdentifier, options);
+      const bindingExpression = emitVariableBindingExpression(
+        instruction,
+        runtimeHelpers,
+        contextNodeIdentifier,
+        options,
+      );
       if (bindingExpression === undefined) {
         return undefined;
       }
@@ -881,10 +1019,13 @@ function emitInstructionSequence(
         return undefined;
       }
 
-      const outputExpression = expressions.length === 0
-        ? remainingExpression
-        : tsConcatExpression([...expressions, remainingExpression]);
-      return tsRawExpression(`(() => { const ${variableIdentifier} = ${bindingExpression.code}; return ${outputExpression.code}; })()`);
+      const outputExpression =
+        expressions.length === 0
+          ? remainingExpression
+          : tsConcatExpression([...expressions, remainingExpression]);
+      return tsRawExpression(
+        `(() => { const ${variableIdentifier} = ${bindingExpression.code}; return ${outputExpression.code}; })()`,
+      );
     }
 
     const emitted = emitInstruction(instruction, runtimeHelpers, contextNodeIdentifier, options);
@@ -940,14 +1081,24 @@ function emitInstruction(
         return undefined;
       }
 
-      return annotateInstruction(tsConcatExpression([
-        tsStringLiteral(`<${instruction.name}${emitAttributes(instruction.attributes)}>`),
-        body,
-        tsStringLiteral(`</${instruction.name}>`),
-      ]));
+      const staticAttributes = emitAttributes(instruction.attributes);
+      const closeTag = `</${instruction.name}>`;
+      return annotateInstruction(
+        tsRawExpression(`(() => {
+  const body = ${body.code};
+  return ${JSON.stringify(`<${instruction.name}${staticAttributes}>`)} + body + ${JSON.stringify(closeTag)};
+})()`),
+      );
+    }
+    case 'attribute': {
+      return undefined;
     }
     case 'literalText':
-      return tsStringLiteral(escapeTextLiteral(instruction.text));
+      return tsStringLiteral(
+        instruction.disableOutputEscaping === true
+          ? instruction.text
+          : escapeTextLiteral(instruction.text),
+      );
     case 'comment': {
       const body = emitInstructionSequence(instruction.body, runtimeHelpers, {
         ...options,
@@ -957,11 +1108,9 @@ function emitInstruction(
         return undefined;
       }
 
-      return annotateInstruction(tsConcatExpression([
-        tsStringLiteral('<!--'),
-        body,
-        tsStringLiteral('-->'),
-      ]));
+      return annotateInstruction(
+        tsConcatExpression([tsStringLiteral('<!--'), body, tsStringLiteral('-->')]),
+      );
     }
     case 'valueOf': {
       const valueOfInstructionInfo = JSON.stringify({
@@ -983,16 +1132,21 @@ function emitInstruction(
       }
 
       if (instruction.select.kind === 'variable') {
-        const variableExpression = resolveVariableBindingExpression(instruction.select.name, options.variableBindings);
+        const variableExpression = resolveVariableBindingExpression(
+          instruction.select.name,
+          options.variableBindings,
+        );
         if (variableExpression === undefined) {
           return undefined;
         }
 
         runtimeHelpers.add('escapeText');
         runtimeHelpers.add('stringValueOfNativeValue');
-        return annotateInstruction(tsCallExpression('escapeText', [
-          tsCallExpression('stringValueOfNativeValue', [variableExpression]),
-        ]));
+        return annotateInstruction(
+          tsCallExpression('escapeText', [
+            tsCallExpression('stringValueOfNativeValue', [variableExpression]),
+          ]),
+        );
       }
 
       if (instruction.select.kind === 'functionCall' && instruction.select.arguments.length === 0) {
@@ -1008,71 +1162,83 @@ function emitInstruction(
 
         if (numericExpression !== undefined) {
           runtimeHelpers.add('escapeText');
-          return annotateInstruction(tsCallExpression('escapeText', [
-            tsRawExpression(`String(${numericExpression})`),
-          ]));
+          return annotateInstruction(
+            tsCallExpression('escapeText', [tsRawExpression(`String(${numericExpression})`)]),
+          );
         }
 
         if (instruction.select.callee === 'name') {
           runtimeHelpers.add('escapeText');
           runtimeHelpers.add('nameOfNode');
-          return annotateInstruction(tsCallExpression('escapeText', [
-            tsCallExpression('nameOfNode', [
-              tsRawExpression(contextNodeIdentifier),
+          return annotateInstruction(
+            tsCallExpression('escapeText', [
+              tsCallExpression('nameOfNode', [tsRawExpression(contextNodeIdentifier)]),
             ]),
-          ]));
+          );
         }
 
         if (instruction.select.callee === 'local-name') {
           runtimeHelpers.add('escapeText');
           runtimeHelpers.add('localNameOfNode');
-          return annotateInstruction(tsCallExpression('escapeText', [
-            tsCallExpression('localNameOfNode', [
-              tsRawExpression(contextNodeIdentifier),
+          return annotateInstruction(
+            tsCallExpression('escapeText', [
+              tsCallExpression('localNameOfNode', [tsRawExpression(contextNodeIdentifier)]),
             ]),
-          ]));
+          );
         }
       }
 
       if (instruction.select.kind === 'functionCall' && instruction.select.arguments.length === 1) {
         const [argument] = instruction.select.arguments;
         if (argument !== undefined && argument.kind === 'path') {
-          const simplePath = tryResolveSimpleChildPath(argument, contextNodeIdentifier, options.variableBindings);
+          const simplePath = tryResolveSimpleChildPath(
+            argument,
+            contextNodeIdentifier,
+            options.variableBindings,
+          );
           if (simplePath !== undefined) {
             if (instruction.select.callee === 'name') {
               runtimeHelpers.add('escapeText');
               runtimeHelpers.add('nameOfNode');
               runtimeHelpers.add('selectSimplePathNode');
-              return annotateInstruction(tsCallExpression('escapeText', [
-                tsCallExpression('nameOfNode', [
-                  tsCallExpression('selectSimplePathNode', [
-                    simplePath.startNodeExpression,
-                    tsRawExpression(JSON.stringify(simplePath.segments)),
+              return annotateInstruction(
+                tsCallExpression('escapeText', [
+                  tsCallExpression('nameOfNode', [
+                    tsCallExpression('selectSimplePathNode', [
+                      simplePath.startNodeExpression,
+                      tsRawExpression(JSON.stringify(simplePath.segments)),
+                    ]),
                   ]),
                 ]),
-              ]));
+              );
             }
 
             if (instruction.select.callee === 'local-name') {
               runtimeHelpers.add('escapeText');
               runtimeHelpers.add('localNameOfNode');
               runtimeHelpers.add('selectSimplePathNode');
-              return annotateInstruction(tsCallExpression('escapeText', [
-                tsCallExpression('localNameOfNode', [
-                  tsCallExpression('selectSimplePathNode', [
-                    simplePath.startNodeExpression,
-                    tsRawExpression(JSON.stringify(simplePath.segments)),
+              return annotateInstruction(
+                tsCallExpression('escapeText', [
+                  tsCallExpression('localNameOfNode', [
+                    tsCallExpression('selectSimplePathNode', [
+                      simplePath.startNodeExpression,
+                      tsRawExpression(JSON.stringify(simplePath.segments)),
+                    ]),
                   ]),
                 ]),
-              ]));
+              );
             }
 
             if (instruction.select.callee === 'count') {
               runtimeHelpers.add('escapeText');
               runtimeHelpers.add('selectSimplePathNodes');
-              return annotateInstruction(tsCallExpression('escapeText', [
-                tsRawExpression(`String(selectSimplePathNodes(${simplePath.startNodeExpression.code}, ${JSON.stringify(simplePath.segments)}).length)`),
-              ]));
+              return annotateInstruction(
+                tsCallExpression('escapeText', [
+                  tsRawExpression(
+                    `String(selectSimplePathNodes(${simplePath.startNodeExpression.code}, ${JSON.stringify(simplePath.segments)}).length)`,
+                  ),
+                ]),
+              );
             }
           }
         }
@@ -1123,10 +1289,13 @@ function emitInstruction(
         return undefined;
       }
 
-      return annotateInstruction(tsConditionalExpression(testExpression, body, tsStringLiteral('')));
+      return annotateInstruction(
+        tsConditionalExpression(testExpression, body, tsStringLiteral('')),
+      );
     }
     case 'choose': {
-      const annotateBranchBody = (comment: string, body: TsExpression): TsExpression => tsRawExpression(`(
+      const annotateBranchBody = (comment: string, body: TsExpression): TsExpression =>
+        tsRawExpression(`(
   ${comment}
   ${body.code}
 )`);
@@ -1150,7 +1319,10 @@ function emitInstruction(
 
         branches.push({
           test: testExpression,
-          body: annotateBranchBody(renderWhenProvenanceComment(branch, options.sourcePath), bodyExpression),
+          body: annotateBranchBody(
+            renderWhenProvenanceComment(branch, options.sourcePath),
+            bodyExpression,
+          ),
         });
       }
 
@@ -1158,12 +1330,13 @@ function emitInstruction(
         return undefined;
       }
 
-      let otherwiseExpression = instruction.otherwiseBody === undefined
-        ? tsStringLiteral('')
-        : emitInstructionSequence(instruction.otherwiseBody, runtimeHelpers, {
-            ...options,
-            contextNodeIdentifier,
-          });
+      let otherwiseExpression =
+        instruction.otherwiseBody === undefined
+          ? tsStringLiteral('')
+          : emitInstructionSequence(instruction.otherwiseBody, runtimeHelpers, {
+              ...options,
+              contextNodeIdentifier,
+            });
       if (otherwiseExpression === undefined) {
         return undefined;
       }
@@ -1181,7 +1354,11 @@ function emitInstruction(
           return undefined;
         }
 
-        otherwiseExpression = tsConditionalExpression(branch.test, branch.body, otherwiseExpression);
+        otherwiseExpression = tsConditionalExpression(
+          branch.test,
+          branch.body,
+          otherwiseExpression,
+        );
       }
 
       return annotateInstruction(otherwiseExpression);
@@ -1201,19 +1378,22 @@ function emitInstruction(
       runtimeHelpers.add('selectSimplePathNodes');
       runtimeHelpers.add('traceSelectedNodes');
       const startNode = simplePath.absolute ? 'document' : contextNodeIdentifier;
-      const callbackParameters = body.code.includes('currentIndex') || body.code.includes('currentNodes.length')
-        ? '(currentNode, currentIndex, currentNodes)'
-        : '(currentNode)';
-      return annotateInstruction(tsRawExpression(
-        `traceSelectedNodes(selectSimplePathNodes(${startNode}, ${JSON.stringify(simplePath.segments)}), ctx, ${JSON.stringify({ kind: 'xsl:for-each', location: instruction.location })}).map(${callbackParameters} => ${body.code}).join("")`,
-      ));
+      const callbackParameters =
+        body.code.includes('currentIndex') || body.code.includes('currentNodes.length')
+          ? '(currentNode, currentIndex, currentNodes)'
+          : '(currentNode)';
+      return annotateInstruction(
+        tsRawExpression(
+          `traceSelectedNodes(selectSimplePathNodes(${startNode}, ${JSON.stringify(simplePath.segments)}), ctx, ${JSON.stringify({ kind: 'xsl:for-each', location: instruction.location })}).map(${callbackParameters} => ${body.code}).join("")`,
+        ),
+      );
     }
     case 'callTemplate': {
       const namedTemplate = options.namedTemplates?.get(instruction.name);
       if (
-        namedTemplate === undefined
-        || namedTemplate.match !== undefined
-        || namedTemplate.modes.length > 0
+        namedTemplate === undefined ||
+        namedTemplate.match !== undefined ||
+        namedTemplate.modes.length > 0
       ) {
         return undefined;
       }
@@ -1249,24 +1429,35 @@ function emitInstruction(
         return undefined;
       }
 
-      const invocationBody = invocationSetup.setupStatements.length === 0
-        ? body.code
-        : `(() => {\n${invocationSetup.setupStatements.map((statement) => `  ${statement}`).join('\n')}\n  return ${body.code};\n})()`;
+      const invocationBody =
+        invocationSetup.setupStatements.length === 0
+          ? body.code
+          : `(() => {\n${invocationSetup.setupStatements.map((statement) => `  ${statement}`).join('\n')}\n  return ${body.code};\n})()`;
 
-      return annotateInstruction(tsRawExpression(
-        `(${renderCommentedArrowFunction(
-          renderTemplateProvenanceComment(namedTemplate, options.sourcePath),
-          '()',
-          invocationBody,
-        )})()`,
-      ));
+      return annotateInstruction(
+        tsRawExpression(
+          `(${renderCommentedArrowFunction(
+            renderTemplateProvenanceComment(namedTemplate, options.sourcePath),
+            '()',
+            invocationBody,
+          )})()`,
+        ),
+      );
     }
     case 'applyTemplates':
-      return annotateInstruction(options.renderApplyTemplates?.(instruction, contextNodeIdentifier, {
-        ...(options.positionExpression === undefined ? {} : { positionExpression: options.positionExpression }),
-        ...(options.lastExpression === undefined ? {} : { lastExpression: options.lastExpression }),
-        ...(options.variableBindings === undefined ? {} : { variableBindings: options.variableBindings }),
-      }));
+      return annotateInstruction(
+        options.renderApplyTemplates?.(instruction, contextNodeIdentifier, {
+          ...(options.positionExpression === undefined
+            ? {}
+            : { positionExpression: options.positionExpression }),
+          ...(options.lastExpression === undefined
+            ? {}
+            : { lastExpression: options.lastExpression }),
+          ...(options.variableBindings === undefined
+            ? {}
+            : { variableBindings: options.variableBindings }),
+        }),
+      );
     default:
       return undefined;
   }
@@ -1281,9 +1472,21 @@ function emitTestExpression(
 ): TsExpression | undefined {
   switch (ast.kind) {
     case 'binary':
-      return emitBinaryTestExpression(ast, runtimeHelpers, contextNodeIdentifier, positionExpression, lastExpression);
+      return emitBinaryTestExpression(
+        ast,
+        runtimeHelpers,
+        contextNodeIdentifier,
+        positionExpression,
+        lastExpression,
+      );
     case 'functionCall':
-      return emitFunctionCallTestExpression(ast, runtimeHelpers, contextNodeIdentifier, positionExpression, lastExpression);
+      return emitFunctionCallTestExpression(
+        ast,
+        runtimeHelpers,
+        contextNodeIdentifier,
+        positionExpression,
+        lastExpression,
+      );
     case 'path': {
       const simplePath = tryGetSimpleChildPath(ast);
       if (simplePath === undefined) {
@@ -1334,7 +1537,13 @@ function emitFunctionCallTestExpression(
     return undefined;
   }
 
-  const testExpression = emitTestExpression(argument, runtimeHelpers, contextNodeIdentifier, positionExpression, lastExpression);
+  const testExpression = emitTestExpression(
+    argument,
+    runtimeHelpers,
+    contextNodeIdentifier,
+    positionExpression,
+    lastExpression,
+  );
   if (testExpression === undefined) {
     return undefined;
   }
@@ -1350,8 +1559,20 @@ function emitBinaryTestExpression(
   lastExpression: string,
 ): TsExpression | undefined {
   if (ast.operator === 'and' || ast.operator === 'or') {
-    const left = emitTestExpression(ast.left, runtimeHelpers, contextNodeIdentifier, positionExpression, lastExpression);
-    const right = emitTestExpression(ast.right, runtimeHelpers, contextNodeIdentifier, positionExpression, lastExpression);
+    const left = emitTestExpression(
+      ast.left,
+      runtimeHelpers,
+      contextNodeIdentifier,
+      positionExpression,
+      lastExpression,
+    );
+    const right = emitTestExpression(
+      ast.right,
+      runtimeHelpers,
+      contextNodeIdentifier,
+      positionExpression,
+      lastExpression,
+    );
     if (left === undefined || right === undefined) {
       return undefined;
     }
@@ -1364,8 +1585,20 @@ function emitBinaryTestExpression(
     return undefined;
   }
 
-  const left = emitComparisonOperand(ast.left, runtimeHelpers, contextNodeIdentifier, positionExpression, lastExpression);
-  const right = emitComparisonOperand(ast.right, runtimeHelpers, contextNodeIdentifier, positionExpression, lastExpression);
+  const left = emitComparisonOperand(
+    ast.left,
+    runtimeHelpers,
+    contextNodeIdentifier,
+    positionExpression,
+    lastExpression,
+  );
+  const right = emitComparisonOperand(
+    ast.right,
+    runtimeHelpers,
+    contextNodeIdentifier,
+    positionExpression,
+    lastExpression,
+  );
   if (left === undefined || right === undefined || left.kind !== right.kind) {
     return undefined;
   }
@@ -1427,14 +1660,16 @@ function emitComparisonOperand(
   }
 }
 
-function mapComparisonOperator(operator: BinaryExpression['operator']): '===' | '!==' | '<' | '<=' | '>' | '>=' | undefined {
+function mapComparisonOperator(
+  operator: BinaryExpression['operator'],
+): '===' | '!==' | '<' | '<=' | '>' | '>=' | undefined {
   switch (operator) {
     case '=':
     case 'eq':
       return '===';
     case '!=':
     case 'ne':
-      return '!==' ;
+      return '!==';
     case '<':
     case 'lt':
       return '<';
@@ -1453,7 +1688,9 @@ function mapComparisonOperator(operator: BinaryExpression['operator']): '===' | 
 }
 
 function emitAttributes(attributes: readonly AttributeInstruction[]): string {
-  return attributes.map((attribute) => ` ${attribute.name}="${escapeAttributeLiteral(attribute.value)}"`).join('');
+  return attributes
+    .map((attribute) => ` ${attribute.name}="${escapeAttributeLiteral(attribute.value)}"`)
+    .join('');
 }
 
 function tryGetSimpleMatchPath(ast: PathExpression): readonly string[] | undefined {
@@ -1464,11 +1701,11 @@ function tryGetSimpleMatchPath(ast: PathExpression): readonly string[] | undefin
   const path: string[] = [];
   for (const step of ast.steps) {
     if (
-      step.kind !== 'step'
-      || step.axis !== 'child'
-      || step.predicates.length > 0
-      || step.nodeTest.kind !== 'nameTest'
-      || step.nodeTest.name.includes(':')
+      step.kind !== 'step' ||
+      step.axis !== 'child' ||
+      step.predicates.length > 0 ||
+      step.nodeTest.kind !== 'nameTest' ||
+      step.nodeTest.name.includes(':')
     ) {
       return undefined;
     }
@@ -1501,7 +1738,9 @@ function tryResolveSimpleChildPath(
   ast: PathExpression,
   contextNodeIdentifier: string,
   variableBindings: ReadonlyMap<string, TsExpression> | undefined,
-): { readonly startNodeExpression: TsExpression; readonly segments: readonly string[] } | undefined {
+):
+  | { readonly startNodeExpression: TsExpression; readonly segments: readonly string[] }
+  | undefined {
   const segments = tryGetSimpleChildSegments(ast);
   if (segments === undefined) {
     return undefined;
@@ -1509,7 +1748,9 @@ function tryResolveSimpleChildPath(
 
   if (ast.base === undefined) {
     return {
-      startNodeExpression: ast.absolute ? tsRawExpression('document') : tsRawExpression(contextNodeIdentifier),
+      startNodeExpression: ast.absolute
+        ? tsRawExpression('document')
+        : tsRawExpression(contextNodeIdentifier),
       segments,
     };
   }
@@ -1530,7 +1771,6 @@ function tryResolveSimpleChildPath(
 }
 
 function tryGetSimpleChildSegments(ast: PathExpression): readonly string[] | undefined {
-
   const names: string[] = [];
   for (const step of ast.steps) {
     if (step.kind !== 'step' || step.axis !== 'child' || step.predicates.length > 0) {
@@ -1602,7 +1842,9 @@ function emitTracedValueOfPathStringExpression(
   runtimeHelpers.add('selectDescendantElementsByName');
   runtimeHelpers.add('traceStringValueOfNode');
   return tsCallExpression('traceStringValueOfNode', [
-    tsRawExpression(`selectDescendantElementsByName(${descendantPath.absolute ? 'document' : contextNodeIdentifier}, ${JSON.stringify(descendantPath.localName)})[0] ?? null`),
+    tsRawExpression(
+      `selectDescendantElementsByName(${descendantPath.absolute ? 'document' : contextNodeIdentifier}, ${JSON.stringify(descendantPath.localName)})[0] ?? null`,
+    ),
     tsRawExpression('ctx'),
     tsRawExpression(instructionInfoCode),
   ]);
@@ -1655,18 +1897,18 @@ function tryGetSimpleDescendantNamePath(
 
   const [leadingStep, terminalStep] = ast.steps;
   if (
-    leadingStep === undefined
-    || leadingStep.kind !== 'step'
-    || leadingStep.axis !== 'descendant-or-self'
-    || leadingStep.predicates.length > 0
-    || leadingStep.nodeTest.kind !== 'kindTest'
-    || leadingStep.nodeTest.name !== 'node'
-    || terminalStep === undefined
-    || terminalStep.kind !== 'step'
-    || terminalStep.axis !== 'child'
-    || terminalStep.predicates.length > 0
-    || terminalStep.nodeTest.kind !== 'nameTest'
-    || terminalStep.nodeTest.name.includes(':')
+    leadingStep === undefined ||
+    leadingStep.kind !== 'step' ||
+    leadingStep.axis !== 'descendant-or-self' ||
+    leadingStep.predicates.length > 0 ||
+    leadingStep.nodeTest.kind !== 'kindTest' ||
+    leadingStep.nodeTest.name !== 'node' ||
+    terminalStep === undefined ||
+    terminalStep.kind !== 'step' ||
+    terminalStep.axis !== 'child' ||
+    terminalStep.predicates.length > 0 ||
+    terminalStep.nodeTest.kind !== 'nameTest' ||
+    terminalStep.nodeTest.name.includes(':')
   ) {
     return undefined;
   }
@@ -1678,15 +1920,11 @@ function tryGetSimpleDescendantNamePath(
 }
 
 function escapeTextLiteral(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
+  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }
 
 function escapeAttributeLiteral(value: string): string {
-  return escapeTextLiteral(value)
-    .replaceAll('"', '&quot;');
+  return escapeTextLiteral(value).replaceAll('"', '&quot;');
 }
 
 function emitVariableBindingExpression(
@@ -1700,14 +1938,24 @@ function emitVariableBindingExpression(
   },
 ): TsExpression | undefined {
   if (instruction.body !== undefined) {
-    return emitTemporaryTreeBindingExpression(instruction.body, runtimeHelpers, contextNodeIdentifier, options);
+    return emitTemporaryTreeBindingExpression(
+      instruction.body,
+      runtimeHelpers,
+      contextNodeIdentifier,
+      options,
+    );
   }
 
   if (instruction.select === undefined) {
     return tsStringLiteral('');
   }
 
-  return emitVariableValueExpression(instruction.select, runtimeHelpers, contextNodeIdentifier, options);
+  return emitVariableValueExpression(
+    instruction.select,
+    runtimeHelpers,
+    contextNodeIdentifier,
+    options,
+  );
 }
 
 function emitTemporaryTreeBindingExpression(
@@ -1722,9 +1970,13 @@ function emitTemporaryTreeBindingExpression(
 ): TsExpression | undefined {
   const serializedBody = emitInstructionSequence(body, runtimeHelpers, {
     contextNodeIdentifier,
-    ...(options.positionExpression === undefined ? {} : { positionExpression: options.positionExpression }),
+    ...(options.positionExpression === undefined
+      ? {}
+      : { positionExpression: options.positionExpression }),
     ...(options.lastExpression === undefined ? {} : { lastExpression: options.lastExpression }),
-    ...(options.variableBindings === undefined ? {} : { variableBindings: options.variableBindings }),
+    ...(options.variableBindings === undefined
+      ? {}
+      : { variableBindings: options.variableBindings }),
   });
   if (serializedBody === undefined) {
     return undefined;
@@ -1819,7 +2071,9 @@ function emitVariableValueExpression(
 
         if (ast.callee === 'count') {
           runtimeHelpers.add('selectSimplePathNodes');
-          return tsRawExpression(`String(selectSimplePathNodes(${startNode}, ${JSON.stringify(simplePath.segments)}).length)`);
+          return tsRawExpression(
+            `String(selectSimplePathNodes(${startNode}, ${JSON.stringify(simplePath.segments)}).length)`,
+          );
         }
       }
 
@@ -1838,8 +2092,10 @@ function resolveVariableBindingExpression(
     return undefined;
   }
 
-  return variableBindings.get(name)
-    ?? (name.startsWith('{}') ? undefined : variableBindings.get(`{}${name}`));
+  return (
+    variableBindings.get(name) ??
+    (name.startsWith('{}') ? undefined : variableBindings.get(`{}${name}`))
+  );
 }
 
 function sanitizeIdentifierFragment(name: string): string {
