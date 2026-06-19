@@ -80,10 +80,10 @@ export function parseXPathInContext(
   }
 }
 
-    export function isSupportedTemplateMatch(ast: XPathAst): boolean {
-      void ast;
-      return true;
-    }
+export function isSupportedTemplateMatch(ast: XPathAst): boolean {
+  void ast;
+  return true;
+}
 
 function tryNormalizeEqName(name: string): string | undefined {
   if (!name.startsWith('Q{')) {
