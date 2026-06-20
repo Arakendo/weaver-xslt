@@ -17,3 +17,4 @@ coverage/
 
 # Local workbench material
 /.workbench/
+/devtools-fixture/public/
