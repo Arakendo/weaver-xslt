@@ -5,6 +5,7 @@ export const source = { path: "matched-root.xsl", digest: "3daffecc" } as const;
 
 /** match="/root" (matched-root.xsl:3) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
+  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;
   resetRecordedTracePause(ctx.trace);
   if (ctx.initialMode !== undefined) {
     throwUnsupportedNativeInitialMode(ctx.initialMode);
@@ -25,8 +26,8 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     output:
       (
   /** literal out (matched-root.xsl:4) */
-  "<out>" +
-    (
+  (() => {
+  const body = (
   /** xsl:value-of (matched-root.xsl:5) */
   escapeText(traceStringValueOfNode(selectSimplePathNode(currentNode, ["name"]), ctx, {"kind":"xsl:value-of","location":{"source":"matched-root.xsl","line":5,"column":35,"offset":174,"endLine":5,"endColumn":39,"endOffset":178}}))
 ) +
@@ -34,11 +35,14 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   /** xsl:if (matched-root.xsl:6) */
   (selectSimplePathExists(currentNode, ["flag"]) ? (
   /** literal flagged (matched-root.xsl:6) */
-  "<flagged>" +
-    "</flagged>"
+  (() => {
+  const body = "";
+  return "<flagged" + "" + ">" + body + "</flagged>";
+})()
 ) : "")
-) +
-    "</out>"
+);
+  return "<out" + "" + ">" + body + "</out>";
+})()
 ),
     ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),
   };

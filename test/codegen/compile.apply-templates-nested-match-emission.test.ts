@@ -53,8 +53,8 @@ describe('XSLT codegen apply-templates nested-match emission', () => {
     expect(emitted).toContain('traceSelectedNodes(selectSimplePathNodesByStepPlan(document, [{"name":"root"},{"name":"section"},{"name":"item"}]), ctx, {"kind":"xsl:apply-templates"');
     expect(emitted).toContain('traceSelectedNodes(selectSimplePathNodes(templateNode, ["detail"]), ctx, {"kind":"xsl:for-each"');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
-    expect(emitted).toContain('"<flagged>" +');
-    expect(emitted).toContain('"<plain>" +');
+    expect(emitted).toContain('return "<flagged" + "" + ">" + body + "</flagged>";');
+    expect(emitted).toContain('return "<plain" + "" + ">" + body + "</plain>";');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
@@ -65,7 +65,7 @@ describe('XSLT codegen apply-templates nested-match emission', () => {
     expect(emitted).toContain('traceSelectedNodes(selectSimplePathNodesByStepPlan(document, [{"name":"root"},{"name":"section"},{"name":"item"}]), ctx, {"kind":"xsl:apply-templates"');
     expect(emitted).toContain('traceSelectedNodes(selectSimplePathNodes(templateNode, ["detail"]), ctx, {"kind":"xsl:for-each"');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
-    expect(emitted).toContain('"<flagged>" +');
+    expect(emitted).toContain('return "<flagged" + "" + ">" + body + "</flagged>";');
     expect(emitted).toContain(': "")');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
@@ -78,9 +78,9 @@ describe('XSLT codegen apply-templates nested-match emission', () => {
     expect(emitted).toContain('traceSelectedNodes(selectSimplePathNodes(templateNode, ["detail"]), ctx, {"kind":"xsl:for-each"');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["vip"])');
-    expect(emitted).toContain('"<flagged>" +');
-    expect(emitted).toContain('"<vip>" +');
-    expect(emitted).toContain('"<plain>" +');
+    expect(emitted).toContain('return "<flagged" + "" + ">" + body + "</flagged>";');
+    expect(emitted).toContain('return "<vip" + "" + ">" + body + "</vip>";');
+    expect(emitted).toContain('return "<plain" + "" + ">" + body + "</plain>";');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 

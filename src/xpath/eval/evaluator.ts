@@ -5,7 +5,7 @@
  * context.
  */
 
-import { FOAR0001, FORG0006, XPTY0019 } from '../../errors/codes.js';
+import { FOAR0001, FORG0006, XPTY0004, XPTY0019 } from '../../errors/codes.js';
 import { XPathError } from '../../errors/XPathError.js';
 import type { ErrorContext, ErrorDetails } from '../../errors/XdmError.js';
 import { createSequence } from '../../xdm/sequence.js';
@@ -143,8 +143,8 @@ function evaluateBinaryExpression(
   }
 
   if (operator === '+' || operator === '-' || operator === '*' || operator === 'div' || operator === 'idiv' || operator === 'mod') {
-    const left = requireSingleNumber(evaluateExpression(leftAst, context), leftAst.span);
-    const right = requireSingleNumber(evaluateExpression(rightAst, context), rightAst.span);
+    const left = evaluateNumericOperand(evaluateExpression(leftAst, context), leftAst.span);
+    const right = evaluateNumericOperand(evaluateExpression(rightAst, context), rightAst.span);
     if ((operator === 'idiv' || operator === 'mod') && right === 0) {
       throw createXPathError(FOAR0001, 'Division by zero.', span);
     }
@@ -224,6 +224,35 @@ function evaluateBinaryExpression(
       ),
     ),
   ];
+}
+
+function evaluateNumericOperand(items: readonly XdmItem[], span: SpanLike): number {
+  const item = items[0];
+  if (items.length !== 1 || item === undefined) {
+    throw createXPathError(XPTY0004, 'Expected a single numeric value.', span, {
+      expectedType: 'singleton item()',
+      actualType: describeItemsType(items),
+    });
+  }
+
+  if (item.xdmKind === 'node') {
+    return Number((item as XdmNode).node.textContent ?? '');
+  }
+
+  if (item.xdmKind !== 'atomic') {
+    throw createXPathError(XPTY0004, 'Expected a single numeric value.', span, {
+      expectedType: 'singleton numeric item()',
+      actualType: describeItemsType(items),
+    });
+  }
+
+  const atomicItem = item as XdmAtomicValue;
+
+  if (atomicItem.type === 'xs:boolean') {
+    return atomicItem.value === true ? 1 : 0;
+  }
+
+  return Number(atomicItem.value);
 }
 
 function evaluateRangeExpression(

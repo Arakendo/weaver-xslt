@@ -72,6 +72,7 @@ export function compileStylesheetRuntimeArtifacts(
 ): CompileStylesheetRuntimeArtifacts {
   return compileStylesheetRuntimeArtifactsCore(stylesheetSource, {
     ...(options.path === undefined ? {} : { path: options.path }),
+    ...(options.filePath === undefined ? {} : { filePath: options.filePath }),
     ...(options.path === undefined && options.filePath === undefined
       ? {}
       : { sourceName: options.path ?? basename(options.filePath!) }),
@@ -106,7 +107,7 @@ export function compileStylesheetArtifactsFromFile(
   });
 }
 
-function composeStylesheetSourceFromFile(stylesheetPath: string): string {
+export function composeStylesheetSourceFromFile(stylesheetPath: string): string {
   const { root, sourceName, source } = loadStylesheetRoot(stylesheetPath);
   if (!isStylesheetRoot(root) || !hasCompositionChildren(root)) {
     return source;

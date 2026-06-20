@@ -12,6 +12,17 @@ import type { SourceLocation } from '../../errors/index.js';
 
 export const STYLESHEET_IR_VERSION = '1.0' as const;
 
+export type AttributeValueTemplatePart =
+  | {
+      readonly kind: 'text';
+      readonly text: string;
+    }
+  | {
+      readonly kind: 'expression';
+      readonly expression: XPathAst;
+      readonly expressionText: string;
+    };
+
 export interface StylesheetIR {
   readonly version: typeof STYLESHEET_IR_VERSION;
   readonly xsltVersion: '3.0';
@@ -25,6 +36,7 @@ export interface StylesheetIR {
 export interface AttributeInstruction {
   readonly name: string;
   readonly value: string;
+  readonly valueTemplate?: readonly AttributeValueTemplatePart[];
   readonly location?: SourceLocation;
 }
 

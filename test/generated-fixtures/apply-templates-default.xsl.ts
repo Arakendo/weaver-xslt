@@ -5,6 +5,7 @@ export const source = { path: "apply-templates-default.xsl", digest: "ebe9616d" 
 
 /** match="/" (apply-templates-default.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
+  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;
   resetRecordedTracePause(ctx.trace);
   if (ctx.initialMode !== undefined) {
     throwUnsupportedNativeInitialMode(ctx.initialMode);
@@ -20,8 +21,8 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     output:
       (
   /** literal items (apply-templates-default.xsl:1) */
-  "<items>" +
-    (
+  (() => {
+  const body = (
   /** xsl:apply-templates (apply-templates-default.xsl:1) */
   applyBuiltInTemplatesByPath(document, ["item"], (templateNode, templateIndex, templateNodes) => (
   /** match="item" (apply-templates-default.xsl:1) */
@@ -30,14 +31,16 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   traceTemplateEnter(templateNode, ctx, {"match":"item","location":{"source":"apply-templates-default.xsl","line":1,"column":101,"offset":100,"endLine":1,"endColumn":102,"endOffset":101}});
   return (
   /** literal item (apply-templates-default.xsl:1) */
-  "<item>" +
-    escapeText(traceStringValueOfNode(templateNode, ctx, {"kind":"xsl:value-of","location":{"source":"apply-templates-default.xsl","line":1,"column":211,"offset":210,"endLine":1,"endColumn":212,"endOffset":211}})) +
-    "</item>"
+  (() => {
+  const body = escapeText(traceStringValueOfNode(templateNode, ctx, {"kind":"xsl:value-of","location":{"source":"apply-templates-default.xsl","line":1,"column":211,"offset":210,"endLine":1,"endColumn":212,"endOffset":211}}));
+  return "<item" + "" + ">" + body + "</item>";
+})()
 );
 })()
 ), false, ctx, {"kind":"xsl:apply-templates","location":{"source":"apply-templates-default.xsl","line":1,"column":111,"offset":110,"endLine":1,"endColumn":112,"endOffset":111}})
-) +
-    "</items>"
+);
+  return "<items" + "" + ">" + body + "</items>";
+})()
 ),
     ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),
   };

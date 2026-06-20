@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { diagnosticReportFromError, formatDiagnostic, assertValidDiagnostic } from '../../../src/diagnostics/index.js';
+import {
+  diagnosticReportFromError,
+  formatDiagnostic,
+  assertValidDiagnostic,
+} from '../../../src/diagnostics/index.js';
 import { XsltProcessor } from '../../../src/index.js';
 import { captureError } from './helpers.js';
 
@@ -34,66 +38,53 @@ describe('XSLT diagnostics', () => {
       },
     ]);
 
-    expect(formatDiagnostic(report, stylesheet)).toBe([
-      'error[XTSE0010]: Unsupported XSLT instruction xsl:vale-of in current MVP+3 slice.',
-      '--> <stylesheet>:3:11',
-      '3 |     <out><xsl:vale-of select="/root/item"/></out>',
-      '  |           ^^^^^^^^^^^',
-      '  = instructionName: xsl:vale-of',
-      '  help: did you mean xsl:value-of?',
-    ].join('\n'));
+    expect(formatDiagnostic(report, stylesheet)).toBe(
+      [
+        'error[XTSE0010]: Unsupported XSLT instruction xsl:vale-of in current MVP+3 slice.',
+        '--> <stylesheet>:3:11',
+        '3 |     <out><xsl:vale-of select="/root/item"/></out>',
+        '  |           ^^^^^^^^^^^',
+        '  = instructionName: xsl:vale-of',
+        '  help: did you mean xsl:value-of?',
+      ].join('\n'),
+    );
   });
 
-  it('converts unsupported XSLT instructions into static diagnostics with stylesheet spans', () => {
-    const stylesheet = [
-      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
-      '  <xsl:template match="/">',
-      '    <out><xsl:copy-of select="/root/item"/></out>',
-      '  </xsl:template>',
-      '</xsl:stylesheet>',
-    ].join('\n');
+  it('converts invalid stylesheet roots into static diagnostics with stylesheet spans', () => {
+    const stylesheet = '<out/>';
     const error = captureError(() => {
       new XsltProcessor(stylesheet).transform('<root><item>apple</item></root>');
     });
     const report = diagnosticReportFromError(error);
 
     assertValidDiagnostic(report);
-    expect(report).toMatchInlineSnapshot(`
+    expect(report.code).toBe('XTSE0010');
+    expect(report.phase).toBe('compile');
+    expect(report.message).toBe(
+      'Stylesheet document element must be xsl:stylesheet or xsl:transform.',
+    );
+    expect(report.suggestions).toEqual([
       {
-        "category": "analysis",
-        "causes": [],
-        "code": "XTSE0010",
-        "details": [
-          {
-            "key": "instructionName",
-            "value": "xsl:copy-of",
-          },
-        ],
-        "frames": [],
-        "message": "Unsupported XSLT instruction xsl:copy-of in current MVP+3 slice.",
-        "phase": "compile",
-        "primary": {
-          "columnEnd": 22,
-          "columnStart": 11,
-          "lineEnd": 3,
-          "lineStart": 3,
-          "offsetEnd": 128,
-          "offsetStart": 117,
-          "uri": "<stylesheet>",
-        },
-        "related": [],
-        "severity": "error",
-        "suggestions": [],
-      }
-    `);
+        kind: 'fix',
+        label: 'wrap the stylesheet in an xsl:stylesheet or xsl:transform document element',
+        confidence: 1,
+      },
+    ]);
+    expect(report.primary).toMatchObject({
+      uri: '<stylesheet>',
+      lineStart: 1,
+      lineEnd: 1,
+    });
 
-    expect(formatDiagnostic(report, stylesheet)).toBe([
-      'error[XTSE0010]: Unsupported XSLT instruction xsl:copy-of in current MVP+3 slice.',
-      '--> <stylesheet>:3:11',
-      '3 |     <out><xsl:copy-of select="/root/item"/></out>',
-      '  |           ^^^^^^^^^^^',
-      '  = instructionName: xsl:copy-of',
-    ].join('\n'));
+    expect(formatDiagnostic(report, stylesheet)).toBe(
+      [
+        'error[XTSE0010]: Stylesheet document element must be xsl:stylesheet or xsl:transform.',
+        '--> <stylesheet>:1:1',
+        '1 | <out/>',
+        '  | ^',
+        '  help: wrap the stylesheet in an xsl:stylesheet or xsl:transform document element',
+      ].join('\n'),
+    );
   });
 
   it('wraps xsl:value-of runtime failures with template and instruction frames', () => {
@@ -280,19 +271,21 @@ describe('XSLT diagnostics', () => {
       }
     `);
 
-    expect(formatDiagnostic(report, '"tea" + 1')).toBe([
-      'error[XPTY0004]: Expected a single numeric value.',
-      '--> <xpath>:1:1',
-      '1 | "tea" + 1',
-      '  | ^^^^^',
-      '  in template match="/" (<stylesheet>:2:24)',
-      '  in instruction xsl:value-of select=""tea" + 1" (<stylesheet>:3:32)',
-      'related:',
-      '  enclosing template (<stylesheet>:2:24)',
-      '  containing instruction (<stylesheet>:3:32)',
-      '  = expectedType: xs:double or xs:integer',
-      '  = actualType: xs:string',
-    ].join('\n'));
+    expect(formatDiagnostic(report, '"tea" + 1')).toBe(
+      [
+        'error[XPTY0004]: Expected a single numeric value.',
+        '--> <xpath>:1:1',
+        '1 | "tea" + 1',
+        '  | ^^^^^',
+        '  in template match="/" (<stylesheet>:2:24)',
+        '  in instruction xsl:value-of select=""tea" + 1" (<stylesheet>:3:32)',
+        'related:',
+        '  enclosing template (<stylesheet>:2:24)',
+        '  containing instruction (<stylesheet>:3:32)',
+        '  = expectedType: xs:double or xs:integer',
+        '  = actualType: xs:string',
+      ].join('\n'),
+    );
   });
 
   it('converts non-node xsl:apply-templates selections into runtime diagnostics', () => {
@@ -324,11 +317,13 @@ describe('XSLT diagnostics', () => {
         { key: 'expectedType', value: 'node()*' },
         { key: 'actualType', value: 'xs:double' },
       ],
-      suggestions: [{
-        kind: 'fix',
-        label: 'use a node-selecting expression for xsl:apply-templates',
-        confidence: 1,
-      }],
+      suggestions: [
+        {
+          kind: 'fix',
+          label: 'use a node-selecting expression for xsl:apply-templates',
+          confidence: 1,
+        },
+      ],
     });
     expect(report.frames).toEqual([
       {
@@ -385,20 +380,22 @@ describe('XSLT diagnostics', () => {
       },
     ]);
 
-    expect(formatDiagnostic(report, stylesheet)).toBe([
-      'error[XPTY0004]: xsl:apply-templates requires a sequence of nodes.',
-      '--> <stylesheet>:3:39',
-      '3 |     <out><xsl:apply-templates select="1"/></out>',
-      '  |                                       ^',
-      '  in template match="/" (<stylesheet>:2:24)',
-      '  in instruction xsl:apply-templates select="1" (<stylesheet>:3:39)',
-      'related:',
-      '  enclosing template (<stylesheet>:2:24)',
-      '  caller instruction (<stylesheet>:3:39)',
-      '  = expectedType: node()*',
-      '  = actualType: xs:double',
-      '  help: use a node-selecting expression for xsl:apply-templates',
-    ].join('\n'));
+    expect(formatDiagnostic(report, stylesheet)).toBe(
+      [
+        'error[XPTY0004]: xsl:apply-templates requires a sequence of nodes.',
+        '--> <stylesheet>:3:39',
+        '3 |     <out><xsl:apply-templates select="1"/></out>',
+        '  |                                       ^',
+        '  in template match="/" (<stylesheet>:2:24)',
+        '  in instruction xsl:apply-templates select="1" (<stylesheet>:3:39)',
+        'related:',
+        '  enclosing template (<stylesheet>:2:24)',
+        '  caller instruction (<stylesheet>:3:39)',
+        '  = expectedType: node()*',
+        '  = actualType: xs:double',
+        '  help: use a node-selecting expression for xsl:apply-templates',
+      ].join('\n'),
+    );
   });
 
   it('preserves the caller chain through xsl:apply-templates', () => {
@@ -528,22 +525,24 @@ describe('XSLT diagnostics', () => {
       frames: [],
     });
 
-    expect(formatDiagnostic(report, '"tea" + 1')).toBe([
-      'error[XPTY0004]: Expected a single numeric value.',
-      '--> <xpath>:1:1',
-      '1 | "tea" + 1',
-      '  | ^^^^^',
-      '  in template match="/" (<stylesheet>:2:24)',
-      '  in instruction xsl:apply-templates select="/root/item" (<stylesheet>:3:39)',
-      '  in template match="item" (<stylesheet>:5:24)',
-      '  in instruction xsl:value-of select=""tea" + 1" (<stylesheet>:6:33)',
-      'related:',
-      '  enclosing template (<stylesheet>:2:24)',
-      '  caller instruction (<stylesheet>:3:39)',
-      '  enclosing template (<stylesheet>:5:24)',
-      '  containing instruction (<stylesheet>:6:33)',
-      '  = expectedType: xs:double or xs:integer',
-      '  = actualType: xs:string',
-    ].join('\n'));
+    expect(formatDiagnostic(report, '"tea" + 1')).toBe(
+      [
+        'error[XPTY0004]: Expected a single numeric value.',
+        '--> <xpath>:1:1',
+        '1 | "tea" + 1',
+        '  | ^^^^^',
+        '  in template match="/" (<stylesheet>:2:24)',
+        '  in instruction xsl:apply-templates select="/root/item" (<stylesheet>:3:39)',
+        '  in template match="item" (<stylesheet>:5:24)',
+        '  in instruction xsl:value-of select=""tea" + 1" (<stylesheet>:6:33)',
+        'related:',
+        '  enclosing template (<stylesheet>:2:24)',
+        '  caller instruction (<stylesheet>:3:39)',
+        '  enclosing template (<stylesheet>:5:24)',
+        '  containing instruction (<stylesheet>:6:33)',
+        '  = expectedType: xs:double or xs:integer',
+        '  = actualType: xs:string',
+      ].join('\n'),
+    );
   });
 });

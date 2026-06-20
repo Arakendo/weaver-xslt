@@ -1,13 +1,26 @@
-import type { TransformExecutionFallbackReason, TransformExecutionInfo, TransformOptions, TransformResult } from './types.js';
+import type {
+  TransformExecutionFallbackReason,
+  TransformExecutionInfo,
+  TransformOptions,
+  TransformResult,
+} from './types.js';
 import { WEAVER_XSLT_NATIVE_UNSUPPORTED, XTSE0010 } from '../errors/codes.js';
 import { XsltError } from '../errors/index.js';
 import { compileStylesheet } from '../xslt/compile/compiler.js';
-import { tryCreateNativeTransformPlan, type NativeTransformPlan } from '../xslt/codegen/emitInstructions.js';
-import { createInitialTemplateSuggestion, findNamedTemplate, normalizeTemplateName } from '../xslt/eval/templateDispatch.js';
+import {
+  tryCreateNativeTransformPlan,
+  type NativeTransformPlan,
+} from '../xslt/codegen/emitInstructions.js';
+import {
+  createInitialTemplateSuggestion,
+  findNamedTemplate,
+  normalizeTemplateName,
+} from '../xslt/eval/templateDispatch.js';
 import {
   applyBuiltInTemplatesByPath,
   createCompiledDocument,
   createTemporaryTreeNode,
+  escapeAttribute,
   escapeText,
   localNameOfNode,
   matchesTemplatePath,
@@ -82,14 +95,26 @@ export class XsltProcessor {
    */
   transform(_sourceXml: string, _options: TransformOptions = {}): TransformResult {
     const compiledStylesheet = this.getCompiledStylesheet();
+    const options =
+      _options.baseUri === undefined && this.stylesheetSourceName !== undefined
+        ? {
+            ..._options,
+            baseUri: this.stylesheetSourceName,
+          }
+        : _options;
 
-    validateInitialModeOption(_options);
-    validateInitialTemplateOption(_options, compiledStylesheet.ir);
+    validateInitialModeOption(options);
+    validateInitialTemplateOption(options, compiledStylesheet.ir);
 
-    const executionInfo = this.resolveExecution(_options, compiledStylesheet.nativePlan, compiledStylesheet.ir);
-    const result = executionInfo?.resolved === 'native' && compiledStylesheet.nativePlan !== undefined
-      ? executeNativeTransformPlan(compiledStylesheet.nativePlan, _sourceXml, _options)
-      : runTransform(compiledStylesheet.ir, _sourceXml, _options);
+    const executionInfo = this.resolveExecution(
+      options,
+      compiledStylesheet.nativePlan,
+      compiledStylesheet.ir,
+    );
+    const result =
+      executionInfo?.resolved === 'native' && compiledStylesheet.nativePlan !== undefined
+        ? executeNativeTransformPlan(compiledStylesheet.nativePlan, _sourceXml, options)
+        : runTransform(compiledStylesheet.ir, _sourceXml, options);
 
     return executionInfo === undefined
       ? result
@@ -105,24 +130,23 @@ export class XsltProcessor {
     }
 
     if (this.stylesheetSource.length === 0) {
-      throw new XsltError(
-        XTSE0010,
-        'Stylesheet source is empty.',
-        undefined,
-        undefined,
-        {
-          suggestions: [{
+      throw new XsltError(XTSE0010, 'Stylesheet source is empty.', undefined, undefined, {
+        suggestions: [
+          {
             kind: 'fix',
-            label: 'provide an xsl:stylesheet or xsl:transform document before running the transform',
+            label:
+              'provide an xsl:stylesheet or xsl:transform document before running the transform',
             confidence: 1,
-          }],
-        },
-      );
+          },
+        ],
+      });
     }
 
     const ir = compileStylesheet(
       this.stylesheetSource,
-      this.stylesheetSourceName === undefined ? undefined : { sourceName: this.stylesheetSourceName },
+      this.stylesheetSourceName === undefined
+        ? undefined
+        : { sourceName: this.stylesheetSourceName },
     );
     this.compiledStylesheet = {
       ir,
@@ -135,7 +159,9 @@ export class XsltProcessor {
   private resolveExecution(
     options: TransformOptions,
     nativePlan: NativeTransformPlan | undefined,
-    ir: Parameters<typeof compileStylesheet>[0] extends never ? never : ReturnType<typeof compileStylesheet>,
+    ir: Parameters<typeof compileStylesheet>[0] extends never
+      ? never
+      : ReturnType<typeof compileStylesheet>,
   ): TransformExecutionInfo | undefined {
     const requested = options.execution;
     if (requested === undefined) {
@@ -162,12 +188,14 @@ export class XsltProcessor {
       [
         {
           kind: 'fix',
-          label: 'retry with execution="native" to get a hard unsupported-native error while simplifying the stylesheet',
+          label:
+            'retry with execution="native" to get a hard unsupported-native error while simplifying the stylesheet',
           confidence: 1,
         },
         {
           kind: 'hint',
-          label: 'simplify the select/match shape toward the documented native slice if you want to stay on the native path',
+          label:
+            'simplify the select/match shape toward the documented native slice if you want to stay on the native path',
           confidence: 0.9,
         },
       ],
@@ -186,7 +214,8 @@ export class XsltProcessor {
           suggestions: [
             {
               kind: 'fix',
-              label: 'use execution="auto" to allow interpreter fallback while the native surface is still landing',
+              label:
+                'use execution="auto" to allow interpreter fallback while the native surface is still landing',
               confidence: 1,
             },
             {
@@ -259,11 +288,13 @@ function validateInitialTemplateOption(
     { initialTemplate: options.initialTemplate },
     suggestion === undefined
       ? {
-          suggestions: [{
-            kind: 'fix',
-            label: `declare xsl:template name="${options.initialTemplate}" or omit initialTemplate`,
-            confidence: 1,
-          }],
+          suggestions: [
+            {
+              kind: 'fix',
+              label: `declare xsl:template name="${options.initialTemplate}" or omit initialTemplate`,
+              confidence: 1,
+            },
+          ],
         }
       : { suggestions: [suggestion] },
   );
@@ -283,35 +314,45 @@ function executeNativeTransformPlan(
   context: TransformOptions,
 ): TransformResult {
   resetRecordedTracePause(context.trace);
-  const useInitialTemplateEntry = context.initialTemplate !== undefined && plan.initialTemplateName !== undefined;
-  const activeEntryTemplate = useInitialTemplateEntry && plan.initialTemplateEntryTemplate !== undefined
-    ? plan.initialTemplateEntryTemplate
-    : plan.entryTemplate;
-  const activeCurrentNodeExpression = useInitialTemplateEntry && plan.initialTemplateCurrentNodeExpression !== undefined
-    ? plan.initialTemplateCurrentNodeExpression
-    : plan.currentNodeExpression;
-  const activeCurrentNodeMayBeNull = useInitialTemplateEntry && plan.initialTemplateCurrentNodeMayBeNull !== undefined
-    ? plan.initialTemplateCurrentNodeMayBeNull
-    : plan.currentNodeMayBeNull;
-  const activeNeedsCurrentNodeBinding = useInitialTemplateEntry && plan.initialTemplateNeedsCurrentNodeBinding !== undefined
-    ? plan.initialTemplateNeedsCurrentNodeBinding
-    : plan.needsCurrentNodeBinding;
-  const activeSetupStatements = useInitialTemplateEntry && plan.initialTemplateSetupStatements !== undefined
-    ? plan.initialTemplateSetupStatements
-    : plan.setupStatements;
-  const activeOutputExpression = useInitialTemplateEntry && plan.initialTemplateOutputExpression !== undefined
-    ? plan.initialTemplateOutputExpression
-    : plan.outputExpression;
+  const useInitialTemplateEntry =
+    context.initialTemplate !== undefined && plan.initialTemplateName !== undefined;
+  const activeEntryTemplate =
+    useInitialTemplateEntry && plan.initialTemplateEntryTemplate !== undefined
+      ? plan.initialTemplateEntryTemplate
+      : plan.entryTemplate;
+  const activeCurrentNodeExpression =
+    useInitialTemplateEntry && plan.initialTemplateCurrentNodeExpression !== undefined
+      ? plan.initialTemplateCurrentNodeExpression
+      : plan.currentNodeExpression;
+  const activeCurrentNodeMayBeNull =
+    useInitialTemplateEntry && plan.initialTemplateCurrentNodeMayBeNull !== undefined
+      ? plan.initialTemplateCurrentNodeMayBeNull
+      : plan.currentNodeMayBeNull;
+  const activeNeedsCurrentNodeBinding =
+    useInitialTemplateEntry && plan.initialTemplateNeedsCurrentNodeBinding !== undefined
+      ? plan.initialTemplateNeedsCurrentNodeBinding
+      : plan.needsCurrentNodeBinding;
+  const activeSetupStatements =
+    useInitialTemplateEntry && plan.initialTemplateSetupStatements !== undefined
+      ? plan.initialTemplateSetupStatements
+      : plan.setupStatements;
+  const activeOutputExpression =
+    useInitialTemplateEntry && plan.initialTemplateOutputExpression !== undefined
+      ? plan.initialTemplateOutputExpression
+      : plan.outputExpression;
   const activeInitialTemplateName = useInitialTemplateEntry ? plan.initialTemplateName : undefined;
-  const helperBindings = plan.runtimeHelpers.length === 0
-    ? ''
-    : `const { ${plan.runtimeHelpers.join(', ')} } = helpers;`;
+  const helperBindings =
+    plan.runtimeHelpers.length === 0
+      ? ''
+      : `const { ${plan.runtimeHelpers.join(', ')} } = helpers;`;
   const isInitialTemplateExecution = activeInitialTemplateName !== undefined;
   const activeCurrentNodeIsDocument = activeCurrentNodeExpression.code === 'document';
   const needsTraceDocumentBinding = !activeNeedsCurrentNodeBinding;
   const activeTraceNodeIdentifier = activeNeedsCurrentNodeBinding ? 'currentNode' : 'document';
   const activeTemplateInfo = JSON.stringify({
-    ...(activeEntryTemplate.matchText === undefined ? {} : { match: activeEntryTemplate.matchText }),
+    ...(activeEntryTemplate.matchText === undefined
+      ? {}
+      : { match: activeEntryTemplate.matchText }),
     ...(activeEntryTemplate.name === undefined ? {} : { name: activeEntryTemplate.name }),
     location: activeEntryTemplate.location,
   });
@@ -320,7 +361,9 @@ function executeNativeTransformPlan(
     ...(plan.needsDocumentBinding || needsTraceDocumentBinding
       ? ['const document = createCompiledDocument(sourceXml);']
       : ['createCompiledDocument(sourceXml);']),
-    ...(!isInitialTemplateExecution && activeTraceNodeIdentifier !== 'document' && !activeCurrentNodeIsDocument
+    ...(!isInitialTemplateExecution &&
+    activeTraceNodeIdentifier !== 'document' &&
+    !activeCurrentNodeIsDocument
       ? ['helpers.traceFocusEnter(document, ctx);']
       : []),
     ...activeSetupStatements,
@@ -328,36 +371,33 @@ function executeNativeTransformPlan(
       ? [`const currentNode = ${activeCurrentNodeExpression.code};`]
       : []),
     ...(activeCurrentNodeMayBeNull
-      ? [
-          'if (currentNode === null) {',
-          '  return { output: "" };',
-          '}',
-        ]
+      ? ['if (currentNode === null) {', '  return { output: "" };', '}']
       : []),
-    ...(isInitialTemplateExecution ? [] : [`helpers.traceFocusEnter(${activeTraceNodeIdentifier}, ctx);`]),
+    ...(isInitialTemplateExecution
+      ? []
+      : [`helpers.traceFocusEnter(${activeTraceNodeIdentifier}, ctx);`]),
     `helpers.traceTemplateEnter(${activeTraceNodeIdentifier}, ctx, ${activeTemplateInfo});`,
     'return {',
     `  output: ${activeOutputExpression.code},`,
     '};',
   ];
-  const wrappedBodyStatements = activeInitialTemplateName === undefined
-    ? nativeBodyStatements
-    : [
-        'try {',
-        ...nativeBodyStatements.map((statement) => `  ${statement}`),
-        '} catch (error) {',
-        `  throw prependNativeInitialTemplateError(error, ${JSON.stringify(activeInitialTemplateName)}, ${JSON.stringify(activeEntryTemplate.location)});`,
-        '}',
-      ];
+  const wrappedBodyStatements =
+    activeInitialTemplateName === undefined
+      ? nativeBodyStatements
+      : [
+          'try {',
+          ...nativeBodyStatements.map((statement) => `  ${statement}`),
+          '} catch (error) {',
+          `  throw prependNativeInitialTemplateError(error, ${JSON.stringify(activeInitialTemplateName)}, ${JSON.stringify(activeEntryTemplate.location)});`,
+          '}',
+        ];
   const executeNative = new Function(
     'sourceXml',
     'ctx',
     'helpers',
-    [
-      '"use strict";',
-      helperBindings,
-      ...wrappedBodyStatements,
-    ].filter((statement) => statement.length > 0).join('\n'),
+    ['"use strict";', helperBindings, ...wrappedBodyStatements]
+      .filter((statement) => statement.length > 0)
+      .join('\n'),
   ) as (
     sourceXml: string,
     context: TransformOptions,
@@ -381,6 +421,7 @@ const NATIVE_RUNTIME_HELPERS = {
   applyBuiltInTemplatesByPath,
   createCompiledDocument,
   createTemporaryTreeNode,
+  escapeAttribute,
   escapeText,
   localNameOfNode,
   matchesTemplatePath,

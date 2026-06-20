@@ -5,6 +5,7 @@ export const source = { path: "matched-nested-root-for-each-choose-nested-if.xsl
 
 /** match="/root/section" (matched-nested-root-for-each-choose-nested-if.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
+  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;
   resetRecordedTracePause(ctx.trace);
   if (ctx.initialMode !== undefined) {
     throwUnsupportedNativeInitialMode(ctx.initialMode);
@@ -25,13 +26,13 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     output:
       (
   /** literal items (matched-nested-root-for-each-choose-nested-if.xsl:1) */
-  "<items>" +
-    (
+  (() => {
+  const body = (
   /** xsl:for-each (matched-nested-root-for-each-choose-nested-if.xsl:1) */
   traceSelectedNodes(selectSimplePathNodes(currentNode, ["item"]), ctx, {"kind":"xsl:for-each","location":{"source":"matched-nested-root-for-each-choose-nested-if.xsl","line":1,"column":145,"offset":144,"endLine":1,"endColumn":149,"endOffset":148}}).map((currentNode) => (
   /** literal item (matched-nested-root-for-each-choose-nested-if.xsl:1) */
-  "<item>" +
-    (
+  (() => {
+  const body = (
   /** xsl:value-of (matched-nested-root-for-each-choose-nested-if.xsl:1) */
   escapeText(traceStringValueOfNode(selectSimplePathNode(currentNode, ["name"]), ctx, {"kind":"xsl:value-of","location":{"source":"matched-nested-root-for-each-choose-nested-if.xsl","line":1,"column":145,"offset":144,"endLine":1,"endColumn":149,"endOffset":148}}))
 ) +
@@ -43,8 +44,10 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   /** xsl:if (matched-nested-root-for-each-choose-nested-if.xsl:1) */
   (selectSimplePathExists(currentNode, ["detail"]) ? (
   /** literal flagged (matched-nested-root-for-each-choose-nested-if.xsl:1) */
-  "<flagged>" +
-    "</flagged>"
+  (() => {
+  const body = "";
+  return "<flagged" + "" + ">" + body + "</flagged>";
+})()
 ) : "")
 )
 ) : (
@@ -53,16 +56,20 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   /** xsl:if (matched-nested-root-for-each-choose-nested-if.xsl:1) */
   (selectSimplePathExists(currentNode, ["vip"]) ? (
   /** literal vip (matched-nested-root-for-each-choose-nested-if.xsl:1) */
-  "<vip>" +
-    "</vip>"
+  (() => {
+  const body = "";
+  return "<vip" + "" + ">" + body + "</vip>";
+})()
 ) : "")
 )
 ))
-) +
-    "</item>"
+);
+  return "<item" + "" + ">" + body + "</item>";
+})()
 )).join("")
-) +
-    "</items>"
+);
+  return "<items" + "" + ">" + body + "</items>";
+})()
 ),
     ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),
   };

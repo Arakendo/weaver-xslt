@@ -5,6 +5,7 @@ export const source = { path: "hello.xsl", digest: "34f4c921" } as const;
 
 /** match="/" (hello.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
+  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;
   resetRecordedTracePause(ctx.trace);
   if (ctx.initialMode !== undefined) {
     throwUnsupportedNativeInitialMode(ctx.initialMode);
@@ -20,12 +21,13 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     output:
       (
   /** literal hello (hello.xsl:1) */
-  "<hello>" +
-    (
+  (() => {
+  const body = (
   /** xsl:value-of (hello.xsl:1) */
   escapeText(traceStringValueOfNode(selectSimplePathNode(document, ["root","name"]), ctx, {"kind":"xsl:value-of","location":{"source":"hello.xsl","line":1,"column":133,"offset":132,"endLine":1,"endColumn":143,"endOffset":142}}))
-) +
-    "</hello>"
+);
+  return "<hello" + "" + ">" + body + "</hello>";
+})()
 ),
     ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),
   };

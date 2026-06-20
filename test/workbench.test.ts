@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 
 import * as stylesheetCompiler from '../src/xslt/compile/compiler.js';
@@ -59,7 +63,10 @@ describe('workbench boundary', () => {
       throw new Error('expected compile to succeed');
     }
 
-    const instructionSpan = findSpan(result.stylesheet.stylesheet, '<xsl:value-of select="/root/name"/>');
+    const instructionSpan = findSpan(
+      result.stylesheet.stylesheet,
+      '<xsl:value-of select="/root/name"/>',
+    );
     const generatedSpans = result.sourceMap?.mapSourceToGenerated(instructionSpan) ?? [];
 
     expect(generatedSpans.length).toBeGreaterThan(0);
@@ -195,28 +202,32 @@ describe('workbench boundary', () => {
           message: 'The current stylesheet is outside the native-supported slice for M6.25.',
         },
       },
-      notices: [{
-        severity: 'warning',
-        code: 'native_fallback',
-        message: 'The current stylesheet is outside the native-supported slice for M6.25.',
-        details: [
-          { key: 'requestedExecution', value: 'auto' },
-          { key: 'resolvedExecution', value: 'interpreter' },
-          { key: 'fallbackCode', value: 'unsupported_stylesheet' },
-        ],
-        suggestions: [
-          {
-            kind: 'fix',
-            label: 'retry with execution="native" to get a hard unsupported-native error while simplifying the stylesheet',
-            confidence: 1,
-          },
-          {
-            kind: 'hint',
-            label: 'simplify the select/match shape toward the documented native slice if you want to stay on the native path',
-            confidence: 0.9,
-          },
-        ],
-      }],
+      notices: [
+        {
+          severity: 'warning',
+          code: 'native_fallback',
+          message: 'The current stylesheet is outside the native-supported slice for M6.25.',
+          details: [
+            { key: 'requestedExecution', value: 'auto' },
+            { key: 'resolvedExecution', value: 'interpreter' },
+            { key: 'fallbackCode', value: 'unsupported_stylesheet' },
+          ],
+          suggestions: [
+            {
+              kind: 'fix',
+              label:
+                'retry with execution="native" to get a hard unsupported-native error while simplifying the stylesheet',
+              confidence: 1,
+            },
+            {
+              kind: 'hint',
+              label:
+                'simplify the select/match shape toward the documented native slice if you want to stay on the native path',
+              confidence: 0.9,
+            },
+          ],
+        },
+      ],
     });
     expect(result.generatedTs).toContain('export function transform(');
   });
@@ -253,6 +264,39 @@ describe('workbench boundary', () => {
     });
     expect(result.generatedTs).toContain('selectDescendantElementsByName');
     expect(result.generatedTs).toContain('traceStringValueOfNode');
+  });
+
+  it('resolves relative document() calls against the stylesheet file URI by default', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver workbench '));
+
+    try {
+      writeFileSync(join(tempDir, 'lookup.xml'), '<lookup><value>ok</value></lookup>', 'utf8');
+
+      const result = compileAndTransform({
+        stylesheet: {
+          uri: pathToFileURL(join(tempDir, 'doc function test.xsl')).href,
+          text: [
+            '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+            '  <xsl:template match="/">',
+            `    <out><xsl:value-of select="document('lookup.xml')/lookup/value"/></out>`,
+            '  </xsl:template>',
+            '</xsl:stylesheet>',
+          ].join('\n'),
+        },
+        sourceXml: {
+          uri: 'memory:/input.xml',
+          text: '<root/>',
+        },
+      });
+
+      expect(result).toMatchObject({
+        ok: true,
+        diagnostics: [],
+        output: '<out>ok</out>',
+      });
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
   });
 
   it('resolves a workbench source XML path into a trace handle', () => {
@@ -360,11 +404,13 @@ describe('workbench boundary', () => {
     const textStart = sourceXml.text.indexOf('beta');
     const textEnd = textStart + 'beta'.length;
 
-    expect(resolveSourceXmlNodeHandleInRange({
-      sourceXml,
-      offsetStart: attributeValueStart,
-      offsetEnd: attributeValueEnd,
-    })).toEqual({
+    expect(
+      resolveSourceXmlNodeHandleInRange({
+        sourceXml,
+        offsetStart: attributeValueStart,
+        offsetEnd: attributeValueEnd,
+      }),
+    ).toEqual({
       ok: true,
       diagnostics: [],
       handle: {
@@ -373,11 +419,13 @@ describe('workbench boundary', () => {
         path: '/root[1]/section[1]/@priority',
       },
     });
-    expect(resolveSourceXmlNodeHandleInRange({
-      sourceXml,
-      offsetStart: paraNameStart,
-      offsetEnd: paraNameEnd,
-    })).toEqual({
+    expect(
+      resolveSourceXmlNodeHandleInRange({
+        sourceXml,
+        offsetStart: paraNameStart,
+        offsetEnd: paraNameEnd,
+      }),
+    ).toEqual({
       ok: true,
       diagnostics: [],
       handle: {
@@ -386,11 +434,13 @@ describe('workbench boundary', () => {
         path: '/root[1]/section[1]/para[2]',
       },
     });
-    expect(resolveSourceXmlNodeHandleInRange({
-      sourceXml,
-      offsetStart: textStart,
-      offsetEnd: textEnd,
-    })).toEqual({
+    expect(
+      resolveSourceXmlNodeHandleInRange({
+        sourceXml,
+        offsetStart: textStart,
+        offsetEnd: textEnd,
+      }),
+    ).toEqual({
       ok: true,
       diagnostics: [],
       handle: {
@@ -481,10 +531,12 @@ describe('workbench boundary', () => {
         execution: 'native',
         trace: {
           documentUri: sourceXml.uri,
-          breakpoints: [{
-            node: trackedParaNode,
-            on: ['template-enter'],
-          }],
+          breakpoints: [
+            {
+              node: trackedParaNode,
+              on: ['template-enter'],
+            },
+          ],
         },
       },
     });
@@ -502,17 +554,22 @@ describe('workbench boundary', () => {
             location: expect.any(Object),
           },
         },
-        frames: [{
-          kind: 'template',
-          label: 'match="para"',
-          location: expect.any(Object),
-        }],
+        frames: [
+          {
+            kind: 'template',
+            label: 'match="para"',
+            location: expect.any(Object),
+          },
+        ],
       },
     });
   });
 });
 
-function findSpan(document: { readonly uri: string; readonly text: string }, needle: string): SourceSpan {
+function findSpan(
+  document: { readonly uri: string; readonly text: string },
+  needle: string,
+): SourceSpan {
   const offsetStart = document.text.indexOf(needle);
   if (offsetStart < 0) {
     throw new Error(`Could not find ${needle}.`);

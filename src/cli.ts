@@ -1,12 +1,20 @@
 import { existsSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import chokidar from 'chokidar';
 
 import { formatDiagnostics, renderDiagnosticError } from './diagnostics/index.js';
-import { XsltProcessor, type TransformExecutionFallbackReason, type TransformExecutionMode } from './index.js';
-import { compileStylesheetArtifacts, createStylesheetDigest } from './processor/compile.js';
+import {
+  XsltProcessor,
+  type TransformExecutionFallbackReason,
+  type TransformExecutionMode,
+} from './index.js';
+import {
+  compileStylesheetArtifactsFromFile,
+  composeStylesheetSourceFromFile,
+  createStylesheetDigest,
+} from './processor/compile.js';
 
 export interface CliIo {
   readonly stdout: (text: string) => void;
@@ -51,7 +59,8 @@ function runCompileCommand(args: readonly string[], io: CliIo): number {
     return 1;
   }
 
-  const sampleDocument = parsed.samplePath === undefined ? undefined : readSampleDocument(parsed.samplePath);
+  const sampleDocument =
+    parsed.samplePath === undefined ? undefined : readSampleDocument(parsed.samplePath);
   if (parsed.samplePath !== undefined && sampleDocument === undefined) {
     io.stderr(`Could not read sample document ${resolve(parsed.samplePath)}\n`);
     return 1;
@@ -71,7 +80,7 @@ function runCompileCommand(args: readonly string[], io: CliIo): number {
   }
 
   for (const resolvedInputPath of matchedPaths) {
-    if (!emitCompiledArtifacts(resolvedInputPath, io, sampleDocument)) {
+    if (!emitCompiledArtifacts(resolvedInputPath, io, parsed.samplePath)) {
       return 1;
     }
   }
@@ -79,7 +88,11 @@ function runCompileCommand(args: readonly string[], io: CliIo): number {
   return 0;
 }
 
-async function runWatchCommand(args: readonly string[], io: CliIo, options: RunCliOptions): Promise<number> {
+async function runWatchCommand(
+  args: readonly string[],
+  io: CliIo,
+  options: RunCliOptions,
+): Promise<number> {
   const parsed = parseCompileLikeArguments(args);
 
   if (parsed === undefined) {
@@ -91,9 +104,15 @@ async function runWatchCommand(args: readonly string[], io: CliIo, options: RunC
 
   const resolvedPattern = resolve(inputPattern);
   const matcher = createGlobMatcher(resolvedPattern);
-  const watchRoots = hasGlobMagic(resolvedPattern) ? [findGlobBaseDirectory(resolvedPattern)] : [dirname(resolvedPattern)];
-  const resolvedSamplePath = parsed.samplePath === undefined ? undefined : resolve(parsed.samplePath);
-  const watcherRoots = resolvedSamplePath === undefined ? watchRoots : [...new Set([...watchRoots, dirname(resolvedSamplePath)])];
+  const watchRoots = hasGlobMagic(resolvedPattern)
+    ? [findGlobBaseDirectory(resolvedPattern)]
+    : [dirname(resolvedPattern)];
+  const resolvedSamplePath =
+    parsed.samplePath === undefined ? undefined : resolve(parsed.samplePath);
+  const watcherRoots =
+    resolvedSamplePath === undefined
+      ? watchRoots
+      : [...new Set([...watchRoots, dirname(resolvedSamplePath)])];
 
   const watcher = chokidar.watch(watcherRoots, {
     ignoreInitial: true,
@@ -136,15 +155,16 @@ async function runWatchCommand(args: readonly string[], io: CliIo, options: RunC
       finish(0);
     };
 
-    const matchesWatchPattern = (inputPath: string): boolean => matcher(testPath(resolve(inputPath)));
-    const listMatchedStylesheets = (): string[] => globSync(inputPattern, {
-      absolute: true,
-      nodir: true,
-      windowsPathsNoEscape: true,
-    }).sort();
-    const readWatchedSampleDocument = (): string | undefined => resolvedSamplePath === undefined
-      ? undefined
-      : readSampleDocument(resolvedSamplePath);
+    const matchesWatchPattern = (inputPath: string): boolean =>
+      matcher(testPath(resolve(inputPath)));
+    const listMatchedStylesheets = (): string[] =>
+      globSync(inputPattern, {
+        absolute: true,
+        nodir: true,
+        windowsPathsNoEscape: true,
+      }).sort();
+    const readWatchedSampleDocument = (): string | undefined =>
+      resolvedSamplePath === undefined ? undefined : readSampleDocument(resolvedSamplePath);
     const recompileStylesheets = (stylesheetPaths: readonly string[]): void => {
       const sampleDocument = readWatchedSampleDocument();
       if (resolvedSamplePath !== undefined && sampleDocument === undefined) {
@@ -153,7 +173,7 @@ async function runWatchCommand(args: readonly string[], io: CliIo, options: RunC
       }
 
       for (const matchedPath of stylesheetPaths) {
-        emitWatchedArtifacts(matchedPath, io, watchedDigests, sampleDocument);
+        emitWatchedArtifacts(matchedPath, io, watchedDigests, sampleDocument, resolvedSamplePath);
       }
     };
     const recompileAllMatchedStylesheets = (): void => {
@@ -180,7 +200,13 @@ async function runWatchCommand(args: readonly string[], io: CliIo, options: RunC
 
       if (matchesWatchPattern(resolvedInputPath)) {
         trackTask(() => {
-          emitWatchedArtifacts(resolvedInputPath, io, watchedDigests, readWatchedSampleDocument());
+          emitWatchedArtifacts(
+            resolvedInputPath,
+            io,
+            watchedDigests,
+            readWatchedSampleDocument(),
+            resolvedSamplePath,
+          );
         });
         return;
       }
@@ -205,7 +231,13 @@ async function runWatchCommand(args: readonly string[], io: CliIo, options: RunC
 
       if (matchesWatchPattern(resolvedInputPath)) {
         trackTask(() => {
-          emitWatchedArtifacts(resolvedInputPath, io, watchedDigests, readWatchedSampleDocument());
+          emitWatchedArtifacts(
+            resolvedInputPath,
+            io,
+            watchedDigests,
+            readWatchedSampleDocument(),
+            resolvedSamplePath,
+          );
         });
         return;
       }
@@ -271,7 +303,9 @@ async function runWatchCommand(args: readonly string[], io: CliIo, options: RunC
 function runTransformCommand(args: readonly string[], io: CliIo): number {
   const parsed = parseRunArguments(args);
   if (parsed === undefined) {
-    io.stderr('Usage: weaver-xslt run <stylesheet> --input <xml> [--execution <interpreter|native|auto>]\n');
+    io.stderr(
+      'Usage: weaver-xslt run <stylesheet> --input <xml> [--execution <interpreter|native|auto>] [--param <name=value> ...]\n',
+    );
     return 1;
   }
 
@@ -279,12 +313,14 @@ function runTransformCommand(args: readonly string[], io: CliIo): number {
   const resolvedInputPath = resolve(parsed.inputPath);
 
   try {
-    const stylesheet = readFileSync(resolvedStylesheetPath, 'utf8');
+    const stylesheet = composeStylesheetSourceFromFile(resolvedStylesheetPath);
     const inputXml = readFileSync(resolvedInputPath, 'utf8');
-    const result = new XsltProcessor(stylesheet, { sourceName: basename(resolvedStylesheetPath) }).transform(
-      inputXml,
-      parsed.execution === undefined ? undefined : { execution: parsed.execution },
-    );
+    const result = new XsltProcessor(stylesheet, {
+      sourceName: pathToFileURL(resolvedStylesheetPath).href,
+    }).transform(inputXml, {
+      ...(parsed.execution === undefined ? {} : { execution: parsed.execution }),
+      ...(parsed.parameters === undefined ? {} : { parameters: parsed.parameters }),
+    });
 
     const fallbackReason = result.execution?.fallbackReason;
     if (fallbackReason !== undefined) {
@@ -300,11 +336,14 @@ function runTransformCommand(args: readonly string[], io: CliIo): number {
   }
 }
 
-function parseRunArguments(args: readonly string[]): {
-  readonly stylesheetPath: string;
-  readonly inputPath: string;
-  readonly execution?: TransformExecutionMode;
-} | undefined {
+function parseRunArguments(args: readonly string[]):
+  | {
+      readonly stylesheetPath: string;
+      readonly inputPath: string;
+      readonly execution?: TransformExecutionMode;
+      readonly parameters?: Readonly<Record<string, unknown>>;
+    }
+  | undefined {
   const [stylesheetPath, ...rest] = args;
   if (stylesheetPath === undefined) {
     return undefined;
@@ -312,6 +351,7 @@ function parseRunArguments(args: readonly string[]): {
 
   let inputPath: string | undefined;
   let execution: TransformExecutionMode | undefined;
+  const parameters: Record<string, unknown> = {};
   for (let index = 0; index < rest.length; index += 1) {
     const token = rest[index];
     if (token === '--input') {
@@ -322,11 +362,37 @@ function parseRunArguments(args: readonly string[]): {
 
     if (token === '--execution') {
       const requestedExecution = rest[index + 1];
-      if (requestedExecution !== 'interpreter' && requestedExecution !== 'native' && requestedExecution !== 'auto') {
+      if (
+        requestedExecution !== 'interpreter' &&
+        requestedExecution !== 'native' &&
+        requestedExecution !== 'auto'
+      ) {
         return undefined;
       }
 
       execution = requestedExecution;
+      index += 1;
+      continue;
+    }
+
+    if (token === '--param') {
+      const parameterText = rest[index + 1];
+      if (parameterText === undefined) {
+        return undefined;
+      }
+
+      const equalsIndex = parameterText.indexOf('=');
+      if (equalsIndex <= 0) {
+        return undefined;
+      }
+
+      const name = parameterText.slice(0, equalsIndex);
+      const value = parameterText.slice(equalsIndex + 1);
+      if (name.length === 0) {
+        return undefined;
+      }
+
+      parameters[name] = value;
       index += 1;
       continue;
     }
@@ -342,6 +408,7 @@ function parseRunArguments(args: readonly string[]): {
     stylesheetPath,
     inputPath,
     ...(execution === undefined ? {} : { execution }),
+    ...(Object.keys(parameters).length === 0 ? {} : { parameters }),
   };
 }
 
@@ -359,7 +426,7 @@ function renderUsage(): string {
     'Usage:',
     '  weaver-xslt compile <glob> [--sample <xml>]',
     '  weaver-xslt watch <glob> [--sample <xml>]',
-    '  weaver-xslt run <stylesheet> --input <xml> [--execution <interpreter|native|auto>]',
+    '  weaver-xslt run <stylesheet> --input <xml> [--execution <interpreter|native|auto>] [--param <name=value> ...]',
     '  weaver-xslt --help',
   ].join('\n');
 }
@@ -389,10 +456,13 @@ if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(
   );
 }
 
-function emitCompiledArtifacts(resolvedInputPath: string, io: CliIo, sampleDocument?: string): boolean {
+function emitCompiledArtifacts(
+  resolvedInputPath: string,
+  io: CliIo,
+  sampleDocumentPath?: string,
+): boolean {
   try {
-    const stylesheet = readFileSync(resolvedInputPath, 'utf8');
-    return emitCompiledArtifactsFromSource(resolvedInputPath, stylesheet, io, sampleDocument) !== undefined;
+    return emitCompiledArtifactsFromFile(resolvedInputPath, io, sampleDocumentPath) !== undefined;
   } catch (error) {
     const stylesheet = tryReadSource(resolvedInputPath);
     io.stderr(`${renderDiagnosticError(error, stylesheet)}\n`);
@@ -421,6 +491,7 @@ function emitWatchedArtifacts(
   io: CliIo,
   watchedDigests: Map<string, string>,
   sampleDocument?: string,
+  sampleDocumentPath?: string,
 ): void {
   try {
     const stylesheet = readFileSync(resolvedInputPath, 'utf8');
@@ -431,12 +502,20 @@ function emitWatchedArtifacts(
     );
     const outputPath = `${resolvedInputPath}.ts`;
 
-    if (watchedDigests.get(resolvedInputPath) === watchInputDigest && hasCompiledArtifacts(resolvedInputPath)) {
+    if (
+      watchedDigests.get(resolvedInputPath) === watchInputDigest &&
+      hasCompiledArtifacts(resolvedInputPath)
+    ) {
       io.stdout(`Unchanged ${outputPath}\n`);
       return;
     }
 
-    const emittedDigest = emitCompiledArtifactsFromSource(resolvedInputPath, stylesheet, io, sampleDocument);
+    const emittedDigest = emitCompiledArtifactsFromFile(
+      resolvedInputPath,
+      io,
+      sampleDocumentPath,
+      stylesheet,
+    );
     if (emittedDigest !== undefined) {
       watchedDigests.set(resolvedInputPath, watchInputDigest);
     } else {
@@ -452,16 +531,14 @@ function emitWatchedArtifacts(
   }
 }
 
-function emitCompiledArtifactsFromSource(
+function emitCompiledArtifactsFromFile(
   resolvedInputPath: string,
-  stylesheet: string,
   io: CliIo,
-  sampleDocument?: string,
+  sampleDocumentPath?: string,
+  stylesheet = readFileSync(resolvedInputPath, 'utf8'),
 ): string | undefined {
-  const output = compileStylesheetArtifacts(stylesheet, {
-    path: basename(resolvedInputPath),
-    filePath: resolvedInputPath,
-    ...(sampleDocument === undefined ? {} : { sampleDocument }),
+  const output = compileStylesheetArtifactsFromFile(resolvedInputPath, {
+    ...(sampleDocumentPath === undefined ? {} : { sampleDocumentPath }),
   });
 
   const outputPath = `${resolvedInputPath}.ts`;
@@ -471,10 +548,10 @@ function emitCompiledArtifactsFromSource(
   const digestContents = `${output.digest}\n`;
 
   if (
-    tryReadSource(outputPath) === output.module
-    && tryReadSource(declarationPath) === output.declaration
-    && tryReadSource(digestPath) === digestContents
-    && tryReadSource(sourceMapPath) === output.sourceMap
+    tryReadSource(outputPath) === output.module &&
+    tryReadSource(declarationPath) === output.declaration &&
+    tryReadSource(digestPath) === digestContents &&
+    tryReadSource(sourceMapPath) === output.sourceMap
   ) {
     writeDiagnostics(output.diagnostics, stylesheet, io);
     io.stdout(`Up to date ${outputPath}\n`);
@@ -532,14 +609,18 @@ function createWatchInputDigest(
   sampleDocument: string | undefined,
   extensionFunctionCatalogSource: string | undefined,
 ): string {
-  return createStylesheetDigest(`${stylesheet}\u0000${sampleDocument ?? ''}\u0000${extensionFunctionCatalogSource ?? ''}`);
+  return createStylesheetDigest(
+    `${stylesheet}\u0000${sampleDocument ?? ''}\u0000${extensionFunctionCatalogSource ?? ''}`,
+  );
 }
 
 function hasCompiledArtifacts(resolvedInputPath: string): boolean {
-  return existsSync(`${resolvedInputPath}.ts`)
-    && existsSync(`${resolvedInputPath}.d.ts`)
-    && existsSync(`${resolvedInputPath}.digest`)
-    && existsSync(`${resolvedInputPath}.map`);
+  return (
+    existsSync(`${resolvedInputPath}.ts`) &&
+    existsSync(`${resolvedInputPath}.d.ts`) &&
+    existsSync(`${resolvedInputPath}.digest`) &&
+    existsSync(`${resolvedInputPath}.map`)
+  );
 }
 
 function isExtensionFunctionCatalogPath(path: string): boolean {
@@ -563,14 +644,21 @@ function replaceFileContents(targetPath: string, contents: string): void {
   }
 }
 
-function writeDiagnostics(diagnostics: readonly import('./diagnostics/index.js').DiagnosticReport[], stylesheet: string, io: CliIo): void {
+function writeDiagnostics(
+  diagnostics: readonly import('./diagnostics/index.js').DiagnosticReport[],
+  stylesheet: string,
+  io: CliIo,
+): void {
   const rendered = formatDiagnostics(diagnostics, stylesheet);
   if (rendered.length > 0) {
     io.stderr(rendered);
   }
 }
 
-function globSync(inputPattern: string, _options: { readonly absolute: true; readonly nodir: true; readonly windowsPathsNoEscape: true }): string[] {
+function globSync(
+  inputPattern: string,
+  _options: { readonly absolute: true; readonly nodir: true; readonly windowsPathsNoEscape: true },
+): string[] {
   const resolvedPattern = resolve(inputPattern);
   if (!hasGlobMagic(resolvedPattern)) {
     return existsSync(resolvedPattern) ? [resolvedPattern] : [];

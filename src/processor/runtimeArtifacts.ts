@@ -6,6 +6,7 @@ import { emitStylesheetDeclarationModule, emitStylesheetModule } from '../xslt/c
 
 export interface CompileStylesheetRuntimeArtifactsOptions {
   readonly path?: string;
+  readonly filePath?: string;
   readonly sourceName?: string;
   readonly runtimeModuleSpecifier?: string;
   readonly sampleDocument?: string;
@@ -29,40 +30,41 @@ export function compileStylesheetRuntimeArtifacts(
   options: CompileStylesheetRuntimeArtifactsOptions = {},
 ): CompileStylesheetRuntimeArtifacts {
   const digest = createStylesheetDigest(stylesheetSource);
-  const sourcePath = options.path ?? '<stylesheet>';
+  const sourcePath = options.filePath ?? options.path ?? '<stylesheet>';
   const ir = compileStylesheet(stylesheetSource, {
     ...(options.sourceName === undefined && options.path === undefined
       ? {}
       : { sourceName: options.sourceName ?? options.path }),
-    ...(options.extensionFunctions === undefined ? {} : { extensionFunctions: options.extensionFunctions }),
+    ...(options.extensionFunctions === undefined
+      ? {}
+      : { extensionFunctions: options.extensionFunctions }),
   });
   const emitOptions = {
     digest,
-    ...(options.path === undefined ? {} : { path: options.path }),
+    ...(options.filePath === undefined
+      ? options.path === undefined
+        ? {}
+        : { path: options.path }
+      : { filePath: options.filePath }),
     ...(options.runtimeModuleSpecifier === undefined
       ? {}
       : { runtimeModuleSpecifier: options.runtimeModuleSpecifier }),
   };
   const emittedModule = emitStylesheetModule(ir, emitOptions);
   const sourceBaseName = fileBasename(sourcePath);
-  const module = appendSourceMappingUrl(
-    emittedModule,
-    `${sourceBaseName}.map`,
+  const module = appendSourceMappingUrl(emittedModule, `${sourceBaseName}.map`);
+  const diagnostics = sortDiagnostics(
+    analyzeStylesheet(ir, {
+      ...(options.sampleDocument === undefined ? {} : { sampleDocument: options.sampleDocument }),
+    }),
   );
-  const diagnostics = sortDiagnostics(analyzeStylesheet(ir, {
-    ...(options.sampleDocument === undefined ? {} : { sampleDocument: options.sampleDocument }),
-  }));
 
   return {
     ir,
     module,
     declaration: emitStylesheetDeclarationModule(ir, emitOptions),
     digest,
-    sourceMap: createStylesheetSourceMap(
-      module,
-      stylesheetSource,
-      sourceBaseName,
-    ),
+    sourceMap: createStylesheetSourceMap(module, stylesheetSource, sourceBaseName),
     diagnostics,
   };
 }
@@ -91,7 +93,11 @@ ${sourceMapFooter}
 `;
 }
 
-function createStylesheetSourceMap(moduleSource: string, stylesheetSource: string, sourcePath: string): string {
+function createStylesheetSourceMap(
+  moduleSource: string,
+  stylesheetSource: string,
+  sourcePath: string,
+): string {
   const generatedLineCount = countLines(moduleSource);
   const sourceLineCount = Math.max(countLines(stylesheetSource), 1);
   let currentSourceLine: number | undefined;
@@ -101,30 +107,44 @@ function createStylesheetSourceMap(moduleSource: string, stylesheetSource: strin
     ? moduleSource.slice(0, -1).split('\n')
     : moduleSource.split('\n');
 
-  for (let generatedLineIndex = 0; generatedLineIndex < generatedLineCount; generatedLineIndex += 1) {
+  for (
+    let generatedLineIndex = 0;
+    generatedLineIndex < generatedLineCount;
+    generatedLineIndex += 1
+  ) {
     const moduleLine = moduleLines[generatedLineIndex] ?? '';
     const anchoredSourceLine = readProvenanceLineNumber(moduleLine);
     if (anchoredSourceLine !== undefined) {
       currentSourceLine = Math.min(Math.max(anchoredSourceLine - 1, 0), sourceLineCount - 1);
     }
 
-    if (currentSourceLine === undefined || isCommentOnlyGeneratedLine(moduleLine) || isGeneratedOnlyLine(moduleLine)) {
+    if (
+      currentSourceLine === undefined ||
+      isCommentOnlyGeneratedLine(moduleLine) ||
+      isGeneratedOnlyLine(moduleLine)
+    ) {
       mappings.push('');
       continue;
     }
 
-    mappings.push(`${encodeVlq(0)}${encodeVlq(0)}${encodeVlq(currentSourceLine - previousSourceLine)}${encodeVlq(0)}`);
+    mappings.push(
+      `${encodeVlq(0)}${encodeVlq(0)}${encodeVlq(currentSourceLine - previousSourceLine)}${encodeVlq(0)}`,
+    );
     previousSourceLine = currentSourceLine;
   }
 
-  return `${JSON.stringify({
-    version: 3,
-    file: `${sourcePath}.ts`,
-    sources: [sourcePath],
-    sourcesContent: [stylesheetSource],
-    names: [],
-    mappings: mappings.join(';'),
-  }, null, 2)}
+  return `${JSON.stringify(
+    {
+      version: 3,
+      file: `${sourcePath}.ts`,
+      sources: [sourcePath],
+      sourcesContent: [stylesheetSource],
+      names: [],
+      mappings: mappings.join(';'),
+    },
+    null,
+    2,
+  )}
 `;
 }
 
@@ -133,9 +153,7 @@ function countLines(text: string): number {
     return 1;
   }
 
-  return text.endsWith('\n')
-    ? text.slice(0, -1).split('\n').length
-    : text.split('\n').length;
+  return text.endsWith('\n') ? text.slice(0, -1).split('\n').length : text.split('\n').length;
 }
 
 function readProvenanceLineNumber(moduleLine: string): number | undefined {
@@ -158,14 +176,16 @@ function isGeneratedOnlyLine(moduleLine: string): boolean {
     return true;
   }
 
-  return trimmedLine.startsWith('import ')
-    || trimmedLine.startsWith('export const source = ')
-    || trimmedLine === 'export default { source, transform };'
-    || trimmedLine.startsWith('//# sourceMappingURL=');
+  return (
+    trimmedLine.startsWith('import ') ||
+    trimmedLine.startsWith('export const source = ') ||
+    trimmedLine === 'export default { source, transform };' ||
+    trimmedLine.startsWith('//# sourceMappingURL=')
+  );
 }
 
 function encodeVlq(value: number): string {
-  let remaining = value < 0 ? ((-value) << 1) + 1 : value << 1;
+  let remaining = value < 0 ? (-value << 1) + 1 : value << 1;
   let encoded = '';
 
   do {

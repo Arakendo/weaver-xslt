@@ -187,6 +187,11 @@ function templateMatchesNode(
     return false;
   }
 
+  const simplePathMatch = tryGetSimpleTemplatePathMatch(template.match);
+  if (simplePathMatch !== undefined) {
+    return matchesSimpleTemplatePath(node, simplePathMatch.path, simplePathMatch.absolute);
+  }
+
   const contextNode =
     node.nodeType === node.DOCUMENT_NODE ? node : (node.parentNode ?? node.ownerDocument ?? node);
   const context = createMatchContext(contextNode, staticContext);
@@ -199,6 +204,62 @@ function templateMatchesNode(
   } catch {
     return false;
   }
+}
+
+function tryGetSimpleTemplatePathMatch(
+  match: XPathAst,
+): { readonly absolute: boolean; readonly path: readonly string[] } | undefined {
+  if (match.kind !== 'path' || match.base !== undefined || match.steps.length === 0) {
+    return undefined;
+  }
+
+  const path: string[] = [];
+  for (const step of match.steps) {
+    if (step.kind !== 'step' || step.axis !== 'child' || step.predicates.length > 0) {
+      return undefined;
+    }
+
+    if (step.nodeTest.kind === 'nameTest') {
+      if (step.nodeTest.name.includes(':')) {
+        return undefined;
+      }
+
+      path.push(step.nodeTest.name);
+      continue;
+    }
+
+    if (step.nodeTest.kind === 'wildcardTest') {
+      path.push('*');
+      continue;
+    }
+
+    return undefined;
+  }
+
+  return {
+    absolute: match.absolute,
+    path,
+  };
+}
+
+function matchesSimpleTemplatePath(node: Node, path: readonly string[], absolute: boolean): boolean {
+  let current: Node | null = node;
+
+  for (let index = path.length - 1; index >= 0; index -= 1) {
+    if (current === null || current.nodeType !== current.ELEMENT_NODE) {
+      return false;
+    }
+
+    const segment = path[index];
+    const currentLocalName = current.localName ?? current.nodeName;
+    if (segment !== '*' && (currentLocalName !== segment || (current.namespaceURI ?? '') !== '')) {
+      return false;
+    }
+
+    current = current.parentNode;
+  }
+
+  return !absolute || current?.nodeType === node.DOCUMENT_NODE;
 }
 
 function getTemplatePriority(template: TemplateRule): number {

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Weaver IR Measure</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: "Segoe UI", sans-serif;
+      }
+
+      body {
+        margin: 0;
+        padding: 2rem;
+        background: linear-gradient(180deg, #f0f4e7 0%, #e5eef8 100%);
+        color: #16212b;
+      }
+
+      main {
+        max-width: 980px;
+        padding: 1.5rem;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 24px 60px rgba(22, 33, 43, 0.12);
+      }
+
+      form {
+        display: grid;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+
+      label {
+        display: grid;
+        gap: 0.35rem;
+        font-weight: 600;
+      }
+
+      input,
+      textarea,
+      button {
+        font: inherit;
+      }
+
+      input,
+      textarea {
+        border: 1px solid #bfd0e0;
+        border-radius: 12px;
+        padding: 0.8rem 0.9rem;
+        background: #fbfdff;
+      }
+
+      textarea {
+        min-height: 6rem;
+        resize: vertical;
+      }
+
+      button {
+        width: fit-content;
+        border: 0;
+        border-radius: 999px;
+        padding: 0.85rem 1.2rem;
+        background: #1f5b8f;
+        color: #fff;
+        cursor: pointer;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+      }
+
+      th,
+      td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #d8e3ec;
+        text-align: left;
+      }
+
+      code,
+      pre {
+        font-family: Consolas, "Courier New", monospace;
+      }
+
+      pre {
+        overflow: auto;
+        padding: 1rem;
+        border-radius: 12px;
+        background: #102033;
+        color: #eef5ff;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>IR Fetch / Parse Measure</h1>
+      <p>
+        Use this page for Phase 1.5 browser measurements. Point it at a minified
+        <code>*.ir.json</code> asset, then measure fetch, parse, heap, and first-transform
+        cost against the real runtime.
+      </p>
+      <form id="measure-form">
+        <label>
+          IR asset URL
+          <input id="asset-url" name="asset" type="text" placeholder="/S1000D_main.xslt.<digest>.ir.json" />
+        </label>
+        <label>
+          Sample XML
+          <textarea id="source-xml" name="xml">&lt;root&gt;&lt;name&gt;world&lt;/name&gt;&lt;/root&gt;</textarea>
+        </label>
+        <button id="measure" type="submit">Measure</button>
+      </form>
+      <div id="status"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Value</th>
+          </tr>
+        </thead>
+        <tbody id="metrics"></tbody>
+      </table>
+      <h2>Transform Output</h2>
+      <pre id="output"></pre>
+    </main>
+    <script type="module" src="./ir-measure.ts"></script>
+  </body>
+</html>

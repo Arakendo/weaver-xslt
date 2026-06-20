@@ -54,7 +54,7 @@ describe('XSLT codegen core emission smoke tests', () => {
     expect(emitted).toContain('createCompiledDocument(sourceXml)');
     expect(emitted).toContain('traceStringValueOfNode(selectSimplePathNode(document, ["root","name"]), ctx, {"kind":"xsl:value-of"');
     expect(emitted).not.toContain('const currentNode = document;');
-    expect(emitted).toContain('"<hello>"');
+    expect(emitted).toContain('return "<hello" + "" + ">" + body + "</hello>";');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
@@ -72,7 +72,7 @@ describe('XSLT codegen core emission smoke tests', () => {
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
     expect(emitted).toContain('selectSimplePathText(document, ["root","name"]) === "world"');
-    expect(emitted).toContain('"<yes>" +');
+    expect(emitted).toContain('return "<yes" + "" + ">" + body + "</yes>";');
     expect(emitted).toContain(': "")');
     expect(emitted).toContain('selectSimplePathText(document, ["root","role"]) === "admin"');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
@@ -83,8 +83,8 @@ describe('XSLT codegen core emission smoke tests', () => {
 
     expect(transpiled.diagnostics ?? []).toEqual([]);
     expect(emitted).toContain('(!selectSimplePathExists(currentNode, ["root","flag"]))');
-    expect(emitted).toContain('"<always>" +');
-    expect(emitted).toContain('"<never>" +');
+    expect(emitted).toContain('return "<always" + "" + ">" + body + "</always>";');
+    expect(emitted).toContain('return "<never" + "" + ">" + body + "</never>";');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 });

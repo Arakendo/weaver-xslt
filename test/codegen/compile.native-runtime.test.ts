@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { resolve } from 'node:path';
 
 import { compileStylesheetToTs } from '../../src/compile.js';
 import { XsltProcessor } from '../../src/index.js';
 
-import { NATIVE_DIRECT_PARITY_TAG, compileAndLoadGeneratedModule, expectNativeRuntimeParity } from './compile.support.js';
+import {
+  NATIVE_DIRECT_PARITY_TAG,
+  compileAndLoadGeneratedModule,
+  expectNativeRuntimeParity,
+} from './compile.support.js';
 
 describe('XSLT codegen MVP4 slice', () => {
   it('executes native temporary-tree local variable bindings through the runtime surface', () => {
@@ -41,6 +46,34 @@ describe('XSLT codegen MVP4 slice', () => {
     expectNativeRuntimeParity(stylesheet, 'temporary-tree-top-level-bindings.xsl', '<root/>');
   });
 
+  it('resolves document() against the stylesheet file path in generated modules', () => {
+    const stylesheet = `
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/">
+          <out><xsl:value-of select="count(document('../../Languages/English.resx')/root)"/></out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `;
+    const stylesheetPath = resolve(
+      'f:/LocalSource/TS XSLT/.workbench/vision xslts/S1000D/descriptive.xslt',
+    );
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'descriptive.xsl',
+      stylesheetPath,
+    );
+
+    expect(diagnostics).toEqual([]);
+
+    const generatedModule = exports as {
+      readonly transform: (source: string) => ReturnType<XsltProcessor['transform']>;
+    };
+    const sourceXml = '<root/>';
+    const interpreter = new XsltProcessor(stylesheet, { sourceName: stylesheetPath });
+
+    expect(generatedModule.transform(sourceXml)).toEqual(interpreter.transform(sourceXml));
+  });
+
   it('emits native code for a single-focus position() test', () => {
     const stylesheet = `
       <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -74,7 +107,10 @@ describe('XSLT codegen MVP4 slice', () => {
         </xsl:template>
       </xsl:stylesheet>
     `;
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'position-last-for-each.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'position-last-for-each.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
@@ -127,7 +163,10 @@ describe('XSLT codegen MVP4 slice', () => {
         </xsl:template>
       </xsl:stylesheet>
     `;
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'position-last-value-of-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'position-last-value-of-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
@@ -173,7 +212,10 @@ describe('XSLT codegen MVP4 slice', () => {
         </xsl:template>
       </xsl:stylesheet>
     `;
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'name-value-of-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'name-value-of-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
@@ -218,7 +260,10 @@ describe('XSLT codegen MVP4 slice', () => {
         </xsl:template>
       </xsl:stylesheet>
     `;
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'name-count-value-of-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'name-count-value-of-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
@@ -264,7 +309,10 @@ describe('XSLT codegen MVP4 slice', () => {
         </xsl:template>
       </xsl:stylesheet>
     `;
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'local-name-value-of-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'local-name-value-of-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
@@ -300,7 +348,10 @@ describe('XSLT codegen MVP4 slice', () => {
         </xsl:template>
       </xsl:stylesheet>
     `;
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'local-name-arg-value-of-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'local-name-arg-value-of-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
@@ -369,7 +420,10 @@ describe('XSLT codegen MVP4 slice', () => {
         </xsl:template>
       </xsl:stylesheet>
     `;
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'named-template-focus-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'named-template-focus-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
@@ -402,7 +456,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'named-template-with-param.xsl', '<root><item>a</item><item>b</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'named-template-with-param.xsl',
+      '<root><item>a</item><item>b</item></root>',
+    );
   });
 
   it('executes native named templates with temporary-tree params through the runtime surface', () => {
@@ -427,7 +485,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'named-template-with-param-temporary-tree.xsl', '<root/>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'named-template-with-param-temporary-tree.xsl',
+      '<root/>',
+    );
   });
 
   it('executes native xsl:apply-templates with temporary-tree params through the runtime surface', () => {
@@ -455,7 +517,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-with-param-temporary-tree.xsl', '<root><item>test</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-with-param-temporary-tree.xsl',
+      '<root><item>test</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[1]" through the runtime surface', () => {
@@ -470,7 +536,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-first-position.xsl', '<root><item>a</item><item>b</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-first-position.xsl',
+      '<root><item>a</item><item>b</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() = 1]" through the runtime surface', () => {
@@ -485,7 +555,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-first-position-function.xsl', '<root><item>a</item><item>b</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-first-position-function.xsl',
+      '<root><item>a</item><item>b</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() = last()]" through the runtime surface', () => {
@@ -500,7 +574,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-last-position-function.xsl', '<root><item>a</item><item>b</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-last-position-function.xsl',
+      '<root><item>a</item><item>b</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() >= 2]" through the runtime surface', () => {
@@ -515,7 +593,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-greater-equal-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-greater-equal-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() != 1]" through the runtime surface', () => {
@@ -530,7 +612,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-equal-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-equal-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() mod 2 = 0]" through the runtime surface', () => {
@@ -545,7 +631,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-mod-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-mod-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() = last() - 1]" through the runtime surface', () => {
@@ -560,7 +650,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-last-minus-one-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-last-minus-one-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() &lt; last()]" through the runtime surface', () => {
@@ -575,7 +669,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-less-than-last-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-less-than-last-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() > 1 and position() &lt; last()]" through the runtime surface', () => {
@@ -590,7 +688,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-between-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-between-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() = 1 or position() = last()]" through the runtime surface', () => {
@@ -605,7 +707,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-first-or-last-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-first-or-last-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() = 1 or position() > 2]" through the runtime surface', () => {
@@ -620,7 +726,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-first-or-after-second-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-first-or-after-second-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() = 1 or not(position() = last())]" through the runtime surface', () => {
@@ -635,7 +745,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-first-or-not-last-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-first-or-not-last-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() mod 2 = 0)]" through the runtime surface', () => {
@@ -650,7 +764,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-even-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-even-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() mod 2 = 0 or position() = 1)]" through the runtime surface', () => {
@@ -665,7 +783,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-even-or-first-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-even-or-first-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() mod 2 = 0 or position() mod 3 = 0)]" through the runtime surface', () => {
@@ -680,7 +802,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-even-or-third-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item><item>e</item><item>f</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-even-or-third-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item><item>e</item><item>f</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() = 1 or position() = 2)]" through the runtime surface', () => {
@@ -695,7 +821,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-first-or-second-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-first-or-second-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() = last() - 1)]" through the runtime surface', () => {
@@ -710,7 +840,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-second-last-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-second-last-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() = last() - 1 or position() = last() - 2)]" through the runtime surface', () => {
@@ -725,7 +859,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-second-or-third-last-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item><item>e</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-second-or-third-last-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item><item>e</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() &lt; last() - 1)]" through the runtime surface', () => {
@@ -740,7 +878,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-before-second-last-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-before-second-last-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() != last() - 1)]" through the runtime surface', () => {
@@ -755,7 +897,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-not-second-last-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-not-second-last-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() != last() - 1 or position() != 1)]" through the runtime surface', () => {
@@ -770,7 +916,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-not-second-last-or-not-first-position-function.xsl', '<root><item>a</item><item>b</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-not-second-last-or-not-first-position-function.xsl',
+      '<root><item>a</item><item>b</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() != 1 or position() &lt; last() - 1)]" through the runtime surface', () => {
@@ -785,7 +935,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-not-first-or-before-second-last-position-function.xsl', '<root><item>a</item><item>b</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-not-first-or-before-second-last-position-function.xsl',
+      '<root><item>a</item><item>b</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() != last()]" through the runtime surface', () => {
@@ -800,7 +954,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-last-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-last-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() > last() - 1]" through the runtime surface', () => {
@@ -815,7 +973,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-after-second-last-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-after-second-last-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() != last() - 1]" through the runtime surface', () => {
@@ -830,7 +992,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-second-last-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-second-last-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() = last() div 2]" through the runtime surface', () => {
@@ -845,7 +1011,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-middle-by-last-divisor-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-middle-by-last-divisor-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() != last() div 2]" through the runtime surface', () => {
@@ -860,7 +1030,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-middle-by-last-divisor-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-middle-by-last-divisor-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() &lt; last() div 2]" through the runtime surface', () => {
@@ -875,7 +1049,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-before-middle-by-last-divisor-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-before-middle-by-last-divisor-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() &lt; last() div 2)]" through the runtime surface', () => {
@@ -890,7 +1068,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-before-middle-by-last-divisor-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-before-middle-by-last-divisor-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() = last() div 2 + 1]" through the runtime surface', () => {
@@ -905,7 +1087,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-middle-plus-one-by-last-divisor-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-middle-plus-one-by-last-divisor-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() &lt; last() div 2 + 1]" through the runtime surface', () => {
@@ -920,7 +1106,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-before-middle-plus-one-by-last-divisor-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-before-middle-plus-one-by-last-divisor-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() = last() div 2 + last() div 4]" through the runtime surface', () => {
@@ -935,7 +1125,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-middle-by-summed-last-divisors-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-middle-by-summed-last-divisors-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() &lt; last() div 2 + last() div 4]" through the runtime surface', () => {
@@ -950,7 +1144,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-before-middle-by-summed-last-divisors-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-before-middle-by-summed-last-divisors-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() &lt; last() div 2 + last() div 4)]" through the runtime surface', () => {
@@ -965,7 +1163,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-before-middle-by-summed-last-divisors-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-before-middle-by-summed-last-divisors-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() = (last() div 2) * 2]" through the runtime surface', () => {
@@ -980,7 +1182,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-end-by-scaled-last-divisor-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-end-by-scaled-last-divisor-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() = (last() div 2) * (last() div 2)]" through the runtime surface', () => {
@@ -995,7 +1201,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-end-by-squared-last-divisor-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-end-by-squared-last-divisor-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() != (last() div 2) * (last() div 2)]" through the runtime surface', () => {
@@ -1010,7 +1220,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-end-by-squared-last-divisor-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-end-by-squared-last-divisor-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() &lt; (last() div 2) * (last() div 2)]" through the runtime surface', () => {
@@ -1025,7 +1239,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-before-end-by-squared-last-divisor-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-before-end-by-squared-last-divisor-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() &lt; (last() div 2) * (last() div 2))]" through the runtime surface', () => {
@@ -1040,7 +1258,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-before-end-by-squared-last-divisor-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-before-end-by-squared-last-divisor-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() != last() div 2 + last() div 4]" through the runtime surface', () => {
@@ -1055,7 +1277,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-middle-by-summed-last-divisors-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-middle-by-summed-last-divisors-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() &lt; last() div 2 + 1)]" through the runtime surface', () => {
@@ -1070,7 +1296,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-before-middle-plus-one-by-last-divisor-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-before-middle-plus-one-by-last-divisor-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[position() != last() div 2 + 1]" through the runtime surface', () => {
@@ -1085,7 +1315,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-middle-plus-one-by-last-divisor-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-middle-plus-one-by-last-divisor-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item><item>d</item></root>',
+    );
   });
 
   it('executes native xsl:apply-templates select="item[not(position() = 1 or position() = last())]" through the runtime surface', () => {
@@ -1100,7 +1334,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-not-first-or-last-position-function.xsl', '<root><item>a</item><item>b</item><item>c</item></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-not-first-or-last-position-function.xsl',
+      '<root><item>a</item><item>b</item><item>c</item></root>',
+    );
   });
 
   it('executes native default-select xsl:apply-templates position() through the runtime surface', () => {
@@ -1115,7 +1353,11 @@ describe('XSLT codegen MVP4 slice', () => {
       </xsl:stylesheet>
     `;
 
-    expectNativeRuntimeParity(stylesheet, 'apply-templates-default-select-position.xsl', '<root><item/><item/></root>');
+    expectNativeRuntimeParity(
+      stylesheet,
+      'apply-templates-default-select-position.xsl',
+      '<root><item/><item/></root>',
+    );
   });
 
   it('emits native code for xsl:comment', () => {
@@ -1146,7 +1388,10 @@ describe('XSLT codegen MVP4 slice', () => {
         </xsl:template>
       </xsl:stylesheet>
     `;
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'comment-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'comment-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
@@ -1199,7 +1444,10 @@ describe('XSLT codegen MVP4 slice', () => {
         </xsl:template>
       </xsl:stylesheet>
     `;
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'local-variable-value-of-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'local-variable-value-of-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
@@ -1224,9 +1472,13 @@ describe('XSLT codegen MVP4 slice', () => {
 
     const emitted = compileStylesheetToTs(stylesheet, { path: 'global-param-native.xsl' });
 
-    expect(emitted).toContain('const raw_global_param_greeting_0 = ctx.parameters?.["greeting"] ?? ctx.parameters?.["{}greeting"];');
+    expect(emitted).toContain(
+      'const raw_global_param_greeting_0 = ctx.parameters?.["greeting"] ?? ctx.parameters?.["{}greeting"];',
+    );
     expect(emitted).toContain('function get_global_param_greeting_0() {');
-    expect(emitted).toContain('global_param_greeting_0_cache.set("value", raw_global_param_greeting_0 === undefined ? "hello" : String(raw_global_param_greeting_0));');
+    expect(emitted).toContain(
+      'global_param_greeting_0_cache.set("value", raw_global_param_greeting_0 === undefined ? "hello" : String(raw_global_param_greeting_0));',
+    );
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
@@ -1347,14 +1599,18 @@ describe('XSLT codegen MVP4 slice', () => {
         </xsl:template>
       </xsl:stylesheet>
     `;
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'apply-templates-three-hop-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'apply-templates-three-hop-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
     const generatedModule = exports as {
       readonly transform: (source: string) => ReturnType<XsltProcessor['transform']>;
     };
-    const sourceXml = '<root><section><item><name>alpha</name><detail><marker>one</marker><marker>two</marker></detail></item></section></root>';
+    const sourceXml =
+      '<root><section><item><name>alpha</name><detail><marker>one</marker><marker>two</marker></detail></item></section></root>';
     const interpreterResult = new XsltProcessor(stylesheet).transform(sourceXml);
 
     expect(generatedModule.transform(sourceXml)).toEqual(interpreterResult);
@@ -1381,7 +1637,8 @@ describe('XSLT codegen MVP4 slice', () => {
         </xsl:template>
       </xsl:stylesheet>
     `;
-    const sourceXml = '<root><section><item><name>alpha</name><group><detail>one</detail><detail>two</detail></group></item></section></root>';
+    const sourceXml =
+      '<root><section><item><name>alpha</name><group><detail>one</detail><detail>two</detail></group></item></section></root>';
 
     expectNativeRuntimeParity(stylesheet, 'apply-templates-nested-default-runtime.xsl', sourceXml);
   });
@@ -1427,8 +1684,13 @@ describe('XSLT codegen MVP4 slice', () => {
     `;
     const sourceXml = '<root/>';
 
-    expectNativeRuntimeParity(stylesheet, 'initial-template-prefixed-name-native-runtime.xsl', sourceXml, {
-      initialTemplate: 't:main',
-    });
+    expectNativeRuntimeParity(
+      stylesheet,
+      'initial-template-prefixed-name-native-runtime.xsl',
+      sourceXml,
+      {
+        initialTemplate: 't:main',
+      },
+    );
   });
 });

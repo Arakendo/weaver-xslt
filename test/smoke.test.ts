@@ -112,7 +112,9 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item></root>', { execution: 'auto' }),
+    ).toEqual({
       output: '<out>a</out>',
       execution: {
         requested: 'auto',
@@ -133,7 +135,9 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item></root>', { execution: 'auto' }),
+    ).toEqual({
       output: '<out>a</out>',
       execution: {
         requested: 'auto',
@@ -154,7 +158,9 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item></root>', { execution: 'auto' }),
+    ).toEqual({
       output: '<out>b</out>',
       execution: {
         requested: 'auto',
@@ -175,7 +181,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>bc</out>',
       execution: {
         requested: 'auto',
@@ -196,7 +206,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>bc</out>',
       execution: {
         requested: 'auto',
@@ -217,7 +231,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>bd</out>',
       execution: {
         requested: 'auto',
@@ -238,7 +256,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>b</out>',
       execution: {
         requested: 'auto',
@@ -259,7 +281,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>ab</out>',
       execution: {
         requested: 'auto',
@@ -280,7 +306,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>b</out>',
       execution: {
         requested: 'auto',
@@ -301,7 +331,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>ac</out>',
       execution: {
         requested: 'auto',
@@ -322,7 +356,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>acd</out>',
       execution: {
         requested: 'auto',
@@ -343,7 +381,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>ab</out>',
       execution: {
         requested: 'auto',
@@ -364,7 +406,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>ac</out>',
       execution: {
         requested: 'auto',
@@ -385,7 +431,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>b</out>',
       execution: {
         requested: 'auto',
@@ -406,7 +456,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>c</out>',
       execution: {
         requested: 'auto',
@@ -427,7 +481,12 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item><item>e</item><item>f</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform(
+        '<root><item>a</item><item>b</item><item>c</item><item>d</item><item>e</item><item>f</item></root>',
+        { execution: 'auto' },
+      ),
+    ).toEqual({
       output: '<out>ae</out>',
       execution: {
         requested: 'auto',
@@ -448,7 +507,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>cd</out>',
       execution: {
         requested: 'auto',
@@ -469,7 +532,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>abd</out>',
       execution: {
         requested: 'auto',
@@ -490,7 +557,12 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item><item>e</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform(
+        '<root><item>a</item><item>b</item><item>c</item><item>d</item><item>e</item></root>',
+        { execution: 'auto' },
+      ),
+    ).toEqual({
       output: '<out>abe</out>',
       execution: {
         requested: 'auto',
@@ -511,7 +583,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>cd</out>',
       execution: {
         requested: 'auto',
@@ -532,7 +608,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>c</out>',
       execution: {
         requested: 'auto',
@@ -553,7 +633,9 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item></root>', { execution: 'auto' }),
+    ).toEqual({
       output: '<out>a</out>',
       execution: {
         requested: 'auto',
@@ -574,7 +656,9 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item></root>', { execution: 'auto' }),
+    ).toEqual({
       output: '<out>a</out>',
       execution: {
         requested: 'auto',
@@ -616,7 +700,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>abc</out>',
       execution: {
         requested: 'auto',
@@ -637,7 +725,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>d</out>',
       execution: {
         requested: 'auto',
@@ -658,7 +750,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>abd</out>',
       execution: {
         requested: 'auto',
@@ -679,7 +775,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>b</out>',
       execution: {
         requested: 'auto',
@@ -700,7 +800,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>acd</out>',
       execution: {
         requested: 'auto',
@@ -721,7 +825,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>acd</out>',
       execution: {
         requested: 'auto',
@@ -742,7 +850,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>a</out>',
       execution: {
         requested: 'auto',
@@ -763,7 +875,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>bcd</out>',
       execution: {
         requested: 'auto',
@@ -784,7 +900,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>c</out>',
       execution: {
         requested: 'auto',
@@ -805,7 +925,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>abd</out>',
       execution: {
         requested: 'auto',
@@ -826,7 +950,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>abd</out>',
       execution: {
         requested: 'auto',
@@ -847,7 +975,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>ab</out>',
       execution: {
         requested: 'auto',
@@ -868,7 +1000,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>c</out>',
       execution: {
         requested: 'auto',
@@ -889,7 +1025,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>ab</out>',
       execution: {
         requested: 'auto',
@@ -910,7 +1050,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>cd</out>',
       execution: {
         requested: 'auto',
@@ -931,7 +1075,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>d</out>',
       execution: {
         requested: 'auto',
@@ -952,7 +1100,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>d</out>',
       execution: {
         requested: 'auto',
@@ -973,7 +1125,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>abc</out>',
       execution: {
         requested: 'auto',
@@ -994,7 +1150,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>abc</out>',
       execution: {
         requested: 'auto',
@@ -1015,7 +1175,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>abd</out>',
       execution: {
         requested: 'auto',
@@ -1036,7 +1200,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>abd</out>',
       execution: {
         requested: 'auto',
@@ -1057,7 +1225,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>cd</out>',
       execution: {
         requested: 'auto',
@@ -1078,7 +1250,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>abc</out>',
       execution: {
         requested: 'auto',
@@ -1099,7 +1275,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>d</out>',
       execution: {
         requested: 'auto',
@@ -1120,7 +1300,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', { execution: 'auto' })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item><item>c</item><item>d</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>abcd</out>',
       execution: {
         requested: 'auto',
@@ -1131,12 +1315,14 @@ describe('Weaver scaffold', () => {
           suggestions: [
             {
               kind: 'fix',
-              label: 'retry with execution="native" to get a hard unsupported-native error while simplifying the stylesheet',
+              label:
+                'retry with execution="native" to get a hard unsupported-native error while simplifying the stylesheet',
               confidence: 1,
             },
             {
               kind: 'hint',
-              label: 'simplify the select/match shape toward the documented native slice if you want to stay on the native path',
+              label:
+                'simplify the select/match shape toward the documented native slice if you want to stay on the native path',
               confidence: 0.9,
             },
           ],
@@ -1152,7 +1338,9 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><name>world</name></root>')).toEqual({ output: '<hello>world</hello>' });
+    expect(proc.transform('<root><name>world</name></root>')).toEqual({
+      output: '<hello>world</hello>',
+    });
   });
 
   it('applies templates through the built-in root and element rules', () => {
@@ -1263,6 +1451,21 @@ describe('Weaver scaffold', () => {
     });
   });
 
+  it('evaluates attribute value templates on literal result attributes', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:variable name="filePath" select="'assets'"/>
+        <xsl:template match="/">
+          <out data-href="{$filePath}/{root/@id}.html" title="{{brace}}"/>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root id="intro"/>')).toEqual({
+      output: '<out data-href="assets/intro.html" title="{brace}"></out>',
+    });
+  });
+
   it('renders xsl:if bodies only when the test expression is true', () => {
     const proc = new XsltProcessor(`
       <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
@@ -1295,7 +1498,11 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><person><sex>M</sex></person><person><sex>F</sex></person><person><sex>X</sex></person></root>')).toEqual({
+    expect(
+      proc.transform(
+        '<root><person><sex>M</sex></person><person><sex>F</sex></person><person><sex>X</sex></person></root>',
+      ),
+    ).toEqual({
       output: '<out><male></male><other></other></out>',
     });
   });
@@ -1366,10 +1573,12 @@ describe('Weaver scaffold', () => {
       output: '<out>root:2</out>',
     });
 
-    expect(proc.transform('<root><item/><item/></root>', {
-      initialTemplate: 'main',
-      execution: 'native',
-    })).toEqual({
+    expect(
+      proc.transform('<root><item/><item/></root>', {
+        initialTemplate: 'main',
+        execution: 'native',
+      }),
+    ).toEqual({
       output: '<out>root:2</out>',
       execution: {
         requested: 'native',
@@ -1387,10 +1596,12 @@ describe('Weaver scaffold', () => {
       </xsl:stylesheet>
     `);
 
-    expect(proc.transform('<root><item/><item/></root>', {
-      initialTemplate: 'main',
-      execution: 'native',
-    })).toEqual({
+    expect(
+      proc.transform('<root><item/><item/></root>', {
+        initialTemplate: 'main',
+        execution: 'native',
+      }),
+    ).toEqual({
       output: '<out>2</out>',
       execution: {
         requested: 'native',
@@ -1431,10 +1642,12 @@ describe('Weaver scaffold', () => {
       output: '<out xmlns:t="urn:test">ok</out>',
     });
 
-    expect(proc.transform('<root/>', {
-      initialTemplate: 't:main',
-      execution: 'native',
-    })).toEqual({
+    expect(
+      proc.transform('<root/>', {
+        initialTemplate: 't:main',
+        execution: 'native',
+      }),
+    ).toEqual({
       output: '<out xmlns:t="urn:test">ok</out>',
       execution: {
         requested: 'native',
@@ -1467,9 +1680,11 @@ describe('Weaver scaffold', () => {
       output: '<out><entry>root</entry><entry>a</entry><entry>b</entry></out>',
     });
 
-    expect(proc.transform('<root><item>a</item><item>b</item></root>', {
-      execution: 'auto',
-    })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out><entry>root</entry><entry>a</entry><entry>b</entry></out>',
       execution: {
         requested: 'auto',
@@ -1477,9 +1692,11 @@ describe('Weaver scaffold', () => {
       },
     });
 
-    expect(proc.transform('<root><item>a</item><item>b</item></root>', {
-      execution: 'native',
-    })).toEqual({
+    expect(
+      proc.transform('<root><item>a</item><item>b</item></root>', {
+        execution: 'native',
+      }),
+    ).toEqual({
       output: '<out><entry>root</entry><entry>a</entry><entry>b</entry></out>',
       execution: {
         requested: 'native',
@@ -1528,9 +1745,11 @@ describe('Weaver scaffold', () => {
       output: '<out>root</out>',
     });
 
-    expect(proc.transform('<root/>', {
-      execution: 'auto',
-    })).toEqual({
+    expect(
+      proc.transform('<root/>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>root</out>',
       execution: {
         requested: 'auto',
@@ -1538,9 +1757,11 @@ describe('Weaver scaffold', () => {
       },
     });
 
-    expect(proc.transform('<root/>', {
-      execution: 'native',
-    })).toEqual({
+    expect(
+      proc.transform('<root/>', {
+        execution: 'native',
+      }),
+    ).toEqual({
       output: '<out>root</out>',
       execution: {
         requested: 'native',
@@ -1575,9 +1796,11 @@ describe('Weaver scaffold', () => {
       output: '<out><entry>default</entry><entry>override</entry></out>',
     });
 
-    expect(proc.transform('<root/>', {
-      execution: 'auto',
-    })).toEqual({
+    expect(
+      proc.transform('<root/>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out><entry>default</entry><entry>override</entry></out>',
       execution: {
         requested: 'auto',
@@ -1585,9 +1808,11 @@ describe('Weaver scaffold', () => {
       },
     });
 
-    expect(proc.transform('<root/>', {
-      execution: 'native',
-    })).toEqual({
+    expect(
+      proc.transform('<root/>', {
+        execution: 'native',
+      }),
+    ).toEqual({
       output: '<out><entry>default</entry><entry>override</entry></out>',
       execution: {
         requested: 'native',
@@ -1673,9 +1898,11 @@ describe('Weaver scaffold', () => {
       output: '<out>hello</out>',
     });
 
-    expect(proc.transform('<root/>', {
-      execution: 'auto',
-    })).toEqual({
+    expect(
+      proc.transform('<root/>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>hello</out>',
       execution: {
         requested: 'auto',
@@ -1683,9 +1910,11 @@ describe('Weaver scaffold', () => {
       },
     });
 
-    expect(proc.transform('<root/>', {
-      execution: 'native',
-    })).toEqual({
+    expect(
+      proc.transform('<root/>', {
+        execution: 'native',
+      }),
+    ).toEqual({
       output: '<out>hello</out>',
       execution: {
         requested: 'native',
@@ -1708,9 +1937,11 @@ describe('Weaver scaffold', () => {
       output: '<out>hello</out>',
     });
 
-    expect(proc.transform('<root/>', {
-      execution: 'auto',
-    })).toEqual({
+    expect(
+      proc.transform('<root/>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>hello</out>',
       execution: {
         requested: 'auto',
@@ -1718,9 +1949,11 @@ describe('Weaver scaffold', () => {
       },
     });
 
-    expect(proc.transform('<root/>', {
-      execution: 'native',
-    })).toEqual({
+    expect(
+      proc.transform('<root/>', {
+        execution: 'native',
+      }),
+    ).toEqual({
       output: '<out>hello</out>',
       execution: {
         requested: 'native',
@@ -1728,20 +1961,24 @@ describe('Weaver scaffold', () => {
       },
     });
 
-    expect(proc.transform('<root/>', {
-      parameters: {
-        greeting: 'hi',
-      },
-    })).toEqual({
+    expect(
+      proc.transform('<root/>', {
+        parameters: {
+          greeting: 'hi',
+        },
+      }),
+    ).toEqual({
       output: '<out>hi</out>',
     });
 
-    expect(proc.transform('<root/>', {
-      execution: 'auto',
-      parameters: {
-        greeting: 'hi',
-      },
-    })).toEqual({
+    expect(
+      proc.transform('<root/>', {
+        execution: 'auto',
+        parameters: {
+          greeting: 'hi',
+        },
+      }),
+    ).toEqual({
       output: '<out>hi</out>',
       execution: {
         requested: 'auto',
@@ -1769,9 +2006,11 @@ describe('Weaver scaffold', () => {
       output: '<out>default</out>',
     });
 
-    expect(proc.transform('<root/>', {
-      execution: 'auto',
-    })).toEqual({
+    expect(
+      proc.transform('<root/>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>default</out>',
       execution: {
         requested: 'auto',
@@ -1779,9 +2018,11 @@ describe('Weaver scaffold', () => {
       },
     });
 
-    expect(proc.transform('<root/>', {
-      execution: 'native',
-    })).toEqual({
+    expect(
+      proc.transform('<root/>', {
+        execution: 'native',
+      }),
+    ).toEqual({
       output: '<out>default</out>',
       execution: {
         requested: 'native',
@@ -1805,9 +2046,11 @@ describe('Weaver scaffold', () => {
       output: '<out>ok</out>',
     });
 
-    expect(proc.transform('<root><item>ok</item></root>', {
-      execution: 'auto',
-    })).toEqual({
+    expect(
+      proc.transform('<root><item>ok</item></root>', {
+        execution: 'auto',
+      }),
+    ).toEqual({
       output: '<out>ok</out>',
       execution: {
         requested: 'auto',
@@ -1815,9 +2058,11 @@ describe('Weaver scaffold', () => {
       },
     });
 
-    expect(proc.transform('<root><item>ok</item></root>', {
-      execution: 'native',
-    })).toEqual({
+    expect(
+      proc.transform('<root><item>ok</item></root>', {
+        execution: 'native',
+      }),
+    ).toEqual({
       output: '<out>ok</out>',
       execution: {
         requested: 'native',

@@ -5,6 +5,7 @@ export const source = { path: "apply-templates-absolute-match-default-for-each-c
 
 /** match="/" (apply-templates-absolute-match-default-for-each-choose-nested-if.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
+  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;
   resetRecordedTracePause(ctx.trace);
   if (ctx.initialMode !== undefined) {
     throwUnsupportedNativeInitialMode(ctx.initialMode);
@@ -20,8 +21,8 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     output:
       (
   /** literal items (apply-templates-absolute-match-default-for-each-choose-nested-if.xsl:1) */
-  "<items>" +
-    (
+  (() => {
+  const body = (
   /** xsl:apply-templates (apply-templates-absolute-match-default-for-each-choose-nested-if.xsl:1) */
   applyBuiltInTemplatesByPath(document, ["root","item"], (templateNode, templateIndex, templateNodes) => (
   /** match="/root/item" (apply-templates-absolute-match-default-for-each-choose-nested-if.xsl:1) */
@@ -30,15 +31,15 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   traceTemplateEnter(templateNode, ctx, {"match":"/root/item","location":{"source":"apply-templates-absolute-match-default-for-each-choose-nested-if.xsl","line":1,"column":101,"offset":100,"endLine":1,"endColumn":102,"endOffset":101}});
   return (
   /** literal item (apply-templates-absolute-match-default-for-each-choose-nested-if.xsl:1) */
-  "<item>" +
-    (
+  (() => {
+  const body = (
   /** xsl:value-of (apply-templates-absolute-match-default-for-each-choose-nested-if.xsl:1) */
   escapeText(traceStringValueOfNode(selectSimplePathNode(templateNode, ["name"]), ctx, {"kind":"xsl:value-of","location":{"source":"apply-templates-absolute-match-default-for-each-choose-nested-if.xsl","line":1,"column":217,"offset":216,"endLine":1,"endColumn":221,"endOffset":220}}))
 ) +
     (
   /** literal details (apply-templates-absolute-match-default-for-each-choose-nested-if.xsl:1) */
-  "<details>" +
-    (
+  (() => {
+  const body = (
   /** xsl:for-each (apply-templates-absolute-match-default-for-each-choose-nested-if.xsl:1) */
   traceSelectedNodes(selectSimplePathNodes(templateNode, ["detail"]), ctx, {"kind":"xsl:for-each","location":{"source":"apply-templates-absolute-match-default-for-each-choose-nested-if.xsl","line":1,"column":217,"offset":216,"endLine":1,"endColumn":221,"endOffset":220}}).map((currentNode) => (
   /** xsl:choose (apply-templates-absolute-match-default-for-each-choose-nested-if.xsl:1) */
@@ -48,8 +49,10 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   /** xsl:if (apply-templates-absolute-match-default-for-each-choose-nested-if.xsl:1) */
   (selectSimplePathExists(currentNode, ["marker"]) ? (
   /** literal flagged (apply-templates-absolute-match-default-for-each-choose-nested-if.xsl:1) */
-  "<flagged>" +
-    "</flagged>"
+  (() => {
+  const body = "";
+  return "<flagged" + "" + ">" + body + "</flagged>";
+})()
 ) : "")
 )
 ) : (
@@ -58,21 +61,26 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   /** xsl:if (apply-templates-absolute-match-default-for-each-choose-nested-if.xsl:1) */
   (selectSimplePathExists(currentNode, ["vip"]) ? (
   /** literal vip (apply-templates-absolute-match-default-for-each-choose-nested-if.xsl:1) */
-  "<vip>" +
-    "</vip>"
+  (() => {
+  const body = "";
+  return "<vip" + "" + ">" + body + "</vip>";
+})()
 ) : "")
 )
 ))
 )).join("")
-) +
-    "</details>"
-) +
-    "</item>"
+);
+  return "<details" + "" + ">" + body + "</details>";
+})()
+);
+  return "<item" + "" + ">" + body + "</item>";
+})()
 );
 })()
 ), true, ctx, {"kind":"xsl:apply-templates","location":{"source":"apply-templates-absolute-match-default-for-each-choose-nested-if.xsl","line":1,"column":111,"offset":110,"endLine":1,"endColumn":112,"endOffset":111}})
-) +
-    "</items>"
+);
+  return "<items" + "" + ">" + body + "</items>";
+})()
 ),
     ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),
   };

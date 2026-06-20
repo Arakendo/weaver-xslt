@@ -99,6 +99,14 @@ describe('XPath expression coverage', () => {
     ]);
   });
 
+  it('coerces node-valued variables in arithmetic expressions', () => {
+    const context = createContext('<root><item>30</item></root>');
+
+    expect([...evaluate(parseXPath('let $x := /root/item return $x + 1'), context)]).toMatchObject([
+      { type: 'xs:double', value: 31 },
+    ]);
+  });
+
   it('evaluates the initial for-return slice', () => {
     const context = createContext('<root><item>A</item><item>B</item></root>');
 

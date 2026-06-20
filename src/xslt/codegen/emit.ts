@@ -13,56 +13,82 @@ export function emitStylesheetModule(
   const typeBlock = createStylesheetTypeBlock(ir);
 
   if (nativePlan !== undefined) {
-    const defaultIsInitialTemplateExecution = nativePlan.initialTemplateName !== undefined && nativePlan.initialTemplateEntryTemplate === undefined;
+    const defaultIsInitialTemplateExecution =
+      nativePlan.initialTemplateName !== undefined &&
+      nativePlan.initialTemplateEntryTemplate === undefined;
     const defaultNeedsTraceDocumentBinding = !nativePlan.needsCurrentNodeBinding;
-    const defaultTraceNodeIdentifier = nativePlan.needsCurrentNodeBinding ? 'currentNode' : 'document';
-    const defaultCurrentNodeIsDocument = renderTsExpression(nativePlan.currentNodeExpression) === 'document';
+    const defaultTraceNodeIdentifier = nativePlan.needsCurrentNodeBinding
+      ? 'currentNode'
+      : 'document';
+    const defaultCurrentNodeIsDocument =
+      renderTsExpression(nativePlan.currentNodeExpression) === 'document';
     const defaultTemplateInfo = JSON.stringify({
-      ...(nativePlan.entryTemplate.matchText === undefined ? {} : { match: nativePlan.entryTemplate.matchText }),
-      ...(nativePlan.entryTemplate.name === undefined ? {} : { name: nativePlan.entryTemplate.name }),
+      ...(nativePlan.entryTemplate.matchText === undefined
+        ? {}
+        : { match: nativePlan.entryTemplate.matchText }),
+      ...(nativePlan.entryTemplate.name === undefined
+        ? {}
+        : { name: nativePlan.entryTemplate.name }),
       location: nativePlan.entryTemplate.location,
     });
-    const initialNeedsTraceDocumentBinding = !(nativePlan.initialTemplateNeedsCurrentNodeBinding ?? false);
-    const initialTraceNodeIdentifier = (nativePlan.initialTemplateNeedsCurrentNodeBinding ?? false) ? 'currentNode' : 'document';
-    const initialTemplateInfo = nativePlan.initialTemplateEntryTemplate === undefined
-      ? undefined
-      : JSON.stringify({
-          ...(nativePlan.initialTemplateEntryTemplate.matchText === undefined ? {} : { match: nativePlan.initialTemplateEntryTemplate.matchText }),
-          ...(nativePlan.initialTemplateEntryTemplate.name === undefined ? {} : { name: nativePlan.initialTemplateEntryTemplate.name }),
-          location: nativePlan.initialTemplateEntryTemplate.location,
-        });
+    const initialNeedsTraceDocumentBinding = !(
+      nativePlan.initialTemplateNeedsCurrentNodeBinding ?? false
+    );
+    const initialTraceNodeIdentifier =
+      (nativePlan.initialTemplateNeedsCurrentNodeBinding ?? false) ? 'currentNode' : 'document';
+    const initialTemplateInfo =
+      nativePlan.initialTemplateEntryTemplate === undefined
+        ? undefined
+        : JSON.stringify({
+            ...(nativePlan.initialTemplateEntryTemplate.matchText === undefined
+              ? {}
+              : { match: nativePlan.initialTemplateEntryTemplate.matchText }),
+            ...(nativePlan.initialTemplateEntryTemplate.name === undefined
+              ? {}
+              : { name: nativePlan.initialTemplateEntryTemplate.name }),
+            location: nativePlan.initialTemplateEntryTemplate.location,
+          });
     const initialModeGuardStatements = [
       '  if (ctx.initialMode !== undefined) {',
       '    throwUnsupportedNativeInitialMode(ctx.initialMode);',
       '  }',
     ];
-    const missingInitialTemplateGuardStatements = nativePlan.initialTemplateName !== undefined
-      ? []
-      : [
-          '  if (ctx.initialTemplate !== undefined) {',
-          '    throwMissingNativeInitialTemplate(ctx.initialTemplate, []);',
-          '  }',
-        ];
-    const initialTemplateValueStatements = nativePlan.initialTemplateName === undefined
-      ? []
-      : [
-          '  const requestedInitialTemplate = ctx.initialTemplate === undefined',
-          '    ? undefined',
-          `    : normalizeNativeTemplateName(ctx.initialTemplate, ${JSON.stringify(ir.namespaces)}, ${JSON.stringify(ir.defaultElementNamespace)});`,
-        ];
-    const initialTemplateGuardStatements = nativePlan.initialTemplateName === undefined
-      ? []
-      : [
-          '  if (requestedInitialTemplate !== undefined && requestedInitialTemplate !== ' + JSON.stringify(nativePlan.initialTemplateName) + ') {',
-          '    throwMissingNativeInitialTemplate(ctx.initialTemplate, [' + JSON.stringify(nativePlan.initialTemplateName) + ']);',
-          '  }',
-        ];
+    const missingInitialTemplateGuardStatements =
+      nativePlan.initialTemplateName !== undefined
+        ? []
+        : [
+            '  if (ctx.initialTemplate !== undefined) {',
+            '    throwMissingNativeInitialTemplate(ctx.initialTemplate, []);',
+            '  }',
+          ];
+    const initialTemplateValueStatements =
+      nativePlan.initialTemplateName === undefined
+        ? []
+        : [
+            '  const requestedInitialTemplate = ctx.initialTemplate === undefined',
+            '    ? undefined',
+            `    : normalizeNativeTemplateName(ctx.initialTemplate, ${JSON.stringify(ir.namespaces)}, ${JSON.stringify(ir.defaultElementNamespace)});`,
+          ];
+    const initialTemplateGuardStatements =
+      nativePlan.initialTemplateName === undefined
+        ? []
+        : [
+            '  if (requestedInitialTemplate !== undefined && requestedInitialTemplate !== ' +
+              JSON.stringify(nativePlan.initialTemplateName) +
+              ') {',
+            '    throwMissingNativeInitialTemplate(ctx.initialTemplate, [' +
+              JSON.stringify(nativePlan.initialTemplateName) +
+              ']);',
+            '  }',
+          ];
     const defaultBodyStatements = [
       ...(nativePlan.setupStatements.length === 0 ? ['  void ctx;'] : []),
       ...(nativePlan.needsDocumentBinding || defaultNeedsTraceDocumentBinding
         ? ['  const document = createCompiledDocument(sourceXml);']
         : ['  createCompiledDocument(sourceXml);']),
-      ...(!defaultIsInitialTemplateExecution && defaultTraceNodeIdentifier !== 'document' && !defaultCurrentNodeIsDocument
+      ...(!defaultIsInitialTemplateExecution &&
+      defaultTraceNodeIdentifier !== 'document' &&
+      !defaultCurrentNodeIsDocument
         ? ['  traceFocusEnter(document, ctx);']
         : []),
       ...nativePlan.setupStatements.map((statement) => `  ${statement}`),
@@ -70,13 +96,11 @@ export function emitStylesheetModule(
         ? [`  const currentNode = ${renderTsExpression(nativePlan.currentNodeExpression)};`]
         : []),
       ...(nativePlan.currentNodeMayBeNull
-        ? [
-            '  if (currentNode === null) {',
-            '    return { output: "" };',
-            '  }',
-          ]
+        ? ['  if (currentNode === null) {', '    return { output: "" };', '  }']
         : []),
-      ...(defaultIsInitialTemplateExecution ? [] : [`  traceFocusEnter(${defaultTraceNodeIdentifier}, ctx);`]),
+      ...(defaultIsInitialTemplateExecution
+        ? []
+        : [`  traceFocusEnter(${defaultTraceNodeIdentifier}, ctx);`]),
       `  traceTemplateEnter(${defaultTraceNodeIdentifier}, ctx, ${defaultTemplateInfo});`,
       '  return {',
       '    output:',
@@ -84,48 +108,54 @@ export function emitStylesheetModule(
       '    ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),',
       '  };',
     ];
-    const wrappedDefaultBodyStatements = nativePlan.initialTemplateEntryTemplate !== undefined
-      ? defaultBodyStatements
-      : nativePlan.initialTemplateName === undefined
+    const wrappedDefaultBodyStatements =
+      nativePlan.initialTemplateEntryTemplate !== undefined
         ? defaultBodyStatements
+        : nativePlan.initialTemplateName === undefined
+          ? defaultBodyStatements
+          : [
+              '  try {',
+              ...defaultBodyStatements.map((statement) => `  ${statement.slice(2)}`),
+              '  } catch (error) {',
+              `    throw prependNativeInitialTemplateError(error, ${JSON.stringify(nativePlan.initialTemplateName)}, ${JSON.stringify(nativePlan.entryTemplate.location)});`,
+              '  }',
+            ];
+    const initialTemplateBodyStatements =
+      nativePlan.initialTemplateEntryTemplate === undefined
+        ? []
         : [
-            '  try {',
-            ...defaultBodyStatements.map((statement) => `  ${statement.slice(2)}`),
-            '  } catch (error) {',
-            `    throw prependNativeInitialTemplateError(error, ${JSON.stringify(nativePlan.initialTemplateName)}, ${JSON.stringify(nativePlan.entryTemplate.location)});`,
+            '  if (requestedInitialTemplate === ' +
+              JSON.stringify(nativePlan.initialTemplateName) +
+              ') {',
+            '    try {',
+            ...((nativePlan.initialTemplateSetupStatements ?? []).length === 0
+              ? ['      void ctx;']
+              : []),
+            ...(nativePlan.needsDocumentBinding || initialNeedsTraceDocumentBinding
+              ? ['      const document = createCompiledDocument(sourceXml);']
+              : ['      createCompiledDocument(sourceXml);']),
+            ...(nativePlan.initialTemplateSetupStatements ?? []).map(
+              (statement) => `      ${statement}`,
+            ),
+            ...((nativePlan.initialTemplateNeedsCurrentNodeBinding ?? false)
+              ? [
+                  `      const currentNode = ${renderTsExpression(nativePlan.initialTemplateCurrentNodeExpression!)};`,
+                ]
+              : []),
+            ...((nativePlan.initialTemplateCurrentNodeMayBeNull ?? false)
+              ? ['      if (currentNode === null) {', '        return { output: "" };', '      }']
+              : []),
+            `      traceTemplateEnter(${initialTraceNodeIdentifier}, ctx, ${initialTemplateInfo!});`,
+            '      return {',
+            '        output:',
+            `          ${renderTsExpression(nativePlan.initialTemplateOutputExpression!)},`,
+            '        ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),',
+            '      };',
+            '    } catch (error) {',
+            `      throw prependNativeInitialTemplateError(error, ${JSON.stringify(nativePlan.initialTemplateName)}, ${JSON.stringify(nativePlan.initialTemplateEntryTemplate.location)});`,
+            '    }',
             '  }',
           ];
-    const initialTemplateBodyStatements = nativePlan.initialTemplateEntryTemplate === undefined
-      ? []
-      : [
-          '  if (requestedInitialTemplate === ' + JSON.stringify(nativePlan.initialTemplateName) + ') {',
-          '    try {',
-          ...((nativePlan.initialTemplateSetupStatements ?? []).length === 0 ? ['      void ctx;'] : []),
-          ...(nativePlan.needsDocumentBinding || initialNeedsTraceDocumentBinding
-            ? ['      const document = createCompiledDocument(sourceXml);']
-            : ['      createCompiledDocument(sourceXml);']),
-          ...(nativePlan.initialTemplateSetupStatements ?? []).map((statement) => `      ${statement}`),
-          ...((nativePlan.initialTemplateNeedsCurrentNodeBinding ?? false)
-            ? [`      const currentNode = ${renderTsExpression(nativePlan.initialTemplateCurrentNodeExpression!)};`]
-            : []),
-          ...((nativePlan.initialTemplateCurrentNodeMayBeNull ?? false)
-            ? [
-                '      if (currentNode === null) {',
-                '        return { output: "" };',
-                '      }',
-              ]
-            : []),
-          `      traceTemplateEnter(${initialTraceNodeIdentifier}, ctx, ${initialTemplateInfo!});`,
-          '      return {',
-          '        output:',
-          `          ${renderTsExpression(nativePlan.initialTemplateOutputExpression!)},`,
-          '        ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),',
-          '      };',
-          '    } catch (error) {',
-          `      throw prependNativeInitialTemplateError(error, ${JSON.stringify(nativePlan.initialTemplateName)}, ${JSON.stringify(nativePlan.initialTemplateEntryTemplate.location)});`,
-          '    }',
-          '  }',
-        ];
     return renderTsModule({
       statements: [
         `import { ${[...new Set(['throwMissingNativeInitialTemplate', 'throwUnsupportedNativeInitialMode', 'getRecordedTracePause', 'resetRecordedTracePause', 'traceFocusEnter', 'traceTemplateEnter', ...nativePlan.runtimeHelpers])].join(', ')} } from ${JSON.stringify(plan.moduleSpecifier)};`,
@@ -138,6 +168,7 @@ export function emitStylesheetModule(
         '',
         renderTemplateProvenanceComment(nativePlan.entryTemplate, plan.sourcePath),
         `export function transform(sourceXml: string, ctx: ${typeBlock.transformContextTypeName} = {}): TransformResult {`,
+        '  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;',
         '  resetRecordedTracePause(ctx.trace);',
         ...initialModeGuardStatements,
         ...missingInitialTemplateGuardStatements,
@@ -165,6 +196,7 @@ export function emitStylesheetModule(
       `export const source = { path: ${JSON.stringify(plan.sourcePath)}, digest: ${JSON.stringify(plan.digest)} } as const;`,
       '',
       `export function transform(sourceXml: string, ctx: ${typeBlock.transformContextTypeName} = {}): TransformResult {`,
+      '  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;',
       '  return transformCompiledStylesheet(stylesheet, sourceXml, ctx);',
       '}',
       '',
@@ -186,12 +218,22 @@ export function emitStylesheetDeclarationModule(
   statements.push(...typeBlock.importStatements);
 
   statements.push('');
-  statements.push(`export declare const source: { readonly path: ${JSON.stringify(plan.sourcePath)}; readonly digest: ${JSON.stringify(plan.digest)}; };`);
+  statements.push(
+    `export declare const source: { readonly path: ${JSON.stringify(plan.sourcePath)}; readonly digest: ${JSON.stringify(plan.digest)}; };`,
+  );
   statements.push('');
-  statements.push(...typeBlock.typeStatements.map((statement) => statement.replace('export interface', 'export interface').replace('export type', 'export type')));
+  statements.push(
+    ...typeBlock.typeStatements.map((statement) =>
+      statement
+        .replace('export interface', 'export interface')
+        .replace('export type', 'export type'),
+    ),
+  );
 
   statements.push('');
-  statements.push('export declare function transform(sourceXml: string, ctx?: StylesheetTransformContext): TransformResult;');
+  statements.push(
+    'export declare function transform(sourceXml: string, ctx?: StylesheetTransformContext): TransformResult;',
+  );
   statements.push('');
   statements.push('declare const _default: {');
   statements.push('  readonly source: typeof source;');
@@ -203,16 +245,20 @@ export function emitStylesheetDeclarationModule(
   return renderTsModule({ statements });
 }
 
-function mapStylesheetParamTypeToTs(declaredType: string | undefined, xmldomTypes: Set<string>): string {
+function mapStylesheetParamTypeToTs(
+  declaredType: string | undefined,
+  xmldomTypes: Set<string>,
+): string {
   if (declaredType === undefined) {
     return 'unknown';
   }
 
   const trimmedType = declaredType.trim();
   const occurrence = trimmedType.at(-1);
-  const baseType = occurrence === '?' || occurrence === '*' || occurrence === '+'
-    ? trimmedType.slice(0, -1).trim()
-    : trimmedType;
+  const baseType =
+    occurrence === '?' || occurrence === '*' || occurrence === '+'
+      ? trimmedType.slice(0, -1).trim()
+      : trimmedType;
 
   const mappedBaseType = mapStylesheetBaseTypeToTs(baseType, xmldomTypes);
   if (occurrence === '*' || occurrence === '+') {
@@ -259,7 +305,9 @@ interface StylesheetTypeBlock {
 }
 
 function createStylesheetTypeBlock(ir: StylesheetIR): StylesheetTypeBlock {
-  const parameters = ir.globalBindings.filter((binding): binding is GlobalParam => binding.kind === 'param');
+  const parameters = ir.globalBindings.filter(
+    (binding): binding is GlobalParam => binding.kind === 'param',
+  );
   if (parameters.length === 0) {
     return {
       importStatements: [],
@@ -276,9 +324,10 @@ function createStylesheetTypeBlock(ir: StylesheetIR): StylesheetTypeBlock {
   });
 
   return {
-    importStatements: xmldomTypes.size > 0
-      ? [`import type { ${[...xmldomTypes].sort().join(', ')} } from '@xmldom/xmldom';`]
-      : [],
+    importStatements:
+      xmldomTypes.size > 0
+        ? [`import type { ${[...xmldomTypes].sort().join(', ')} } from '@xmldom/xmldom';`]
+        : [],
     typeStatements: [
       'export interface StylesheetParameters extends Readonly<Record<string, unknown>> {',
       ...parameterLines,

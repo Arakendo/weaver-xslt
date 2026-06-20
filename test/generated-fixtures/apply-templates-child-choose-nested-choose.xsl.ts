@@ -5,6 +5,7 @@ export const source = { path: "apply-templates-child-choose-nested-choose.xsl", 
 
 /** match="/" (apply-templates-child-choose-nested-choose.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
+  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;
   resetRecordedTracePause(ctx.trace);
   if (ctx.initialMode !== undefined) {
     throwUnsupportedNativeInitialMode(ctx.initialMode);
@@ -20,8 +21,8 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     output:
       (
   /** literal items (apply-templates-child-choose-nested-choose.xsl:1) */
-  "<items>" +
-    (
+  (() => {
+  const body = (
   /** xsl:apply-templates (apply-templates-child-choose-nested-choose.xsl:1) */
   traceSelectedNodes(selectSimplePathNodesByStepPlan(document, [{"name":"root"},{"name":"item"}]), ctx, {"kind":"xsl:apply-templates","location":{"source":"apply-templates-child-choose-nested-choose.xsl","line":1,"column":140,"offset":139,"endLine":1,"endColumn":150,"endOffset":149}}).map((templateNode, templateIndex, templateNodes) => (
   /** match="item" (apply-templates-child-choose-nested-choose.xsl:1) */
@@ -30,8 +31,8 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   traceTemplateEnter(templateNode, ctx, {"match":"item","location":{"source":"apply-templates-child-choose-nested-choose.xsl","line":1,"column":101,"offset":100,"endLine":1,"endColumn":102,"endOffset":101}});
   return (
   /** literal item (apply-templates-child-choose-nested-choose.xsl:1) */
-  "<item>" +
-    (
+  (() => {
+  const body = (
   /** xsl:value-of (apply-templates-child-choose-nested-choose.xsl:1) */
   escapeText(traceStringValueOfNode(selectSimplePathNode(templateNode, ["name"]), ctx, {"kind":"xsl:value-of","location":{"source":"apply-templates-child-choose-nested-choose.xsl","line":1,"column":140,"offset":139,"endLine":1,"endColumn":150,"endOffset":149}}))
 ) +
@@ -45,15 +46,19 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   /** xsl:when (apply-templates-child-choose-nested-choose.xsl:1) */
   (
   /** literal flagged (apply-templates-child-choose-nested-choose.xsl:1) */
-  "<flagged>" +
-    "</flagged>"
+  (() => {
+  const body = "";
+  return "<flagged" + "" + ">" + body + "</flagged>";
+})()
 )
 ) : (
   /** xsl:otherwise (apply-templates-child-choose-nested-choose.xsl:1) */
   (
   /** literal brief (apply-templates-child-choose-nested-choose.xsl:1) */
-  "<brief>" +
-    "</brief>"
+  (() => {
+  const body = "";
+  return "<brief" + "" + ">" + body + "</brief>";
+})()
 )
 ))
 )
@@ -65,26 +70,32 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   /** xsl:when (apply-templates-child-choose-nested-choose.xsl:1) */
   (
   /** literal vip (apply-templates-child-choose-nested-choose.xsl:1) */
-  "<vip>" +
-    "</vip>"
+  (() => {
+  const body = "";
+  return "<vip" + "" + ">" + body + "</vip>";
+})()
 )
 ) : (
   /** xsl:otherwise (apply-templates-child-choose-nested-choose.xsl:1) */
   (
   /** literal plain (apply-templates-child-choose-nested-choose.xsl:1) */
-  "<plain>" +
-    "</plain>"
+  (() => {
+  const body = "";
+  return "<plain" + "" + ">" + body + "</plain>";
+})()
 )
 ))
 )
 ))
-) +
-    "</item>"
+);
+  return "<item" + "" + ">" + body + "</item>";
+})()
 );
 })()
 )).join("")
-) +
-    "</items>"
+);
+  return "<items" + "" + ">" + body + "</items>";
+})()
 ),
     ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),
   };

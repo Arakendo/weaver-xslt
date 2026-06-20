@@ -7,11 +7,11 @@ import { captureError } from '../helpers/captureError.js';
 import { NATIVE_DIRECT_PARITY_TAG, compileAndLoadGeneratedModule } from './compile.support.js';
 
 describe('codegen diagnostic parity', () => {
-  it('matches interpreter static diagnostics for unsupported instructions', () => {
+  it('matches interpreter static diagnostics for unsupported compile-time instruction features', () => {
     const stylesheet = [
       '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
       '  <xsl:template match="/">',
-      '    <out><xsl:copy-of select="/root/item"/></out>',
+      '    <out><xsl:apply-templates select="/root/item" mode="special"/></out>',
       '  </xsl:template>',
       '</xsl:stylesheet>',
     ].join('\n');
@@ -28,7 +28,9 @@ describe('codegen diagnostic parity', () => {
     const codegenReport = diagnosticReportFromError(codegenError);
 
     expect(codegenReport).toEqual(interpreterReport);
-    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
+    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
   });
 
   it(`${NATIVE_DIRECT_PARITY_TAG} matches interpreter and codegen diagnostics for undeclared xsl:call-template targets`, () => {
@@ -57,8 +59,12 @@ describe('codegen diagnostic parity', () => {
 
     expect(nativeReport).toEqual(interpreterReport);
     expect(codegenReport).toEqual(interpreterReport);
-    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
-    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
+    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
+    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
   });
 
   it(`${NATIVE_DIRECT_PARITY_TAG} preserves call-template typo suggestions under explicit native execution`, () => {
@@ -123,8 +129,12 @@ describe('codegen diagnostic parity', () => {
 
     expect(nativeReport).toEqual(interpreterReport);
     expect(codegenReport).toEqual(interpreterReport);
-    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
-    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
+    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
+    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
   });
 
   it(`${NATIVE_DIRECT_PARITY_TAG} preserves call-template parameter typo suggestions under explicit native execution`, () => {
@@ -191,8 +201,12 @@ describe('codegen diagnostic parity', () => {
 
     expect(nativeReport).toEqual(interpreterReport);
     expect(codegenReport).toEqual(interpreterReport);
-    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
-    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
+    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
+    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
   });
 
   it(`${NATIVE_DIRECT_PARITY_TAG} matches interpreter and codegen diagnostics for duplicate named templates`, () => {
@@ -224,8 +238,12 @@ describe('codegen diagnostic parity', () => {
 
     expect(nativeReport).toEqual(interpreterReport);
     expect(codegenReport).toEqual(interpreterReport);
-    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
-    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
+    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
+    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
   });
 
   it(`${NATIVE_DIRECT_PARITY_TAG} matches interpreter and codegen diagnostics for duplicate global bindings`, () => {
@@ -256,8 +274,12 @@ describe('codegen diagnostic parity', () => {
 
     expect(nativeReport).toEqual(interpreterReport);
     expect(codegenReport).toEqual(interpreterReport);
-    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
-    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
+    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
+    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
   });
 
   it('matches interpreter runtime diagnostics for expression failures', () => {
@@ -286,7 +308,9 @@ describe('codegen diagnostic parity', () => {
     const codegenReport = diagnosticReportFromError(codegenError);
 
     expect(codegenReport).toEqual(interpreterReport);
-    expect(formatDiagnostic(codegenReport, '"tea" + 1')).toBe(formatDiagnostic(interpreterReport, '"tea" + 1'));
+    expect(formatDiagnostic(codegenReport, '"tea" + 1')).toBe(
+      formatDiagnostic(interpreterReport, '"tea" + 1'),
+    );
   });
 
   it(`${NATIVE_DIRECT_PARITY_TAG} matches interpreter and direct-native failures for malformed source XML`, () => {
@@ -330,11 +354,13 @@ describe('codegen diagnostic parity', () => {
         lineStart: 1,
         columnStart: 1,
       },
-      suggestions: [{
-        kind: 'fix',
-        label: 'supply a well-formed XML source document',
-        confidence: 1,
-      }],
+      suggestions: [
+        {
+          kind: 'fix',
+          label: 'supply a well-formed XML source document',
+          confidence: 1,
+        },
+      ],
     });
     expect(formatDiagnostic(nativeReport, input)).toBe(formatDiagnostic(interpreterReport, input));
     expect(formatDiagnostic(codegenReport, input)).toBe(formatDiagnostic(interpreterReport, input));
@@ -368,20 +394,27 @@ describe('codegen diagnostic parity', () => {
       code: 'WEAVER_XML_STYLESHEET_PARSE_ERROR',
       phase: 'compile',
       category: 'syntax',
-      message: 'Stylesheet XML is not well-formed: Opening and ending tag mismatch: "xsl:template" != "xsl:stylesheet".',
+      message:
+        'Stylesheet XML is not well-formed: Opening and ending tag mismatch: "xsl:template" != "xsl:stylesheet".',
       primary: {
         uri: sourceName,
         lineStart: 2,
         columnStart: 27,
       },
-      suggestions: [{
-        kind: 'fix',
-        label: 'fix the XML well-formedness error in the stylesheet document',
-        confidence: 1,
-      }],
+      suggestions: [
+        {
+          kind: 'fix',
+          label: 'fix the XML well-formedness error in the stylesheet document',
+          confidence: 1,
+        },
+      ],
     });
-    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
-    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
+    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
+    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
   });
 
   it(`${NATIVE_DIRECT_PARITY_TAG} matches interpreter and direct-native diagnostics when initialTemplate is missing from a native root-match plan`, () => {
@@ -406,7 +439,10 @@ describe('codegen diagnostic parity', () => {
       new XsltProcessor(stylesheet, { sourceName }).transform(input, options);
     });
     const nativeError = captureError(() => {
-      new XsltProcessor(stylesheet, { sourceName }).transform(input, { ...options, execution: 'native' });
+      new XsltProcessor(stylesheet, { sourceName }).transform(input, {
+        ...options,
+        execution: 'native',
+      });
     });
     const codegenError = captureError(() => {
       generatedModule.transform(input, options);
@@ -418,8 +454,12 @@ describe('codegen diagnostic parity', () => {
 
     expect(nativeReport).toEqual(interpreterReport);
     expect(codegenReport).toEqual(interpreterReport);
-    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
-    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
+    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
+    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
   });
 
   it(`${NATIVE_DIRECT_PARITY_TAG} matches interpreter and direct-native runtime diagnostics for circular top-level variables`, () => {
@@ -455,8 +495,12 @@ describe('codegen diagnostic parity', () => {
 
     expect(nativeReport).toEqual(interpreterReport);
     expect(codegenReport).toEqual(interpreterReport);
-    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
-    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
+    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
+    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
   });
 
   it(`${NATIVE_DIRECT_PARITY_TAG} matches interpreter and direct-native runtime diagnostics for missing required stylesheet parameters`, () => {
@@ -491,8 +535,12 @@ describe('codegen diagnostic parity', () => {
 
     expect(nativeReport).toEqual(interpreterReport);
     expect(codegenReport).toEqual(interpreterReport);
-    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
-    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
+    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
+    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
   });
 
   it(`${NATIVE_DIRECT_PARITY_TAG} preserves missing required stylesheet parameter suggestions when transform options use a typo`, () => {
@@ -518,14 +566,20 @@ describe('codegen diagnostic parity', () => {
     const sourceName = 'diagnostics-native-required-param-typo-runtime.xsl';
     const { exports } = compileAndLoadGeneratedModule(stylesheet, sourceName);
     const generatedModule = exports as {
-      readonly transform: (sourceXml: string, options?: RuntimeOptions) => { readonly output: string };
+      readonly transform: (
+        sourceXml: string,
+        options?: RuntimeOptions,
+      ) => { readonly output: string };
     };
 
     const interpreterError = captureError(() => {
       new XsltProcessor(stylesheet, { sourceName }).transform(input, options);
     });
     const nativeError = captureError(() => {
-      new XsltProcessor(stylesheet, { sourceName }).transform(input, { ...options, execution: 'native' });
+      new XsltProcessor(stylesheet, { sourceName }).transform(input, {
+        ...options,
+        execution: 'native',
+      });
     });
     const codegenError = captureError(() => {
       generatedModule.transform(input, options);
@@ -562,7 +616,10 @@ describe('codegen diagnostic parity', () => {
       new XsltProcessor(stylesheet, { sourceName }).transform(input, options);
     });
     const nativeError = captureError(() => {
-      new XsltProcessor(stylesheet, { sourceName }).transform(input, { ...options, execution: 'native' });
+      new XsltProcessor(stylesheet, { sourceName }).transform(input, {
+        ...options,
+        execution: 'native',
+      });
     });
     const codegenError = captureError(() => {
       generatedModule.transform(input, options);
@@ -574,8 +631,12 @@ describe('codegen diagnostic parity', () => {
 
     expect(nativeReport).toEqual(interpreterReport);
     expect(codegenReport).toEqual(interpreterReport);
-    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
-    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
+    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
+    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
   });
 
   it(`${NATIVE_DIRECT_PARITY_TAG} matches interpreter and direct-native diagnostics for invalid initialTemplate names`, () => {
@@ -600,7 +661,10 @@ describe('codegen diagnostic parity', () => {
       new XsltProcessor(stylesheet, { sourceName }).transform(input, options);
     });
     const nativeError = captureError(() => {
-      new XsltProcessor(stylesheet, { sourceName }).transform(input, { ...options, execution: 'native' });
+      new XsltProcessor(stylesheet, { sourceName }).transform(input, {
+        ...options,
+        execution: 'native',
+      });
     });
     const codegenError = captureError(() => {
       generatedModule.transform(input, options);
@@ -612,8 +676,12 @@ describe('codegen diagnostic parity', () => {
 
     expect(nativeReport).toEqual(interpreterReport);
     expect(codegenReport).toEqual(interpreterReport);
-    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
-    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
+    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
+    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
   });
 
   it(`${NATIVE_DIRECT_PARITY_TAG} matches interpreter and direct-native diagnostics for unsupported initialMode options`, () => {
@@ -638,7 +706,10 @@ describe('codegen diagnostic parity', () => {
       new XsltProcessor(stylesheet, { sourceName }).transform(input, options);
     });
     const nativeError = captureError(() => {
-      new XsltProcessor(stylesheet, { sourceName }).transform(input, { ...options, execution: 'native' });
+      new XsltProcessor(stylesheet, { sourceName }).transform(input, {
+        ...options,
+        execution: 'native',
+      });
     });
     const codegenError = captureError(() => {
       generatedModule.transform(input, options);
@@ -650,7 +721,11 @@ describe('codegen diagnostic parity', () => {
 
     expect(nativeReport).toEqual(interpreterReport);
     expect(codegenReport).toEqual(interpreterReport);
-    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
-    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(formatDiagnostic(interpreterReport, stylesheet));
+    expect(formatDiagnostic(nativeReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
+    expect(formatDiagnostic(codegenReport, stylesheet)).toBe(
+      formatDiagnostic(interpreterReport, stylesheet),
+    );
   });
 });

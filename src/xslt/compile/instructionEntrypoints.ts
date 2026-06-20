@@ -330,6 +330,7 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
       compileInstructions,
       helpers.xsltNamespace,
       helpers.stylesheetSourceName,
+      helpers.parseXPathInContext,
     );
   }
 

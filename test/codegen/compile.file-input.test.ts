@@ -195,4 +195,23 @@ describe('compileStylesheetArtifactsFromFile', () => {
     const result = new XsltProcessor(stylesheet).transform('<root/>');
     expect(result.output).toBe('<item class="hot">x</item>');
   });
+
+  it('compiles a globals-only helper stylesheet with no templates', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:variable name="version">5</xsl:variable>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+
+    const artifacts = compileStylesheetArtifacts(stylesheet, {
+      path: 'globals-only.xsl',
+      filePath: 'f:/LocalSource/TS XSLT/globals-only.xsl',
+    });
+
+    expect(artifacts.diagnostics).toHaveLength(1);
+    expect(artifacts.diagnostics[0]?.code).toBe('WEAVER_ANALYZE_UNUSED_GLOBAL_VARIABLE');
+    expect(artifacts.module).toContain('"globalBindings":[');
+    expect(artifacts.module).toContain('"name":"version"');
+    expect(artifacts.module).toContain('"templates":[]');
+  });
 });

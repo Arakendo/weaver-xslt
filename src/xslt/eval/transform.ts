@@ -47,6 +47,8 @@ import { evaluate, evaluateEffectiveBooleanValue } from '../../xpath/eval/evalua
 import type { DynamicContext } from '../../xpath/eval/context.js';
 import type { XPathAst } from '../../xpath/parse/ast.js';
 import type {
+  AttributeInstruction,
+  AttributeValueTemplatePart,
   GlobalBinding,
   Instruction,
   StylesheetIR,
@@ -397,7 +399,10 @@ function renderInstruction(
     case 'literalElement': {
       const collectedAttributes = new Map<string, string>();
       for (const attribute of instruction.attributes) {
-        collectedAttributes.set(attribute.name, attribute.value);
+        collectedAttributes.set(
+          attribute.name,
+          renderLiteralResultAttributeValue(attribute, context),
+        );
       }
 
       const body = renderInstructions(
@@ -1456,4 +1461,28 @@ function escapeText(value: string): string {
 
 function escapeAttribute(value: string): string {
   return escapeText(value).replaceAll('"', '&quot;');
+}
+
+function renderLiteralResultAttributeValue(
+  attribute: AttributeInstruction,
+  context: DynamicContext,
+): string {
+  if (attribute.valueTemplate === undefined) {
+    return attribute.value;
+  }
+
+  return attribute.valueTemplate
+    .map((part) => renderAttributeValueTemplatePart(part, context))
+    .join('');
+}
+
+function renderAttributeValueTemplatePart(
+  part: AttributeValueTemplatePart,
+  context: DynamicContext,
+): string {
+  if (part.kind === 'text') {
+    return part.text;
+  }
+
+  return [...evaluate(part.expression, context)].map(itemToStringValue).join(' ');
 }

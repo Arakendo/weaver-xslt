@@ -10,7 +10,14 @@ import type {
   XmlTraceTemplateInfo,
 } from '../processor/types.js';
 import { XTDE0040, XTDE0050, XTDE0640, XTDE0700, XTSE0010 } from '../errors/codes.js';
-import { XdmError, XsltError, type ErrorFrame, type ErrorSuggestion, type RelatedLocation, type SourceLocation } from '../errors/index.js';
+import {
+  XdmError,
+  XsltError,
+  type ErrorFrame,
+  type ErrorSuggestion,
+  type RelatedLocation,
+  type SourceLocation,
+} from '../errors/index.js';
 import { parseXml, type Document } from '../xml/parse.js';
 import {
   createXmlNodeHandle,
@@ -37,7 +44,12 @@ export function createCompiledDocument(sourceXml: string): Document {
   return parseXml(sourceXml, { role: 'source-document', sourceName: '<source-xml>' });
 }
 
-export { createXmlNodeHandle, resolveXmlNodeHandle, resolveXmlNodeHandleAtOffset, resolveXmlNodeHandleInRange };
+export {
+  createXmlNodeHandle,
+  resolveXmlNodeHandle,
+  resolveXmlNodeHandleAtOffset,
+  resolveXmlNodeHandleInRange,
+};
 
 function getTraceDocumentUri(ctx: TransformContext): string {
   return ctx.trace?.documentUri ?? '<source-xml>';
@@ -80,7 +92,11 @@ export function traceFocusEnter(node: Node, ctx: TransformContext): Node {
   return node;
 }
 
-export function traceTemplateEnter(node: Node, ctx: TransformContext, template: XmlTraceTemplateInfo): Node {
+export function traceTemplateEnter(
+  node: Node,
+  ctx: TransformContext,
+  template: XmlTraceTemplateInfo,
+): Node {
   if (!isTraceEnabled(ctx.trace)) {
     return node;
   }
@@ -222,25 +238,85 @@ type SimplePathStepPositionPlan = {
   readonly positionTotalPolynomialLinearNumerator?: number;
   readonly positionTotalPolynomialConstantNumerator?: number;
   readonly excludedPositionTotalDivisors?: readonly number[];
-  readonly excludedPositionTotalDivisorOffsets?: readonly ({ readonly divisor: number; readonly offset: number })[];
-  readonly excludedPositionTotalFractions?: readonly ({ readonly denominator: number; readonly numerator: number; readonly offset: number })[];
-  readonly excludedPositionTotalPolynomials?: readonly ({ readonly denominator: number; readonly quadraticNumerator: number; readonly linearNumerator: number; readonly constantNumerator: number })[];
+  readonly excludedPositionTotalDivisorOffsets?: readonly {
+    readonly divisor: number;
+    readonly offset: number;
+  }[];
+  readonly excludedPositionTotalFractions?: readonly {
+    readonly denominator: number;
+    readonly numerator: number;
+    readonly offset: number;
+  }[];
+  readonly excludedPositionTotalPolynomials?: readonly {
+    readonly denominator: number;
+    readonly quadraticNumerator: number;
+    readonly linearNumerator: number;
+    readonly constantNumerator: number;
+  }[];
   readonly maximumPositionExclusiveTotalDivisors?: readonly number[];
-  readonly maximumPositionExclusiveTotalDivisorOffsets?: readonly ({ readonly divisor: number; readonly offset: number })[];
-  readonly maximumPositionExclusiveTotalFractions?: readonly ({ readonly denominator: number; readonly numerator: number; readonly offset: number })[];
-  readonly maximumPositionExclusiveTotalPolynomials?: readonly ({ readonly denominator: number; readonly quadraticNumerator: number; readonly linearNumerator: number; readonly constantNumerator: number })[];
+  readonly maximumPositionExclusiveTotalDivisorOffsets?: readonly {
+    readonly divisor: number;
+    readonly offset: number;
+  }[];
+  readonly maximumPositionExclusiveTotalFractions?: readonly {
+    readonly denominator: number;
+    readonly numerator: number;
+    readonly offset: number;
+  }[];
+  readonly maximumPositionExclusiveTotalPolynomials?: readonly {
+    readonly denominator: number;
+    readonly quadraticNumerator: number;
+    readonly linearNumerator: number;
+    readonly constantNumerator: number;
+  }[];
   readonly maximumPositionInclusiveTotalDivisors?: readonly number[];
-  readonly maximumPositionInclusiveTotalDivisorOffsets?: readonly ({ readonly divisor: number; readonly offset: number })[];
-  readonly maximumPositionInclusiveTotalFractions?: readonly ({ readonly denominator: number; readonly numerator: number; readonly offset: number })[];
-  readonly maximumPositionInclusiveTotalPolynomials?: readonly ({ readonly denominator: number; readonly quadraticNumerator: number; readonly linearNumerator: number; readonly constantNumerator: number })[];
+  readonly maximumPositionInclusiveTotalDivisorOffsets?: readonly {
+    readonly divisor: number;
+    readonly offset: number;
+  }[];
+  readonly maximumPositionInclusiveTotalFractions?: readonly {
+    readonly denominator: number;
+    readonly numerator: number;
+    readonly offset: number;
+  }[];
+  readonly maximumPositionInclusiveTotalPolynomials?: readonly {
+    readonly denominator: number;
+    readonly quadraticNumerator: number;
+    readonly linearNumerator: number;
+    readonly constantNumerator: number;
+  }[];
   readonly minimumPositionExclusiveTotalDivisors?: readonly number[];
-  readonly minimumPositionExclusiveTotalDivisorOffsets?: readonly ({ readonly divisor: number; readonly offset: number })[];
-  readonly minimumPositionExclusiveTotalFractions?: readonly ({ readonly denominator: number; readonly numerator: number; readonly offset: number })[];
-  readonly minimumPositionExclusiveTotalPolynomials?: readonly ({ readonly denominator: number; readonly quadraticNumerator: number; readonly linearNumerator: number; readonly constantNumerator: number })[];
+  readonly minimumPositionExclusiveTotalDivisorOffsets?: readonly {
+    readonly divisor: number;
+    readonly offset: number;
+  }[];
+  readonly minimumPositionExclusiveTotalFractions?: readonly {
+    readonly denominator: number;
+    readonly numerator: number;
+    readonly offset: number;
+  }[];
+  readonly minimumPositionExclusiveTotalPolynomials?: readonly {
+    readonly denominator: number;
+    readonly quadraticNumerator: number;
+    readonly linearNumerator: number;
+    readonly constantNumerator: number;
+  }[];
   readonly minimumPositionInclusiveTotalDivisors?: readonly number[];
-  readonly minimumPositionInclusiveTotalDivisorOffsets?: readonly ({ readonly divisor: number; readonly offset: number })[];
-  readonly minimumPositionInclusiveTotalFractions?: readonly ({ readonly denominator: number; readonly numerator: number; readonly offset: number })[];
-  readonly minimumPositionInclusiveTotalPolynomials?: readonly ({ readonly denominator: number; readonly quadraticNumerator: number; readonly linearNumerator: number; readonly constantNumerator: number })[];
+  readonly minimumPositionInclusiveTotalDivisorOffsets?: readonly {
+    readonly divisor: number;
+    readonly offset: number;
+  }[];
+  readonly minimumPositionInclusiveTotalFractions?: readonly {
+    readonly denominator: number;
+    readonly numerator: number;
+    readonly offset: number;
+  }[];
+  readonly minimumPositionInclusiveTotalPolynomials?: readonly {
+    readonly denominator: number;
+    readonly quadraticNumerator: number;
+    readonly linearNumerator: number;
+    readonly constantNumerator: number;
+  }[];
   readonly positionFromLastOffset?: number;
   readonly includedPositions?: readonly number[];
   readonly includedPositionFromLastOffsets?: readonly number[];
@@ -273,7 +349,10 @@ export function selectSimplePathNodesByStepPlan(
         }
 
         const childLocalName = child.localName ?? child.nodeName;
-        if ((step.name === '*' || childLocalName === step.name) && (child.namespaceURI ?? '') === '') {
+        if (
+          (step.name === '*' || childLocalName === step.name) &&
+          (child.namespaceURI ?? '') === ''
+        ) {
           matchingChildren.push(child);
         }
       }
@@ -284,7 +363,9 @@ export function selectSimplePathNodesByStepPlan(
       }
 
       nextNodes.push(
-        ...matchingChildren.filter((_, index) => matchesSimplePathStepPositionPlan(step, index + 1, matchingChildren.length)),
+        ...matchingChildren.filter((_, index) =>
+          matchesSimplePathStepPositionPlan(step, index + 1, matchingChildren.length),
+        ),
       );
     }
 
@@ -299,45 +380,47 @@ export function selectSimplePathNodesByStepPlan(
 }
 
 function hasSimplePathStepPositionConstraints(plan: SimplePathStepPositionPlan): boolean {
-  return plan.position !== undefined
-    || plan.positionTotalDivisor !== undefined
-    || plan.positionTotalNumerator !== undefined
-    || plan.positionTotalOffset !== undefined
-    || plan.positionTotalPolynomialDenominator !== undefined
-    || plan.positionTotalPolynomialQuadraticNumerator !== undefined
-    || plan.positionTotalPolynomialLinearNumerator !== undefined
-    || plan.positionTotalPolynomialConstantNumerator !== undefined
-    || plan.excludedPositionTotalDivisors !== undefined
-    || plan.excludedPositionTotalDivisorOffsets !== undefined
-    || plan.excludedPositionTotalFractions !== undefined
-    || plan.excludedPositionTotalPolynomials !== undefined
-    || plan.maximumPositionExclusiveTotalDivisors !== undefined
-    || plan.maximumPositionExclusiveTotalDivisorOffsets !== undefined
-    || plan.maximumPositionExclusiveTotalFractions !== undefined
-    || plan.maximumPositionExclusiveTotalPolynomials !== undefined
-    || plan.maximumPositionInclusiveTotalDivisors !== undefined
-    || plan.maximumPositionInclusiveTotalDivisorOffsets !== undefined
-    || plan.maximumPositionInclusiveTotalFractions !== undefined
-    || plan.maximumPositionInclusiveTotalPolynomials !== undefined
-    || plan.minimumPositionExclusiveTotalDivisors !== undefined
-    || plan.minimumPositionExclusiveTotalDivisorOffsets !== undefined
-    || plan.minimumPositionExclusiveTotalFractions !== undefined
-    || plan.minimumPositionExclusiveTotalPolynomials !== undefined
-    || plan.minimumPositionInclusiveTotalDivisors !== undefined
-    || plan.minimumPositionInclusiveTotalDivisorOffsets !== undefined
-    || plan.minimumPositionInclusiveTotalFractions !== undefined
-    || plan.minimumPositionInclusiveTotalPolynomials !== undefined
-    || plan.positionFromLastOffset !== undefined
-    || plan.includedPositions !== undefined
-    || plan.includedPositionFromLastOffsets !== undefined
-    || plan.maximumPositionFromLastOffset !== undefined
-    || plan.minimumPosition !== undefined
-    || plan.maximumPosition !== undefined
-    || plan.excludedPosition !== undefined
-    || plan.excludedPositions !== undefined
-    || plan.positionModuloDivisor !== undefined
-    || plan.positionModuloRemainder !== undefined
-    || plan.alternatives !== undefined;
+  return (
+    plan.position !== undefined ||
+    plan.positionTotalDivisor !== undefined ||
+    plan.positionTotalNumerator !== undefined ||
+    plan.positionTotalOffset !== undefined ||
+    plan.positionTotalPolynomialDenominator !== undefined ||
+    plan.positionTotalPolynomialQuadraticNumerator !== undefined ||
+    plan.positionTotalPolynomialLinearNumerator !== undefined ||
+    plan.positionTotalPolynomialConstantNumerator !== undefined ||
+    plan.excludedPositionTotalDivisors !== undefined ||
+    plan.excludedPositionTotalDivisorOffsets !== undefined ||
+    plan.excludedPositionTotalFractions !== undefined ||
+    plan.excludedPositionTotalPolynomials !== undefined ||
+    plan.maximumPositionExclusiveTotalDivisors !== undefined ||
+    plan.maximumPositionExclusiveTotalDivisorOffsets !== undefined ||
+    plan.maximumPositionExclusiveTotalFractions !== undefined ||
+    plan.maximumPositionExclusiveTotalPolynomials !== undefined ||
+    plan.maximumPositionInclusiveTotalDivisors !== undefined ||
+    plan.maximumPositionInclusiveTotalDivisorOffsets !== undefined ||
+    plan.maximumPositionInclusiveTotalFractions !== undefined ||
+    plan.maximumPositionInclusiveTotalPolynomials !== undefined ||
+    plan.minimumPositionExclusiveTotalDivisors !== undefined ||
+    plan.minimumPositionExclusiveTotalDivisorOffsets !== undefined ||
+    plan.minimumPositionExclusiveTotalFractions !== undefined ||
+    plan.minimumPositionExclusiveTotalPolynomials !== undefined ||
+    plan.minimumPositionInclusiveTotalDivisors !== undefined ||
+    plan.minimumPositionInclusiveTotalDivisorOffsets !== undefined ||
+    plan.minimumPositionInclusiveTotalFractions !== undefined ||
+    plan.minimumPositionInclusiveTotalPolynomials !== undefined ||
+    plan.positionFromLastOffset !== undefined ||
+    plan.includedPositions !== undefined ||
+    plan.includedPositionFromLastOffsets !== undefined ||
+    plan.maximumPositionFromLastOffset !== undefined ||
+    plan.minimumPosition !== undefined ||
+    plan.maximumPosition !== undefined ||
+    plan.excludedPosition !== undefined ||
+    plan.excludedPositions !== undefined ||
+    plan.positionModuloDivisor !== undefined ||
+    plan.positionModuloRemainder !== undefined ||
+    plan.alternatives !== undefined
+  );
 }
 
 function matchesSimplePathStepPositionPlan(
@@ -346,7 +429,9 @@ function matchesSimplePathStepPositionPlan(
   totalPositions: number,
 ): boolean {
   if (plan.alternatives !== undefined) {
-    return plan.alternatives.some((alternative) => matchesSimplePathStepPositionPlan(alternative, position, totalPositions));
+    return plan.alternatives.some((alternative) =>
+      matchesSimplePathStepPositionPlan(alternative, position, totalPositions),
+    );
   }
 
   const maximumPosition = Math.min(
@@ -355,135 +440,191 @@ function matchesSimplePathStepPositionPlan(
       ? totalPositions
       : totalPositions - plan.maximumPositionFromLastOffset,
   );
-  const matchesExactPosition = plan.position === undefined
-    ? true
-    : plan.position === 'last'
-      ? position === totalPositions
-      : position === plan.position;
-  const positionTotalNumerator = plan.positionTotalNumerator ?? (plan.positionTotalDivisor === undefined ? undefined : 1);
-  const matchesPositionTotalDivisor = plan.positionTotalDivisor === undefined
-    ? true
-    : positionTotalNumerator !== undefined
-      && position * plan.positionTotalDivisor === (totalPositions * positionTotalNumerator) + ((plan.positionTotalOffset ?? 0) * plan.positionTotalDivisor);
-  const matchesPositionTotalPolynomial = plan.positionTotalPolynomialDenominator === undefined
-    ? true
-    : position * plan.positionTotalPolynomialDenominator === (totalPositions * totalPositions * (plan.positionTotalPolynomialQuadraticNumerator ?? 0))
-      + (totalPositions * (plan.positionTotalPolynomialLinearNumerator ?? 0))
-      + (plan.positionTotalPolynomialConstantNumerator ?? 0);
-  const matchesPositionFromLastOffset = plan.positionFromLastOffset === undefined
-    ? true
-    : position === totalPositions - plan.positionFromLastOffset;
-  const matchesIncludedPositions = plan.includedPositions === undefined && plan.includedPositionFromLastOffsets === undefined
-    ? true
-    : (plan.includedPositions?.includes(position) ?? false)
-      || (plan.includedPositionFromLastOffsets?.some((offset) => position === totalPositions - offset) ?? false);
-  const matchesExcludedPositionTotalDivisors = !(plan.excludedPositionTotalDivisors?.some(
-    (divisor) => position * divisor === totalPositions,
-  ) ?? false);
-  const matchesExcludedPositionTotalDivisorOffsets = !(plan.excludedPositionTotalDivisorOffsets?.some(
-    ({ divisor, offset }) => position * divisor === totalPositions + (offset * divisor),
-  ) ?? false);
-  const matchesExcludedPositionTotalFractions = !(plan.excludedPositionTotalFractions?.some(
-    ({ denominator, numerator, offset }) => position * denominator === (totalPositions * numerator) + (offset * denominator),
-  ) ?? false);
-  const matchesExcludedPositionTotalPolynomials = !(plan.excludedPositionTotalPolynomials?.some(
-    ({ denominator, quadraticNumerator, linearNumerator, constantNumerator }) => position * denominator === (totalPositions * totalPositions * quadraticNumerator)
-      + (totalPositions * linearNumerator)
-      + constantNumerator,
-  ) ?? false);
-  const matchesMaximumPositionExclusiveTotalDivisors = plan.maximumPositionExclusiveTotalDivisors?.every(
-    (divisor) => position * divisor < totalPositions,
-  ) ?? true;
-  const matchesMaximumPositionExclusiveTotalDivisorOffsets = plan.maximumPositionExclusiveTotalDivisorOffsets?.every(
-    ({ divisor, offset }) => position * divisor < totalPositions + (offset * divisor),
-  ) ?? true;
-  const matchesMaximumPositionExclusiveTotalFractions = plan.maximumPositionExclusiveTotalFractions?.every(
-    ({ denominator, numerator, offset }) => position * denominator < (totalPositions * numerator) + (offset * denominator),
-  ) ?? true;
-  const matchesMaximumPositionExclusiveTotalPolynomials = plan.maximumPositionExclusiveTotalPolynomials?.every(
-    ({ denominator, quadraticNumerator, linearNumerator, constantNumerator }) => position * denominator < (totalPositions * totalPositions * quadraticNumerator)
-      + (totalPositions * linearNumerator)
-      + constantNumerator,
-  ) ?? true;
-  const matchesMaximumPositionInclusiveTotalDivisors = plan.maximumPositionInclusiveTotalDivisors?.every(
-    (divisor) => position * divisor <= totalPositions,
-  ) ?? true;
-  const matchesMaximumPositionInclusiveTotalDivisorOffsets = plan.maximumPositionInclusiveTotalDivisorOffsets?.every(
-    ({ divisor, offset }) => position * divisor <= totalPositions + (offset * divisor),
-  ) ?? true;
-  const matchesMaximumPositionInclusiveTotalFractions = plan.maximumPositionInclusiveTotalFractions?.every(
-    ({ denominator, numerator, offset }) => position * denominator <= (totalPositions * numerator) + (offset * denominator),
-  ) ?? true;
-  const matchesMaximumPositionInclusiveTotalPolynomials = plan.maximumPositionInclusiveTotalPolynomials?.every(
-    ({ denominator, quadraticNumerator, linearNumerator, constantNumerator }) => position * denominator <= (totalPositions * totalPositions * quadraticNumerator)
-      + (totalPositions * linearNumerator)
-      + constantNumerator,
-  ) ?? true;
-  const matchesMinimumPositionExclusiveTotalDivisors = plan.minimumPositionExclusiveTotalDivisors?.every(
-    (divisor) => position * divisor > totalPositions,
-  ) ?? true;
-  const matchesMinimumPositionExclusiveTotalDivisorOffsets = plan.minimumPositionExclusiveTotalDivisorOffsets?.every(
-    ({ divisor, offset }) => position * divisor > totalPositions + (offset * divisor),
-  ) ?? true;
-  const matchesMinimumPositionExclusiveTotalFractions = plan.minimumPositionExclusiveTotalFractions?.every(
-    ({ denominator, numerator, offset }) => position * denominator > (totalPositions * numerator) + (offset * denominator),
-  ) ?? true;
-  const matchesMinimumPositionExclusiveTotalPolynomials = plan.minimumPositionExclusiveTotalPolynomials?.every(
-    ({ denominator, quadraticNumerator, linearNumerator, constantNumerator }) => position * denominator > (totalPositions * totalPositions * quadraticNumerator)
-      + (totalPositions * linearNumerator)
-      + constantNumerator,
-  ) ?? true;
-  const matchesMinimumPositionInclusiveTotalDivisors = plan.minimumPositionInclusiveTotalDivisors?.every(
-    (divisor) => position * divisor >= totalPositions,
-  ) ?? true;
-  const matchesMinimumPositionInclusiveTotalDivisorOffsets = plan.minimumPositionInclusiveTotalDivisorOffsets?.every(
-    ({ divisor, offset }) => position * divisor >= totalPositions + (offset * divisor),
-  ) ?? true;
-  const matchesMinimumPositionInclusiveTotalFractions = plan.minimumPositionInclusiveTotalFractions?.every(
-    ({ denominator, numerator, offset }) => position * denominator >= (totalPositions * numerator) + (offset * denominator),
-  ) ?? true;
-  const matchesMinimumPositionInclusiveTotalPolynomials = plan.minimumPositionInclusiveTotalPolynomials?.every(
-    ({ denominator, quadraticNumerator, linearNumerator, constantNumerator }) => position * denominator >= (totalPositions * totalPositions * quadraticNumerator)
-      + (totalPositions * linearNumerator)
-      + constantNumerator,
-  ) ?? true;
-  const matchesModulo = plan.positionModuloDivisor === undefined || plan.positionModuloRemainder === undefined
-    ? true
-    : position % plan.positionModuloDivisor === plan.positionModuloRemainder;
+  const matchesExactPosition =
+    plan.position === undefined
+      ? true
+      : plan.position === 'last'
+        ? position === totalPositions
+        : position === plan.position;
+  const positionTotalNumerator =
+    plan.positionTotalNumerator ?? (plan.positionTotalDivisor === undefined ? undefined : 1);
+  const matchesPositionTotalDivisor =
+    plan.positionTotalDivisor === undefined
+      ? true
+      : positionTotalNumerator !== undefined &&
+        position * plan.positionTotalDivisor ===
+          totalPositions * positionTotalNumerator +
+            (plan.positionTotalOffset ?? 0) * plan.positionTotalDivisor;
+  const matchesPositionTotalPolynomial =
+    plan.positionTotalPolynomialDenominator === undefined
+      ? true
+      : position * plan.positionTotalPolynomialDenominator ===
+        totalPositions * totalPositions * (plan.positionTotalPolynomialQuadraticNumerator ?? 0) +
+          totalPositions * (plan.positionTotalPolynomialLinearNumerator ?? 0) +
+          (plan.positionTotalPolynomialConstantNumerator ?? 0);
+  const matchesPositionFromLastOffset =
+    plan.positionFromLastOffset === undefined
+      ? true
+      : position === totalPositions - plan.positionFromLastOffset;
+  const matchesIncludedPositions =
+    plan.includedPositions === undefined && plan.includedPositionFromLastOffsets === undefined
+      ? true
+      : (plan.includedPositions?.includes(position) ?? false) ||
+        (plan.includedPositionFromLastOffsets?.some(
+          (offset) => position === totalPositions - offset,
+        ) ??
+          false);
+  const matchesExcludedPositionTotalDivisors = !(
+    plan.excludedPositionTotalDivisors?.some((divisor) => position * divisor === totalPositions) ??
+    false
+  );
+  const matchesExcludedPositionTotalDivisorOffsets = !(
+    plan.excludedPositionTotalDivisorOffsets?.some(
+      ({ divisor, offset }) => position * divisor === totalPositions + offset * divisor,
+    ) ?? false
+  );
+  const matchesExcludedPositionTotalFractions = !(
+    plan.excludedPositionTotalFractions?.some(
+      ({ denominator, numerator, offset }) =>
+        position * denominator === totalPositions * numerator + offset * denominator,
+    ) ?? false
+  );
+  const matchesExcludedPositionTotalPolynomials = !(
+    plan.excludedPositionTotalPolynomials?.some(
+      ({ denominator, quadraticNumerator, linearNumerator, constantNumerator }) =>
+        position * denominator ===
+        totalPositions * totalPositions * quadraticNumerator +
+          totalPositions * linearNumerator +
+          constantNumerator,
+    ) ?? false
+  );
+  const matchesMaximumPositionExclusiveTotalDivisors =
+    plan.maximumPositionExclusiveTotalDivisors?.every(
+      (divisor) => position * divisor < totalPositions,
+    ) ?? true;
+  const matchesMaximumPositionExclusiveTotalDivisorOffsets =
+    plan.maximumPositionExclusiveTotalDivisorOffsets?.every(
+      ({ divisor, offset }) => position * divisor < totalPositions + offset * divisor,
+    ) ?? true;
+  const matchesMaximumPositionExclusiveTotalFractions =
+    plan.maximumPositionExclusiveTotalFractions?.every(
+      ({ denominator, numerator, offset }) =>
+        position * denominator < totalPositions * numerator + offset * denominator,
+    ) ?? true;
+  const matchesMaximumPositionExclusiveTotalPolynomials =
+    plan.maximumPositionExclusiveTotalPolynomials?.every(
+      ({ denominator, quadraticNumerator, linearNumerator, constantNumerator }) =>
+        position * denominator <
+        totalPositions * totalPositions * quadraticNumerator +
+          totalPositions * linearNumerator +
+          constantNumerator,
+    ) ?? true;
+  const matchesMaximumPositionInclusiveTotalDivisors =
+    plan.maximumPositionInclusiveTotalDivisors?.every(
+      (divisor) => position * divisor <= totalPositions,
+    ) ?? true;
+  const matchesMaximumPositionInclusiveTotalDivisorOffsets =
+    plan.maximumPositionInclusiveTotalDivisorOffsets?.every(
+      ({ divisor, offset }) => position * divisor <= totalPositions + offset * divisor,
+    ) ?? true;
+  const matchesMaximumPositionInclusiveTotalFractions =
+    plan.maximumPositionInclusiveTotalFractions?.every(
+      ({ denominator, numerator, offset }) =>
+        position * denominator <= totalPositions * numerator + offset * denominator,
+    ) ?? true;
+  const matchesMaximumPositionInclusiveTotalPolynomials =
+    plan.maximumPositionInclusiveTotalPolynomials?.every(
+      ({ denominator, quadraticNumerator, linearNumerator, constantNumerator }) =>
+        position * denominator <=
+        totalPositions * totalPositions * quadraticNumerator +
+          totalPositions * linearNumerator +
+          constantNumerator,
+    ) ?? true;
+  const matchesMinimumPositionExclusiveTotalDivisors =
+    plan.minimumPositionExclusiveTotalDivisors?.every(
+      (divisor) => position * divisor > totalPositions,
+    ) ?? true;
+  const matchesMinimumPositionExclusiveTotalDivisorOffsets =
+    plan.minimumPositionExclusiveTotalDivisorOffsets?.every(
+      ({ divisor, offset }) => position * divisor > totalPositions + offset * divisor,
+    ) ?? true;
+  const matchesMinimumPositionExclusiveTotalFractions =
+    plan.minimumPositionExclusiveTotalFractions?.every(
+      ({ denominator, numerator, offset }) =>
+        position * denominator > totalPositions * numerator + offset * denominator,
+    ) ?? true;
+  const matchesMinimumPositionExclusiveTotalPolynomials =
+    plan.minimumPositionExclusiveTotalPolynomials?.every(
+      ({ denominator, quadraticNumerator, linearNumerator, constantNumerator }) =>
+        position * denominator >
+        totalPositions * totalPositions * quadraticNumerator +
+          totalPositions * linearNumerator +
+          constantNumerator,
+    ) ?? true;
+  const matchesMinimumPositionInclusiveTotalDivisors =
+    plan.minimumPositionInclusiveTotalDivisors?.every(
+      (divisor) => position * divisor >= totalPositions,
+    ) ?? true;
+  const matchesMinimumPositionInclusiveTotalDivisorOffsets =
+    plan.minimumPositionInclusiveTotalDivisorOffsets?.every(
+      ({ divisor, offset }) => position * divisor >= totalPositions + offset * divisor,
+    ) ?? true;
+  const matchesMinimumPositionInclusiveTotalFractions =
+    plan.minimumPositionInclusiveTotalFractions?.every(
+      ({ denominator, numerator, offset }) =>
+        position * denominator >= totalPositions * numerator + offset * denominator,
+    ) ?? true;
+  const matchesMinimumPositionInclusiveTotalPolynomials =
+    plan.minimumPositionInclusiveTotalPolynomials?.every(
+      ({ denominator, quadraticNumerator, linearNumerator, constantNumerator }) =>
+        position * denominator >=
+        totalPositions * totalPositions * quadraticNumerator +
+          totalPositions * linearNumerator +
+          constantNumerator,
+    ) ?? true;
+  const matchesModulo =
+    plan.positionModuloDivisor === undefined || plan.positionModuloRemainder === undefined
+      ? true
+      : position % plan.positionModuloDivisor === plan.positionModuloRemainder;
 
-  return matchesExactPosition
-    && matchesPositionTotalDivisor
-    && matchesPositionTotalPolynomial
-    && matchesPositionFromLastOffset
-    && position >= (plan.minimumPosition ?? 1)
-    && position <= maximumPosition
-    && matchesIncludedPositions
-    && matchesExcludedPositionTotalDivisors
-    && matchesExcludedPositionTotalDivisorOffsets
-    && matchesExcludedPositionTotalFractions
-    && matchesExcludedPositionTotalPolynomials
-    && matchesMaximumPositionExclusiveTotalDivisors
-    && matchesMaximumPositionExclusiveTotalDivisorOffsets
-    && matchesMaximumPositionExclusiveTotalFractions
-    && matchesMaximumPositionExclusiveTotalPolynomials
-    && matchesMaximumPositionInclusiveTotalDivisors
-    && matchesMaximumPositionInclusiveTotalDivisorOffsets
-    && matchesMaximumPositionInclusiveTotalFractions
-    && matchesMaximumPositionInclusiveTotalPolynomials
-    && matchesMinimumPositionExclusiveTotalDivisors
-    && matchesMinimumPositionExclusiveTotalDivisorOffsets
-    && matchesMinimumPositionExclusiveTotalFractions
-    && matchesMinimumPositionExclusiveTotalPolynomials
-    && matchesMinimumPositionInclusiveTotalDivisors
-    && matchesMinimumPositionInclusiveTotalDivisorOffsets
-    && matchesMinimumPositionInclusiveTotalFractions
-    && matchesMinimumPositionInclusiveTotalPolynomials
-    && position !== plan.excludedPosition
-    && !(plan.excludedPositions?.includes(position) ?? false)
-    && matchesModulo;
+  return (
+    matchesExactPosition &&
+    matchesPositionTotalDivisor &&
+    matchesPositionTotalPolynomial &&
+    matchesPositionFromLastOffset &&
+    position >= (plan.minimumPosition ?? 1) &&
+    position <= maximumPosition &&
+    matchesIncludedPositions &&
+    matchesExcludedPositionTotalDivisors &&
+    matchesExcludedPositionTotalDivisorOffsets &&
+    matchesExcludedPositionTotalFractions &&
+    matchesExcludedPositionTotalPolynomials &&
+    matchesMaximumPositionExclusiveTotalDivisors &&
+    matchesMaximumPositionExclusiveTotalDivisorOffsets &&
+    matchesMaximumPositionExclusiveTotalFractions &&
+    matchesMaximumPositionExclusiveTotalPolynomials &&
+    matchesMaximumPositionInclusiveTotalDivisors &&
+    matchesMaximumPositionInclusiveTotalDivisorOffsets &&
+    matchesMaximumPositionInclusiveTotalFractions &&
+    matchesMaximumPositionInclusiveTotalPolynomials &&
+    matchesMinimumPositionExclusiveTotalDivisors &&
+    matchesMinimumPositionExclusiveTotalDivisorOffsets &&
+    matchesMinimumPositionExclusiveTotalFractions &&
+    matchesMinimumPositionExclusiveTotalPolynomials &&
+    matchesMinimumPositionInclusiveTotalDivisors &&
+    matchesMinimumPositionInclusiveTotalDivisorOffsets &&
+    matchesMinimumPositionInclusiveTotalFractions &&
+    matchesMinimumPositionInclusiveTotalPolynomials &&
+    position !== plan.excludedPosition &&
+    !(plan.excludedPositions?.includes(position) ?? false) &&
+    matchesModulo
+  );
 }
 
-export function selectDescendantElementsByName(startNode: Node, localName: string): readonly Node[] {
+export function selectDescendantElementsByName(
+  startNode: Node,
+  localName: string,
+): readonly Node[] {
   const matches: Node[] = [];
   collectDescendantElementsByName(startNode, localName, matches);
   return matches;
@@ -498,7 +639,11 @@ export function selectDescendantElementTextByName(startNode: Node, localName: st
   return collectStringValue(node);
 }
 
-export function matchesTemplatePath(node: Node, path: readonly string[], absolute = false): boolean {
+export function matchesTemplatePath(
+  node: Node,
+  path: readonly string[],
+  absolute = false,
+): boolean {
   let current: Node | null = node;
 
   for (let index = path.length - 1; index >= 0; index -= 1) {
@@ -530,7 +675,15 @@ export function applyBuiltInTemplatesByPath(
     return '';
   }
 
-  return renderBuiltInTemplateChildren(startNode, path, renderMatchedNode, absolute, ctx, instruction, true);
+  return renderBuiltInTemplateChildren(
+    startNode,
+    path,
+    renderMatchedNode,
+    absolute,
+    ctx,
+    instruction,
+    true,
+  );
 }
 
 export function selectSimplePathText(startNode: Node, path: readonly string[]): string {
@@ -579,10 +732,11 @@ export function localNameOfNode(node: Node | null): string {
 }
 
 export function escapeText(value: string): string {
-  return value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;');
+  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+}
+
+export function escapeAttribute(value: string): string {
+  return escapeText(value).replaceAll('"', '&quot;');
 }
 
 export function transformCompiledStylesheet(
@@ -659,11 +813,13 @@ export function throwMissingNativeInitialTemplate(
     { initialTemplate: templateName },
     suggestion === undefined
       ? {
-          suggestions: [{
-            kind: 'fix',
-            label: `declare xsl:template name="${templateName}" or omit initialTemplate`,
-            confidence: 1,
-          }],
+          suggestions: [
+            {
+              kind: 'fix',
+              label: `declare xsl:template name="${templateName}" or omit initialTemplate`,
+              confidence: 1,
+            },
+          ],
         }
       : { suggestions: [suggestion] },
   );
@@ -676,11 +832,13 @@ export function throwUnsupportedNativeInitialMode(mode: string): never {
     undefined,
     { mode },
     {
-      suggestions: [{
-        kind: 'fix',
-        label: 'omit initialMode and use the default mode in the current MVP+3 slice',
-        confidence: 1,
-      }],
+      suggestions: [
+        {
+          kind: 'fix',
+          label: 'omit initialMode and use the default mode in the current MVP+3 slice',
+          confidence: 1,
+        },
+      ],
     },
   );
 }
@@ -699,25 +857,20 @@ export function prependNativeInitialTemplateError(
     label: `name="${templateName}"`,
     ...(location === undefined ? {} : { location }),
   };
-  const related: RelatedLocation | undefined = location === undefined
-    ? undefined
-    : {
-        label: 'initial template',
-        location,
-      };
+  const related: RelatedLocation | undefined =
+    location === undefined
+      ? undefined
+      : {
+          label: 'initial template',
+          location,
+        };
 
-  return new XsltError(
-    error.code,
-    error.detailMessage,
-    error.location,
-    error.details,
-    {
-      related: related === undefined ? error.related : [related, ...error.related],
-      frames: [frame, ...error.frames],
-      suggestions: error.suggestions,
-      causes: error.causes.length === 0 ? [error] : error.causes,
-    },
-  );
+  return new XsltError(error.code, error.detailMessage, error.location, error.details, {
+    related: related === undefined ? error.related : [related, ...error.related],
+    frames: [frame, ...error.frames],
+    suggestions: error.suggestions,
+    causes: error.causes.length === 0 ? [error] : error.causes,
+  });
 }
 
 function createMissingStylesheetParameterSuggestion(
@@ -739,7 +892,7 @@ function createMissingStylesheetParameterSuggestion(
     kind: 'fix',
     label: `did you mean to pass parameters["${expectedName}"]?`,
     replacement: expectedName,
-    confidence: nearest.distance === 0 ? 1 : 1 - (nearest.distance / expectedName.length),
+    confidence: nearest.distance === 0 ? 1 : 1 - nearest.distance / expectedName.length,
   };
 }
 
@@ -762,7 +915,7 @@ function createMissingTemplateParameterSuggestion(
     kind: 'fix',
     label: `did you mean xsl:with-param name="${expectedName}"?`,
     replacement: expectedName,
-    confidence: nearest.distance === 0 ? 1 : 1 - (nearest.distance / expectedName.length),
+    confidence: nearest.distance === 0 ? 1 : 1 - nearest.distance / expectedName.length,
   };
 }
 
@@ -785,7 +938,7 @@ function createMissingInitialTemplateSuggestion(
     kind: 'fix',
     label: `did you mean initialTemplate "${nearest.candidate}"?`,
     replacement: nearest.candidate,
-    confidence: nearest.distance === 0 ? 1 : 1 - (nearest.distance / nearest.candidate.length),
+    confidence: nearest.distance === 0 ? 1 : 1 - nearest.distance / nearest.candidate.length,
   };
 }
 
@@ -802,30 +955,26 @@ export function prependNativeGlobalBindingError(
 
   const frame: ErrorFrame = {
     kind: 'instruction',
-    label: selectText === undefined
-      ? `xsl:${bindingKind} name="${variableName}"`
-      : `xsl:${bindingKind} name="${variableName}" select="${selectText}"`,
+    label:
+      selectText === undefined
+        ? `xsl:${bindingKind} name="${variableName}"`
+        : `xsl:${bindingKind} name="${variableName}" select="${selectText}"`,
     ...(location === undefined ? {} : { location }),
   };
-  const related: RelatedLocation | undefined = location === undefined
-    ? undefined
-    : {
-        label: `top-level ${bindingKind}`,
-        location,
-      };
+  const related: RelatedLocation | undefined =
+    location === undefined
+      ? undefined
+      : {
+          label: `top-level ${bindingKind}`,
+          location,
+        };
 
-  return new XsltError(
-    error.code,
-    error.detailMessage,
-    error.location,
-    error.details,
-    {
-      related: related === undefined ? error.related : [related, ...error.related],
-      frames: [frame, ...error.frames],
-      suggestions: error.suggestions,
-      causes: error.causes.length === 0 ? [error] : error.causes,
-    },
-  );
+  return new XsltError(error.code, error.detailMessage, error.location, error.details, {
+    related: related === undefined ? error.related : [related, ...error.related],
+    frames: [frame, ...error.frames],
+    suggestions: error.suggestions,
+    causes: error.causes.length === 0 ? [error] : error.causes,
+  });
 }
 
 function findChildElement(node: Node, localName: string): Node | null {
@@ -886,13 +1035,31 @@ function renderBuiltInTemplateChildren(
   for (const [index, child] of childNodes.entries()) {
     if (child.nodeType !== child.ELEMENT_NODE) {
       if (child !== null) {
-        output += renderBuiltInTemplateNode(child, path, renderMatchedNode, absolute, index, childNodes, ctx, instruction);
+        output += renderBuiltInTemplateNode(
+          child,
+          path,
+          renderMatchedNode,
+          absolute,
+          index,
+          childNodes,
+          ctx,
+          instruction,
+        );
       }
 
       continue;
     }
 
-    output += renderBuiltInTemplateNode(child, path, renderMatchedNode, absolute, index, childNodes, ctx, instruction);
+    output += renderBuiltInTemplateNode(
+      child,
+      path,
+      renderMatchedNode,
+      absolute,
+      index,
+      childNodes,
+      ctx,
+      instruction,
+    );
   }
 
   return output;
@@ -921,9 +1088,9 @@ function renderBuiltInTemplateNode(
   }
 
   if (
-    node.nodeType === node.TEXT_NODE
-    || node.nodeType === node.CDATA_SECTION_NODE
-    || node.nodeType === node.ATTRIBUTE_NODE
+    node.nodeType === node.TEXT_NODE ||
+    node.nodeType === node.CDATA_SECTION_NODE ||
+    node.nodeType === node.ATTRIBUTE_NODE
   ) {
     return escapeText(node.nodeValue ?? '');
   }
@@ -957,9 +1124,9 @@ function isUnqualifiedElementNamed(node: Node | null, localName: string): boolea
 
 function collectStringValue(node: Node): string {
   if (
-    node.nodeType === node.TEXT_NODE
-    || node.nodeType === node.CDATA_SECTION_NODE
-    || node.nodeType === node.ATTRIBUTE_NODE
+    node.nodeType === node.TEXT_NODE ||
+    node.nodeType === node.CDATA_SECTION_NODE ||
+    node.nodeType === node.ATTRIBUTE_NODE
   ) {
     return node.nodeValue ?? '';
   }
@@ -974,4 +1141,3 @@ function collectStringValue(node: Node): string {
 
   return value;
 }
-

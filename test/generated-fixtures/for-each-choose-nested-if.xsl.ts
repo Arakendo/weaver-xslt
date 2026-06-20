@@ -5,6 +5,7 @@ export const source = { path: "for-each-choose-nested-if.xsl", digest: "9887b70c
 
 /** match="/" (for-each-choose-nested-if.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
+  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;
   resetRecordedTracePause(ctx.trace);
   if (ctx.initialMode !== undefined) {
     throwUnsupportedNativeInitialMode(ctx.initialMode);
@@ -21,13 +22,13 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     output:
       (
   /** literal items (for-each-choose-nested-if.xsl:1) */
-  "<items>" +
-    (
+  (() => {
+  const body = (
   /** xsl:for-each (for-each-choose-nested-if.xsl:1) */
   traceSelectedNodes(selectSimplePathNodes(document, ["root","item"]), ctx, {"kind":"xsl:for-each","location":{"source":"for-each-choose-nested-if.xsl","line":1,"column":133,"offset":132,"endLine":1,"endColumn":143,"endOffset":142}}).map((currentNode) => (
   /** literal item (for-each-choose-nested-if.xsl:1) */
-  "<item>" +
-    (
+  (() => {
+  const body = (
   /** xsl:value-of (for-each-choose-nested-if.xsl:1) */
   escapeText(traceStringValueOfNode(selectSimplePathNode(currentNode, ["name"]), ctx, {"kind":"xsl:value-of","location":{"source":"for-each-choose-nested-if.xsl","line":1,"column":133,"offset":132,"endLine":1,"endColumn":143,"endOffset":142}}))
 ) +
@@ -39,8 +40,10 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   /** xsl:if (for-each-choose-nested-if.xsl:1) */
   (selectSimplePathExists(currentNode, ["detail"]) ? (
   /** literal flagged (for-each-choose-nested-if.xsl:1) */
-  "<flagged>" +
-    "</flagged>"
+  (() => {
+  const body = "";
+  return "<flagged" + "" + ">" + body + "</flagged>";
+})()
 ) : "")
 )
 ) : (
@@ -49,16 +52,20 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   /** xsl:if (for-each-choose-nested-if.xsl:1) */
   (selectSimplePathExists(currentNode, ["vip"]) ? (
   /** literal vip (for-each-choose-nested-if.xsl:1) */
-  "<vip>" +
-    "</vip>"
+  (() => {
+  const body = "";
+  return "<vip" + "" + ">" + body + "</vip>";
+})()
 ) : "")
 )
 ))
-) +
-    "</item>"
+);
+  return "<item" + "" + ">" + body + "</item>";
+})()
 )).join("")
-) +
-    "</items>"
+);
+  return "<items" + "" + ">" + body + "</items>";
+})()
 ),
     ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),
   };

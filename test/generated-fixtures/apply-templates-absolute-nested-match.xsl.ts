@@ -5,6 +5,7 @@ export const source = { path: "apply-templates-absolute-nested-match.xsl", diges
 
 /** match="/" (apply-templates-absolute-nested-match.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
+  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;
   resetRecordedTracePause(ctx.trace);
   if (ctx.initialMode !== undefined) {
     throwUnsupportedNativeInitialMode(ctx.initialMode);
@@ -20,8 +21,8 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     output:
       (
   /** literal items (apply-templates-absolute-nested-match.xsl:1) */
-  "<items>" +
-    (
+  (() => {
+  const body = (
   /** xsl:apply-templates (apply-templates-absolute-nested-match.xsl:1) */
   traceSelectedNodes(selectSimplePathNodesByStepPlan(document, [{"name":"root"},{"name":"section"},{"name":"item"}]), ctx, {"kind":"xsl:apply-templates","location":{"source":"apply-templates-absolute-nested-match.xsl","line":1,"column":140,"offset":139,"endLine":1,"endColumn":158,"endOffset":157}}).map((templateNode, templateIndex, templateNodes) => (
   /** match="/root/section/item" (apply-templates-absolute-nested-match.xsl:1) */
@@ -30,17 +31,19 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   traceTemplateEnter(templateNode, ctx, {"match":"/root/section/item","location":{"source":"apply-templates-absolute-nested-match.xsl","line":1,"column":101,"offset":100,"endLine":1,"endColumn":102,"endOffset":101}});
   return (
   /** literal item (apply-templates-absolute-nested-match.xsl:1) */
-  "<item>" +
-    (
+  (() => {
+  const body = (
   /** xsl:value-of (apply-templates-absolute-nested-match.xsl:1) */
   escapeText(traceStringValueOfNode(selectSimplePathNode(templateNode, ["name"]), ctx, {"kind":"xsl:value-of","location":{"source":"apply-templates-absolute-nested-match.xsl","line":1,"column":140,"offset":139,"endLine":1,"endColumn":158,"endOffset":157}}))
-) +
-    "</item>"
+);
+  return "<item" + "" + ">" + body + "</item>";
+})()
 );
 })()
 )).join("")
-) +
-    "</items>"
+);
+  return "<items" + "" + ">" + body + "</items>";
+})()
 ),
     ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),
   };

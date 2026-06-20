@@ -5,6 +5,7 @@ export const source = { path: "boolean-helpers.xsl", digest: "1b5a2d3c" } as con
 
 /** match="/" (boolean-helpers.xsl:3) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
+  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;
   resetRecordedTracePause(ctx.trace);
   if (ctx.initialMode !== undefined) {
     throwUnsupportedNativeInitialMode(ctx.initialMode);
@@ -21,32 +22,39 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     output:
       (
   /** literal out (boolean-helpers.xsl:4) */
-  "<out>" +
-    (
+  (() => {
+  const body = (
   /** xsl:if (boolean-helpers.xsl:5) */
   ((!selectSimplePathExists(currentNode, ["root","flag"])) ? (
   /** literal missing (boolean-helpers.xsl:5) */
-  "<missing>" +
-    "</missing>"
+  (() => {
+  const body = "";
+  return "<missing" + "" + ">" + body + "</missing>";
+})()
 ) : "")
 ) +
     (
   /** xsl:if (boolean-helpers.xsl:6) */
   (true ? (
   /** literal always (boolean-helpers.xsl:6) */
-  "<always>" +
-    "</always>"
+  (() => {
+  const body = "";
+  return "<always" + "" + ">" + body + "</always>";
+})()
 ) : "")
 ) +
     (
   /** xsl:if (boolean-helpers.xsl:7) */
   (false ? (
   /** literal never (boolean-helpers.xsl:7) */
-  "<never>" +
-    "</never>"
+  (() => {
+  const body = "";
+  return "<never" + "" + ">" + body + "</never>";
+})()
 ) : "")
-) +
-    "</out>"
+);
+  return "<out" + "" + ">" + body + "</out>";
+})()
 ),
     ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),
   };

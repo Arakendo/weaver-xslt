@@ -1,6 +1,7 @@
 import { FOER0000, XPST0017, XPTY0004 } from '../../errors/codes.js';
 import { readFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve as resolvePath } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { DynamicContext } from './context.js';
 import {
   createXdmBoolean,
@@ -273,7 +274,7 @@ export function createBuiltinFunctionEvaluator(helpers: BuiltinFunctionHelpers):
 
 function resolveDocumentPath(uri: string, baseUri?: string): string {
   if (uri.startsWith('file:')) {
-    return new URL(uri).pathname;
+    return fileURLToPath(uri);
   }
 
   if (baseUri === undefined) {
@@ -281,7 +282,7 @@ function resolveDocumentPath(uri: string, baseUri?: string): string {
   }
 
   if (baseUri.startsWith('file:')) {
-    return resolvePath(dirname(new URL(baseUri).pathname), uri);
+    return resolvePath(dirname(fileURLToPath(baseUri)), uri);
   }
 
   return isAbsolute(uri) ? uri : resolvePath(dirname(baseUri), uri);

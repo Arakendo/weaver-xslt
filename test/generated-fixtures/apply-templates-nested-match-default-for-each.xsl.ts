@@ -5,6 +5,7 @@ export const source = { path: "apply-templates-nested-match-default-for-each.xsl
 
 /** match="/" (apply-templates-nested-match-default-for-each.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
+  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;
   resetRecordedTracePause(ctx.trace);
   if (ctx.initialMode !== undefined) {
     throwUnsupportedNativeInitialMode(ctx.initialMode);
@@ -20,8 +21,8 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     output:
       (
   /** literal items (apply-templates-nested-match-default-for-each.xsl:1) */
-  "<items>" +
-    (
+  (() => {
+  const body = (
   /** xsl:apply-templates (apply-templates-nested-match-default-for-each.xsl:1) */
   applyBuiltInTemplatesByPath(document, ["section","item"], (templateNode, templateIndex, templateNodes) => (
   /** match="section/item" (apply-templates-nested-match-default-for-each.xsl:1) */
@@ -30,31 +31,35 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   traceTemplateEnter(templateNode, ctx, {"match":"section/item","location":{"source":"apply-templates-nested-match-default-for-each.xsl","line":1,"column":101,"offset":100,"endLine":1,"endColumn":102,"endOffset":101}});
   return (
   /** literal item (apply-templates-nested-match-default-for-each.xsl:1) */
-  "<item>" +
-    (
+  (() => {
+  const body = (
   /** xsl:value-of (apply-templates-nested-match-default-for-each.xsl:1) */
   escapeText(traceStringValueOfNode(selectSimplePathNode(templateNode, ["name"]), ctx, {"kind":"xsl:value-of","location":{"source":"apply-templates-nested-match-default-for-each.xsl","line":1,"column":219,"offset":218,"endLine":1,"endColumn":223,"endOffset":222}}))
 ) +
     (
   /** literal details (apply-templates-nested-match-default-for-each.xsl:1) */
-  "<details>" +
-    (
+  (() => {
+  const body = (
   /** xsl:for-each (apply-templates-nested-match-default-for-each.xsl:1) */
   traceSelectedNodes(selectSimplePathNodes(templateNode, ["detail"]), ctx, {"kind":"xsl:for-each","location":{"source":"apply-templates-nested-match-default-for-each.xsl","line":1,"column":219,"offset":218,"endLine":1,"endColumn":223,"endOffset":222}}).map((currentNode) => (
   /** literal detail (apply-templates-nested-match-default-for-each.xsl:1) */
-  "<detail>" +
-    escapeText(traceStringValueOfNode(currentNode, ctx, {"kind":"xsl:value-of","location":{"source":"apply-templates-nested-match-default-for-each.xsl","line":1,"column":219,"offset":218,"endLine":1,"endColumn":223,"endOffset":222}})) +
-    "</detail>"
+  (() => {
+  const body = escapeText(traceStringValueOfNode(currentNode, ctx, {"kind":"xsl:value-of","location":{"source":"apply-templates-nested-match-default-for-each.xsl","line":1,"column":219,"offset":218,"endLine":1,"endColumn":223,"endOffset":222}}));
+  return "<detail" + "" + ">" + body + "</detail>";
+})()
 )).join("")
-) +
-    "</details>"
-) +
-    "</item>"
+);
+  return "<details" + "" + ">" + body + "</details>";
+})()
+);
+  return "<item" + "" + ">" + body + "</item>";
+})()
 );
 })()
 ), false, ctx, {"kind":"xsl:apply-templates","location":{"source":"apply-templates-nested-match-default-for-each.xsl","line":1,"column":111,"offset":110,"endLine":1,"endColumn":112,"endOffset":111}})
-) +
-    "</items>"
+);
+  return "<items" + "" + ">" + body + "</items>";
+})()
 ),
     ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),
   };

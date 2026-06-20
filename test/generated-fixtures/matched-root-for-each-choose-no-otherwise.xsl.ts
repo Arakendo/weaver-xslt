@@ -5,6 +5,7 @@ export const source = { path: "matched-root-for-each-choose-no-otherwise.xsl", d
 
 /** match="/root" (matched-root-for-each-choose-no-otherwise.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
+  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;
   resetRecordedTracePause(ctx.trace);
   if (ctx.initialMode !== undefined) {
     throwUnsupportedNativeInitialMode(ctx.initialMode);
@@ -25,13 +26,13 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     output:
       (
   /** literal items (matched-root-for-each-choose-no-otherwise.xsl:1) */
-  "<items>" +
-    (
+  (() => {
+  const body = (
   /** xsl:for-each (matched-root-for-each-choose-no-otherwise.xsl:1) */
   traceSelectedNodes(selectSimplePathNodes(currentNode, ["item"]), ctx, {"kind":"xsl:for-each","location":{"source":"matched-root-for-each-choose-no-otherwise.xsl","line":1,"column":137,"offset":136,"endLine":1,"endColumn":141,"endOffset":140}}).map((currentNode) => (
   /** literal item (matched-root-for-each-choose-no-otherwise.xsl:1) */
-  "<item>" +
-    (
+  (() => {
+  const body = (
   /** xsl:value-of (matched-root-for-each-choose-no-otherwise.xsl:1) */
   escapeText(traceStringValueOfNode(selectSimplePathNode(currentNode, ["name"]), ctx, {"kind":"xsl:value-of","location":{"source":"matched-root-for-each-choose-no-otherwise.xsl","line":1,"column":137,"offset":136,"endLine":1,"endColumn":141,"endOffset":140}}))
 ) +
@@ -41,15 +42,19 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   /** xsl:when (matched-root-for-each-choose-no-otherwise.xsl:1) */
   (
   /** literal flagged (matched-root-for-each-choose-no-otherwise.xsl:1) */
-  "<flagged>" +
-    "</flagged>"
+  (() => {
+  const body = "";
+  return "<flagged" + "" + ">" + body + "</flagged>";
+})()
 )
 ) : "")
-) +
-    "</item>"
+);
+  return "<item" + "" + ">" + body + "</item>";
+})()
 )).join("")
-) +
-    "</items>"
+);
+  return "<items" + "" + ">" + body + "</items>";
+})()
 ),
     ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),
   };

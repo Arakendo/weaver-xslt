@@ -10,14 +10,14 @@ site_dir: site
 theme:
   name: material
   palette:
-    - media: "(prefers-color-scheme: light)"
+    - media: '(prefers-color-scheme: light)'
       scheme: default
       primary: teal
       accent: cyan
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
+    - media: '(prefers-color-scheme: dark)'
       scheme: slate
       primary: teal
       accent: cyan
@@ -37,7 +37,9 @@ nav:
   - Differentiators: DIFFERENTIATORS.md
   - Architecture: ARCHITECTURE.md
   - Roadmap: ROADMAP.md
+  - Lessons Learned: LESSONS_LEARNED.md
   - Progress Artifacts: PROGRESS_ARTIFACTS.md
+  - Fallback File Size Findings: CODEGEN_FALLBACK_SIZE.md
   - Errors: ERRORS.md
   - XPath: XPATH.md
   - Semantic Boundaries: SEMANTIC_BOUNDARIES.md

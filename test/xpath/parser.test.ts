@@ -12,6 +12,11 @@ describe('XPath parser coverage', () => {
     expect(parseXPath('-1')).toMatchObject({ kind: 'unary', operator: '-' });
     expect(parseXPath('+.65535032')).toMatchObject({ kind: 'unary', operator: '+' });
     expect(parseXPath('foo/bar[1]')).toMatchObject({ kind: 'path', absolute: false });
+    expect(parseXPath('./@to')).toMatchObject({
+      kind: 'path',
+      base: { kind: 'contextItem' },
+      steps: [{ kind: 'step', axis: 'attribute', nodeTest: { kind: 'nameTest', name: 'to' } }],
+    });
   });
 
   it('parses the initial MVP+2 expression kinds', () => {
@@ -50,10 +55,12 @@ describe('XPath parser coverage', () => {
       kind: 'let',
       returnExpr: {
         kind: 'sequence',
-        items: [{
-          kind: 'binary',
-          operator: '||',
-        }],
+        items: [
+          {
+            kind: 'binary',
+            operator: '||',
+          },
+        ],
       },
     });
     expect(parseXPath('for $x in (1, 2) return $x')).toMatchObject({
@@ -71,11 +78,7 @@ describe('XPath parser coverage', () => {
     });
     expect(parseXPath('/root/item/string(@name)')).toMatchObject({
       kind: 'path',
-      steps: [
-        { kind: 'step' },
-        { kind: 'step' },
-        { kind: 'functionCall', callee: 'string' },
-      ],
+      steps: [{ kind: 'step' }, { kind: 'step' }, { kind: 'functionCall', callee: 'string' }],
     });
     expect(parseXPath('(1 to 25)[. mod 2 eq 0]')).toMatchObject({
       kind: 'filter',
@@ -153,10 +156,7 @@ describe('XPath parser coverage', () => {
     });
     expect(parseXPath('//comment()')).toMatchObject({
       kind: 'path',
-      steps: [
-        { kind: 'step' },
-        { kind: 'step', nodeTest: { kind: 'kindTest', name: 'comment' } },
-      ],
+      steps: [{ kind: 'step' }, { kind: 'step', nodeTest: { kind: 'kindTest', name: 'comment' } }],
     });
     expect(parseXPath('//@xml:*')).toMatchObject({
       kind: 'path',
@@ -168,7 +168,11 @@ describe('XPath parser coverage', () => {
   });
 
   it('rejects chained comparison expressions without parentheses', () => {
-    expect(() => parseXPath('2 < 3 < 4')).toThrowError(expect.objectContaining({ code: 'XPST0003' }));
-    expect(() => parseXPath('true() = true() = true() = true()')).toThrowError(expect.objectContaining({ code: 'XPST0003' }));
+    expect(() => parseXPath('2 < 3 < 4')).toThrowError(
+      expect.objectContaining({ code: 'XPST0003' }),
+    );
+    expect(() => parseXPath('true() = true() = true() = true()')).toThrowError(
+      expect.objectContaining({ code: 'XPST0003' }),
+    );
   });
 });

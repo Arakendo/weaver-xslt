@@ -1,5 +1,6 @@
 import type {
   AttributeInstruction,
+  AttributeValueTemplatePart,
   GlobalBinding,
   Instruction,
   StylesheetIR,
@@ -1081,12 +1082,21 @@ function emitInstruction(
         return undefined;
       }
 
-      const staticAttributes = emitAttributes(instruction.attributes);
+      const emittedAttributes = emitAttributesExpression(
+        instruction.attributes,
+        runtimeHelpers,
+        contextNodeIdentifier,
+        options,
+      );
+      if (emittedAttributes === undefined) {
+        return undefined;
+      }
+
       const closeTag = `</${instruction.name}>`;
       return annotateInstruction(
         tsRawExpression(`(() => {
   const body = ${body.code};
-  return ${JSON.stringify(`<${instruction.name}${staticAttributes}>`)} + body + ${JSON.stringify(closeTag)};
+  return ${JSON.stringify(`<${instruction.name}`)} + ${emittedAttributes.code} + ${JSON.stringify('>')} + body + ${JSON.stringify(closeTag)};
 })()`),
       );
     }
@@ -1687,10 +1697,99 @@ function mapComparisonOperator(
   }
 }
 
-function emitAttributes(attributes: readonly AttributeInstruction[]): string {
-  return attributes
-    .map((attribute) => ` ${attribute.name}="${escapeAttributeLiteral(attribute.value)}"`)
-    .join('');
+function emitAttributesExpression(
+  attributes: readonly AttributeInstruction[],
+  runtimeHelpers: Set<string>,
+  contextNodeIdentifier: string,
+  options: {
+    readonly positionExpression?: string;
+    readonly lastExpression?: string;
+    readonly variableBindings?: ReadonlyMap<string, TsExpression>;
+  },
+): TsExpression | undefined {
+  const attributeExpressions: TsExpression[] = [];
+
+  for (const attribute of attributes) {
+    const valueExpression = emitAttributeValueExpression(
+      attribute,
+      runtimeHelpers,
+      contextNodeIdentifier,
+      options,
+    );
+    if (valueExpression === undefined) {
+      return undefined;
+    }
+
+    attributeExpressions.push(
+      tsConcatExpression([
+        tsStringLiteral(` ${attribute.name}="`),
+        valueExpression,
+        tsStringLiteral('"'),
+      ]),
+    );
+  }
+
+  return tsConcatExpression(attributeExpressions);
+}
+
+function emitAttributeValueExpression(
+  attribute: AttributeInstruction,
+  runtimeHelpers: Set<string>,
+  contextNodeIdentifier: string,
+  options: {
+    readonly positionExpression?: string;
+    readonly lastExpression?: string;
+    readonly variableBindings?: ReadonlyMap<string, TsExpression>;
+  },
+): TsExpression | undefined {
+  if (attribute.valueTemplate === undefined) {
+    return tsStringLiteral(escapeAttributeLiteral(attribute.value));
+  }
+
+  const partExpressions: TsExpression[] = [];
+  for (const part of attribute.valueTemplate) {
+    const partExpression = emitAttributeValueTemplatePartExpression(
+      part,
+      runtimeHelpers,
+      contextNodeIdentifier,
+      options,
+    );
+    if (partExpression === undefined) {
+      return undefined;
+    }
+
+    partExpressions.push(partExpression);
+  }
+
+  return tsConcatExpression(partExpressions);
+}
+
+function emitAttributeValueTemplatePartExpression(
+  part: AttributeValueTemplatePart,
+  runtimeHelpers: Set<string>,
+  contextNodeIdentifier: string,
+  options: {
+    readonly positionExpression?: string;
+    readonly lastExpression?: string;
+    readonly variableBindings?: ReadonlyMap<string, TsExpression>;
+  },
+): TsExpression | undefined {
+  if (part.kind === 'text') {
+    return tsStringLiteral(escapeAttributeLiteral(part.text));
+  }
+
+  const expression = emitVariableValueExpression(
+    part.expression,
+    runtimeHelpers,
+    contextNodeIdentifier,
+    options,
+  );
+  if (expression === undefined) {
+    return undefined;
+  }
+
+  runtimeHelpers.add('escapeAttribute');
+  return tsCallExpression('escapeAttribute', [expression]);
 }
 
 function tryGetSimpleMatchPath(ast: PathExpression): readonly string[] | undefined {

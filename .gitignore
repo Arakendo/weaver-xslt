@@ -13,6 +13,7 @@ coverage/
 .env
 .env.local
 /tools/
+/.tmp-vision-runtime/
 
 # Local workbench material
 /.workbench/

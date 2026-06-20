@@ -74,12 +74,17 @@ const GENERATED_RUNTIME_MODULE = {
   transformCompiledStylesheet,
 };
 
-export function compileAndLoadGeneratedModule(stylesheet: string, path: string): {
+export function compileAndLoadGeneratedModule(
+  stylesheet: string,
+  path: string,
+  filePath?: string,
+): {
   readonly diagnostics: readonly ts.Diagnostic[];
   readonly exports: Record<string, unknown>;
 } {
   const emitted = compileStylesheetToTs(stylesheet, {
     path,
+    ...(filePath === undefined ? {} : { filePath }),
     runtimeModuleSpecifier: GENERATED_RUNTIME_MODULE_SPECIFIER,
   });
   const transpiled = ts.transpileModule(emitted, {
@@ -113,12 +118,19 @@ export function compileAndLoadGeneratedModule(stylesheet: string, path: string):
 
 export function expectGeneratedFixtureToMatch(stylesheet: string, path: string): void {
   const emitted = compileStylesheetToTs(stylesheet, { path });
-  const fixture = readFileSync(new URL(`../generated-fixtures/${path}.ts`, import.meta.url), 'utf8').replaceAll('\r\n', '\n');
+  const fixture = readFileSync(
+    new URL(`../generated-fixtures/${path}.ts`, import.meta.url),
+    'utf8',
+  ).replaceAll('\r\n', '\n');
 
   expect(emitted.trimEnd()).toBe(fixture.trimEnd());
 }
 
-export function expectRuntimeModuleToMatchInterpreter(stylesheet: string, path: string, sourceXml: string): void {
+export function expectRuntimeModuleToMatchInterpreter(
+  stylesheet: string,
+  path: string,
+  sourceXml: string,
+): void {
   const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, path);
 
   expect(diagnostics).toEqual([]);
@@ -142,15 +154,20 @@ export function expectNativeRuntimeParity(
   expect(diagnostics).toEqual([]);
 
   const generatedModule = exports as {
-    readonly transform: (source: string, ctx?: Omit<TransformOptions, 'execution'>) => ReturnType<XsltProcessor['transform']>;
+    readonly transform: (
+      source: string,
+      ctx?: Omit<TransformOptions, 'execution'>,
+    ) => ReturnType<XsltProcessor['transform']>;
   };
   const processor = new XsltProcessor(stylesheet);
   const interpreterResult = processor.transform(sourceXml, options);
 
-  expect(processor.transform(sourceXml, {
-    ...options,
-    execution: 'native',
-  })).toEqual({
+  expect(
+    processor.transform(sourceXml, {
+      ...options,
+      execution: 'native',
+    }),
+  ).toEqual({
     ...interpreterResult,
     execution: {
       requested: 'native',

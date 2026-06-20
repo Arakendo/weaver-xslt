@@ -670,6 +670,7 @@ class Parser {
     const token = this.current();
     if (
       token.kind !== 'name' &&
+      !isNameTestTokenKind(token.kind) &&
       token.kind !== 'if' &&
       token.kind !== 'for' &&
       token.kind !== 'let' &&
@@ -840,6 +841,30 @@ function isKindTestName(value: string): value is KindTest['name'] {
     value === 'node' ||
     value === 'processing-instruction' ||
     value === 'text'
+  );
+}
+
+function isNameTestTokenKind(kind: TokenKind): boolean {
+  return (
+    kind === 'and' ||
+    kind === 'div' ||
+    kind === 'eq' ||
+    kind === 'except' ||
+    kind === 'ge' ||
+    kind === 'gt' ||
+    kind === 'idiv' ||
+    kind === 'in' ||
+    kind === 'intersect' ||
+    kind === 'is' ||
+    kind === 'le' ||
+    kind === 'lt' ||
+    kind === 'mod' ||
+    kind === 'ne' ||
+    kind === 'or' ||
+    kind === 'return' ||
+    kind === 'satisfies' ||
+    kind === 'to' ||
+    kind === 'union'
   );
 }
 

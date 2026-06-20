@@ -5,6 +5,7 @@ export const source = { path: "conditional.xsl", digest: "8ff84c60" } as const;
 
 /** match="/" (conditional.xsl:1) */
 export function transform(sourceXml: string, ctx: TransformContext = {}): TransformResult {
+  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;
   resetRecordedTracePause(ctx.trace);
   if (ctx.initialMode !== undefined) {
     throwUnsupportedNativeInitialMode(ctx.initialMode);
@@ -20,13 +21,15 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
     output:
       (
   /** literal out (conditional.xsl:1) */
-  "<out>" +
-    (
+  (() => {
+  const body = (
   /** xsl:if (conditional.xsl:1) */
   ((selectSimplePathText(document, ["root","name"]) === "world") ? (
   /** literal yes (conditional.xsl:1) */
-  "<yes>" +
-    "</yes>"
+  (() => {
+  const body = "";
+  return "<yes" + "" + ">" + body + "</yes>";
+})()
 ) : "")
 ) +
     (
@@ -35,21 +38,24 @@ export function transform(sourceXml: string, ctx: TransformContext = {}): Transf
   /** xsl:when (conditional.xsl:1) */
   (
   /** literal role (conditional.xsl:1) */
-  "<role>" +
-    "admin" +
-    "</role>"
+  (() => {
+  const body = "admin";
+  return "<role" + "" + ">" + body + "</role>";
+})()
 )
 ) : (
   /** xsl:otherwise (conditional.xsl:1) */
   (
   /** literal role (conditional.xsl:1) */
-  "<role>" +
-    "user" +
-    "</role>"
+  (() => {
+  const body = "user";
+  return "<role" + "" + ">" + body + "</role>";
+})()
 )
 ))
-) +
-    "</out>"
+);
+  return "<out" + "" + ">" + body + "</out>";
+})()
 ),
     ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),
   };

@@ -61,8 +61,8 @@ describe('XSLT codegen for-each emission', () => {
     expect(emitted).toContain('const currentNode = selectSimplePathNode(document, ["root","section"]);');
     expect(emitted).toContain('traceSelectedNodes(selectSimplePathNodes(currentNode, ["item"]), ctx, {"kind":"xsl:for-each"');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
-    expect(emitted).toContain('"<flagged>" +');
-    expect(emitted).toContain('"<plain>" +');
+    expect(emitted).toContain('return "<flagged" + "" + ">" + body + "</flagged>";');
+    expect(emitted).toContain('return "<plain" + "" + ">" + body + "</plain>";');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
@@ -73,7 +73,7 @@ describe('XSLT codegen for-each emission', () => {
     expect(emitted).toContain('const currentNode = selectSimplePathNode(document, ["root","section"]);');
     expect(emitted).toContain('traceSelectedNodes(selectSimplePathNodes(currentNode, ["item"]), ctx, {"kind":"xsl:for-each"');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
-    expect(emitted).toContain('"<flagged>" +');
+    expect(emitted).toContain('return "<flagged" + "" + ">" + body + "</flagged>";');
     expect(emitted).toContain(': "")');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
@@ -86,9 +86,9 @@ describe('XSLT codegen for-each emission', () => {
     expect(emitted).toContain('traceSelectedNodes(selectSimplePathNodes(currentNode, ["item"]), ctx, {"kind":"xsl:for-each"');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["vip"])');
-    expect(emitted).toContain('"<flagged>" +');
-    expect(emitted).toContain('"<vip>" +');
-    expect(emitted).toContain('"<plain>" +');
+    expect(emitted).toContain('return "<flagged" + "" + ">" + body + "</flagged>";');
+    expect(emitted).toContain('return "<vip" + "" + ">" + body + "</vip>";');
+    expect(emitted).toContain('return "<plain" + "" + ">" + body + "</plain>";');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
@@ -154,8 +154,8 @@ describe('XSLT codegen for-each emission', () => {
     expect(emitted).toContain('traceSelectedNodes(selectSimplePathNodes(document, ["root","item"]), ctx, {"kind":"xsl:for-each"');
     expect(emitted).toContain('escapeText(traceStringValueOfNode(selectSimplePathNode(currentNode, ["name"]), ctx, {"kind":"xsl:value-of"');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
-    expect(emitted).toContain('"<flagged>" +');
-    expect(emitted).toContain('"<plain>" +');
+    expect(emitted).toContain('return "<flagged" + "" + ">" + body + "</flagged>";');
+    expect(emitted).toContain('return "<plain" + "" + ">" + body + "</plain>";');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
@@ -166,7 +166,7 @@ describe('XSLT codegen for-each emission', () => {
     expect(emitted).toContain('traceSelectedNodes(selectSimplePathNodes(document, ["root","item"]), ctx, {"kind":"xsl:for-each"');
     expect(emitted).toContain('escapeText(traceStringValueOfNode(selectSimplePathNode(currentNode, ["name"]), ctx, {"kind":"xsl:value-of"');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
-    expect(emitted).toContain('"<flagged>" +');
+    expect(emitted).toContain('return "<flagged" + "" + ">" + body + "</flagged>";');
     expect(emitted).toContain(': "")');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
@@ -179,9 +179,9 @@ describe('XSLT codegen for-each emission', () => {
     expect(emitted).toContain('escapeText(traceStringValueOfNode(selectSimplePathNode(currentNode, ["name"]), ctx, {"kind":"xsl:value-of"');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["flag"])');
     expect(emitted).toContain('selectSimplePathExists(currentNode, ["vip"])');
-    expect(emitted).toContain('"<flagged>" +');
-    expect(emitted).toContain('"<vip>" +');
-    expect(emitted).toContain('"<plain>" +');
+    expect(emitted).toContain('return "<flagged" + "" + ">" + body + "</flagged>";');
+    expect(emitted).toContain('return "<vip" + "" + ">" + body + "</vip>";');
+    expect(emitted).toContain('return "<plain" + "" + ">" + body + "</plain>";');
     expect(emitted).not.toContain('transformCompiledStylesheet(stylesheet, sourceXml, ctx)');
   });
 
