@@ -109,7 +109,7 @@ jobs:
           exit "$benchmark_exit_code"
 
       - name: Add benchmark summary
-        if: runner.os == 'Linux' && matrix.node == 22 && always()
+        if: runner.os == 'Linux' && matrix.node == 22 && always() && steps.vision_benchmark.outputs.summary_path != ''
         shell: bash
         run: |
           echo '## Compile benchmark guardrail' >> "$GITHUB_STEP_SUMMARY"
@@ -123,7 +123,7 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload benchmark artifact
-        if: runner.os == 'Linux' && matrix.node == 22 && always()
+        if: runner.os == 'Linux' && matrix.node == 22 && always() && steps.vision_benchmark.outputs.report_path != '' && steps.vision_benchmark.outputs.summary_path != ''
         uses: actions/upload-artifact@v4
         with:
           name: vision-compile-benchmark-node-${{ matrix.node }}

@@ -1,5 +1,7 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
-import { resolve } from 'node:path';
 
 import { compileStylesheetToTs } from '../../src/compile.js';
 import { XsltProcessor } from '../../src/index.js';
@@ -47,6 +49,8 @@ describe('XSLT codegen MVP4 slice', () => {
   });
 
   it('resolves document() against the stylesheet file path in generated modules', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-native-document-resolution-'));
+
     const stylesheet = `
       <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
         <xsl:template match="/">
@@ -54,24 +58,35 @@ describe('XSLT codegen MVP4 slice', () => {
         </xsl:template>
       </xsl:stylesheet>
     `;
-    const stylesheetPath = resolve(
-      'f:/LocalSource/TS XSLT/.workbench/vision xslts/S1000D/descriptive.xslt',
-    );
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(
-      stylesheet,
-      'descriptive.xsl',
-      stylesheetPath,
-    );
 
-    expect(diagnostics).toEqual([]);
+    try {
+      const stylesheetDir = join(tempDir, '.workbench', 'vision xslts', 'S1000D');
+      const languagesDir = join(tempDir, '.workbench', 'Languages');
+      const stylesheetPath = resolve(join(stylesheetDir, 'descriptive.xslt'));
+      const documentPath = join(languagesDir, 'English.resx');
 
-    const generatedModule = exports as {
-      readonly transform: (source: string) => ReturnType<XsltProcessor['transform']>;
-    };
-    const sourceXml = '<root/>';
-    const interpreter = new XsltProcessor(stylesheet, { sourceName: stylesheetPath });
+      mkdirSync(stylesheetDir, { recursive: true });
+      mkdirSync(languagesDir, { recursive: true });
+      writeFileSync(documentPath, '<root><entry>ok</entry></root>', 'utf8');
 
-    expect(generatedModule.transform(sourceXml)).toEqual(interpreter.transform(sourceXml));
+      const { diagnostics, exports } = compileAndLoadGeneratedModule(
+        stylesheet,
+        'descriptive.xsl',
+        stylesheetPath,
+      );
+
+      expect(diagnostics).toEqual([]);
+
+      const generatedModule = exports as {
+        readonly transform: (source: string) => ReturnType<XsltProcessor['transform']>;
+      };
+      const sourceXml = '<root/>';
+      const interpreter = new XsltProcessor(stylesheet, { sourceName: stylesheetPath });
+
+      expect(generatedModule.transform(sourceXml)).toEqual(interpreter.transform(sourceXml));
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
   });
 
   it('emits native code for a single-focus position() test', () => {
