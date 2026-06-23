@@ -7,6 +7,7 @@ import {
   getElementNameSourceLocation,
   getNodeSourceLocation,
 } from '../../xml/parse.js';
+import type { CompileIrStatsRecorder } from './compiler.js';
 import type { ChooseWhenBranch, Instruction, TemplateRule, WithParam } from './ir.js';
 
 type NodeListLike = {
@@ -32,6 +33,7 @@ export type InstructionCompilerHelpers = {
     allowedAttributes: readonly string[],
   ): void;
   createXsltStaticError: StaticErrorFactory;
+  readonly irStats?: CompileIrStatsRecorder;
   parseXPathInContext(
     expression: string,
     location: TemplateRule['location'],

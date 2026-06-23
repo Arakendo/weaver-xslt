@@ -7,7 +7,14 @@ type LocatedNode = Node & {
   readonly columnNumber?: number;
 };
 
-export function getNodeSourceLocation(source: string, node: Node, sourceName = '<xml>'): SourceLocation | undefined {
+const MAX_LINE_START_OFFSETS_CACHE_ENTRIES = 4;
+const lineStartOffsetsCache = new Map<string, readonly number[]>();
+
+export function getNodeSourceLocation(
+  source: string,
+  node: Node,
+  sourceName = '<xml>',
+): SourceLocation | undefined {
   const locatedNode = node as LocatedNode;
   const line = normalizeLineNumber(locatedNode.lineNumber);
   const column = locatedNode.columnNumber;
@@ -112,6 +119,11 @@ export function getElementNameSourceLocation(
 }
 
 function computeLineStartOffsets(source: string): number[] {
+  const cached = lineStartOffsetsCache.get(source);
+  if (cached !== undefined) {
+    return cached as number[];
+  }
+
   const offsets = [0];
 
   for (let index = 0; index < source.length; index += 1) {
@@ -129,10 +141,22 @@ function computeLineStartOffsets(source: string): number[] {
     }
   }
 
+  lineStartOffsetsCache.set(source, offsets);
+  if (lineStartOffsetsCache.size > MAX_LINE_START_OFFSETS_CACHE_ENTRIES) {
+    const oldestKey = lineStartOffsetsCache.keys().next().value;
+    if (typeof oldestKey === 'string') {
+      lineStartOffsetsCache.delete(oldestKey);
+    }
+  }
+
   return offsets;
 }
 
-function getLineText(source: string, lineStartOffsets: readonly number[], line: number): string | undefined {
+function getLineText(
+  source: string,
+  lineStartOffsets: readonly number[],
+  line: number,
+): string | undefined {
   const lineStartOffset = lineStartOffsets[line - 1];
   if (lineStartOffset === undefined) {
     return undefined;
@@ -161,7 +185,7 @@ function findAttributeValueRange(
 
   const quoteIndex = assignmentIndex + attribute.name.length + 1;
   const quoteCharacter = lineText[quoteIndex];
-  if (quoteCharacter !== '"' && quoteCharacter !== '\'') {
+  if (quoteCharacter !== '"' && quoteCharacter !== "'") {
     return undefined;
   }
 

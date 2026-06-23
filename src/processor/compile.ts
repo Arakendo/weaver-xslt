@@ -10,11 +10,19 @@ import {
   compileStylesheetRuntimeArtifacts as compileStylesheetRuntimeArtifactsCore,
   createStylesheetDigest,
   type CompileStylesheetArtifacts,
+  type CompilePerformancePhase,
   type CompileStylesheetRuntimeArtifacts,
 } from './runtimeArtifacts.js';
 
 export { createStylesheetDigest };
-export type { CompileStylesheetArtifacts, CompileStylesheetRuntimeArtifacts };
+export type {
+  CompileIrStats,
+  CompileMemoryUsageSnapshot,
+  CompilePerformancePhase,
+  CompilePerformanceProfile,
+  CompileStylesheetArtifacts,
+  CompileStylesheetRuntimeArtifacts,
+} from './runtimeArtifacts.js';
 
 const XSLT_NAMESPACE = 'http://www.w3.org/1999/XSL/Transform';
 
@@ -24,6 +32,22 @@ interface ComposedTopLevelEntry {
   readonly xml: string;
   readonly precedence: ImportPrecedence;
   readonly duplicateKey?: string;
+  readonly summaryKey?: string;
+}
+
+export interface ComposedStylesheetDuplicateSummary {
+  readonly key: string;
+  readonly occurrencesBeforePrune: number;
+  readonly occurrencesAfterPrune: number;
+  readonly droppedOccurrences: number;
+}
+
+export interface ComposedStylesheetSummary {
+  readonly stylesheetPath: string;
+  readonly topLevelEntriesBeforePrune: number;
+  readonly topLevelEntriesAfterPrune: number;
+  readonly droppedDuplicateEntries: number;
+  readonly duplicateSummaries: readonly ComposedStylesheetDuplicateSummary[];
 }
 
 export interface CompileStylesheetToTsOptions {
@@ -31,11 +55,17 @@ export interface CompileStylesheetToTsOptions {
   readonly filePath?: string;
   readonly runtimeModuleSpecifier?: string;
   readonly sampleDocument?: string;
+  readonly onProgress?: (message: string) => void;
+  readonly captureProfile?: boolean;
+  readonly captureIrStats?: boolean;
 }
 
 export interface CompileStylesheetArtifactsFromFileOptions {
   readonly runtimeModuleSpecifier?: string;
   readonly sampleDocumentPath?: string;
+  readonly onProgress?: (message: string) => void;
+  readonly captureProfile?: boolean;
+  readonly captureIrStats?: boolean;
 }
 
 export function compileStylesheetToTs(
@@ -63,6 +93,8 @@ export function compileStylesheetArtifacts(
     digest: artifacts.digest,
     sourceMap: artifacts.sourceMap,
     diagnostics: artifacts.diagnostics,
+    ...(artifacts.profile === undefined ? {} : { profile: artifacts.profile }),
+    ...(artifacts.irStats === undefined ? {} : { irStats: artifacts.irStats }),
   };
 }
 
@@ -83,6 +115,9 @@ export function compileStylesheetRuntimeArtifacts(
     ...(options.filePath === undefined
       ? {}
       : { extensionFunctions: loadExtensionFunctionCatalog(options.filePath) }),
+    ...(options.onProgress === undefined ? {} : { onProgress: options.onProgress }),
+    ...(options.captureProfile === undefined ? {} : { captureProfile: options.captureProfile }),
+    ...(options.captureIrStats === undefined ? {} : { captureIrStats: options.captureIrStats }),
   });
 }
 
@@ -90,27 +125,115 @@ export function compileStylesheetArtifactsFromFile(
   stylesheetPath: string,
   options: CompileStylesheetArtifactsFromFileOptions = {},
 ): CompileStylesheetArtifacts {
+  const totalStartTime = options.captureProfile ? performance.now() : undefined;
+  const composeStartTime = options.captureProfile ? performance.now() : undefined;
+  const composeMemoryBefore = options.captureProfile ? sampleMemoryUsage() : undefined;
   const resolvedStylesheetPath = resolve(stylesheetPath);
+  options.onProgress?.(`Composing stylesheet source from ${resolvedStylesheetPath}`);
   const stylesheetSource = composeStylesheetSourceFromFile(resolvedStylesheetPath);
+  const composeElapsedMs =
+    composeStartTime === undefined ? undefined : performance.now() - composeStartTime;
+  const composeMemoryAfter = options.captureProfile ? sampleMemoryUsage() : undefined;
   const sampleDocument =
     options.sampleDocumentPath === undefined
       ? undefined
       : readFileSync(resolve(options.sampleDocumentPath), 'utf8');
 
-  return compileStylesheetArtifacts(stylesheetSource, {
+  const artifacts = compileStylesheetArtifacts(stylesheetSource, {
     path: basename(resolvedStylesheetPath),
     filePath: resolvedStylesheetPath,
     ...(options.runtimeModuleSpecifier === undefined
       ? {}
       : { runtimeModuleSpecifier: options.runtimeModuleSpecifier }),
     ...(sampleDocument === undefined ? {} : { sampleDocument }),
+    ...(options.onProgress === undefined ? {} : { onProgress: options.onProgress }),
+    ...(options.captureProfile === undefined ? {} : { captureProfile: options.captureProfile }),
+    ...(options.captureIrStats === undefined ? {} : { captureIrStats: options.captureIrStats }),
   });
+
+  if (
+    options.captureProfile !== true ||
+    artifacts.profile === undefined ||
+    composeElapsedMs === undefined ||
+    totalStartTime === undefined
+  ) {
+    return artifacts;
+  }
+
+  const composePhase: CompilePerformancePhase = {
+    key: 'compose',
+    label: 'Composing stylesheet source',
+    elapsedMs: composeElapsedMs,
+    ...(composeMemoryBefore === undefined ? {} : { memoryBefore: composeMemoryBefore }),
+    ...(composeMemoryAfter === undefined ? {} : { memoryAfter: composeMemoryAfter }),
+  };
+
+  return {
+    ...artifacts,
+    profile: {
+      totalElapsedMs: performance.now() - totalStartTime,
+      phases: [composePhase, ...artifacts.profile.phases],
+    },
+  };
+}
+
+function sampleMemoryUsage():
+  | {
+      readonly rss: number;
+      readonly heapTotal: number;
+      readonly heapUsed: number;
+      readonly external: number;
+      readonly arrayBuffers: number;
+    }
+  | undefined {
+  const processValue = (
+    globalThis as typeof globalThis & {
+      process?: { memoryUsage?: () => NodeJS.MemoryUsage };
+    }
+  ).process;
+
+  if (typeof processValue?.memoryUsage !== 'function') {
+    return undefined;
+  }
+
+  const memoryUsage = processValue.memoryUsage();
+  return {
+    rss: memoryUsage.rss,
+    heapTotal: memoryUsage.heapTotal,
+    heapUsed: memoryUsage.heapUsed,
+    external: memoryUsage.external,
+    arrayBuffers: memoryUsage.arrayBuffers,
+  };
 }
 
 export function composeStylesheetSourceFromFile(stylesheetPath: string): string {
+  return composeStylesheetSourceDetailsFromFile(stylesheetPath).source;
+}
+
+export function summarizeComposedStylesheetFromFile(
+  stylesheetPath: string,
+): ComposedStylesheetSummary {
+  const details = composeStylesheetSourceDetailsFromFile(stylesheetPath);
+  return details.summary;
+}
+
+function composeStylesheetSourceDetailsFromFile(stylesheetPath: string): {
+  readonly source: string;
+  readonly summary: ComposedStylesheetSummary;
+} {
   const { root, sourceName, source } = loadStylesheetRoot(stylesheetPath);
+  const resolvedStylesheetPath = resolve(stylesheetPath);
   if (!isStylesheetRoot(root) || !hasCompositionChildren(root)) {
-    return source;
+    return {
+      source,
+      summary: {
+        stylesheetPath: resolvedStylesheetPath,
+        topLevelEntriesBeforePrune: 0,
+        topLevelEntriesAfterPrune: 0,
+        droppedDuplicateEntries: 0,
+        duplicateSummaries: [],
+      },
+    };
   }
 
   const serializer = new XMLSerializer();
@@ -125,10 +248,12 @@ export function composeStylesheetSourceFromFile(stylesheetPath: string): string 
       activePaths,
       [],
     );
-    const children = pruneLowerPrecedenceDuplicates(entries)
-      .map((entry) => entry.xml)
-      .join('');
-    return `<${root.nodeName}${serializeAttributes(root)}>${children}</${root.nodeName}>`;
+    const prunedEntries = pruneLowerPrecedenceDuplicates(entries);
+    const children = prunedEntries.map((entry) => entry.xml).join('');
+    return {
+      source: `<${root.nodeName}${serializeAttributes(root)}>${children}</${root.nodeName}>`,
+      summary: createComposedStylesheetSummary(resolvedStylesheetPath, entries, prunedEntries),
+    };
   } catch (error) {
     if (error instanceof Error && error.message === '__WEAVER_COMPOSE_RECURSION__') {
       throw new Error(
@@ -277,14 +402,19 @@ function createComposedTopLevelEntry(
   serializer: XMLSerializer,
   precedence: ImportPrecedence,
 ): ComposedTopLevelEntry {
+  const xml = serializer.serializeToString(node);
   return {
-    xml: serializer.serializeToString(node),
+    xml,
     precedence,
-    ...(node.nodeType === 1 ? createDuplicateKey(node as Element, stylesheetSource) : {}),
+    ...(node.nodeType === 1 ? createDuplicateKey(node as Element, stylesheetSource, xml) : {}),
   };
 }
 
-function createDuplicateKey(element: Element, stylesheetSource: string): { duplicateKey?: string } {
+function createDuplicateKey(
+  element: Element,
+  stylesheetSource: string,
+  serializedXml: string,
+): { duplicateKey?: string; summaryKey?: string } {
   if (element.namespaceURI !== XSLT_NAMESPACE) {
     return {};
   }
@@ -292,6 +422,22 @@ function createDuplicateKey(element: Element, stylesheetSource: string): { dupli
   const localName = element.localName ?? element.nodeName;
   if (localName !== 'template' && localName !== 'param' && localName !== 'variable') {
     return {};
+  }
+
+  if (localName === 'template') {
+    const rawName = element.getAttribute('name');
+    if (rawName === null || rawName.length === 0) {
+      const matchText = element.getAttribute('match');
+      // Exact duplicate unnamed templates from repeated imports are semantically
+      // redundant but extremely expensive to lower repeatedly.
+      return {
+        duplicateKey: `${localName}:xml:${serializedXml}`,
+        summaryKey:
+          matchText === null || matchText.length === 0
+            ? 'template:(anonymous)'
+            : `template:${matchText}`,
+      };
+    }
   }
 
   const rawName = element.getAttribute('name');
@@ -308,6 +454,58 @@ function createDuplicateKey(element: Element, stylesheetSource: string): { dupli
   );
   return {
     duplicateKey: `${localName}:${normalizedName}`,
+    summaryKey: `${localName}:${normalizedName}`,
+  };
+}
+
+function createComposedStylesheetSummary(
+  stylesheetPath: string,
+  entries: readonly ComposedTopLevelEntry[],
+  prunedEntries: readonly ComposedTopLevelEntry[],
+): ComposedStylesheetSummary {
+  const beforeCounts = new Map<string, number>();
+  const afterCounts = new Map<string, number>();
+
+  for (const entry of entries) {
+    if (entry.duplicateKey === undefined || entry.summaryKey === undefined) {
+      continue;
+    }
+
+    beforeCounts.set(entry.summaryKey, (beforeCounts.get(entry.summaryKey) ?? 0) + 1);
+  }
+
+  for (const entry of prunedEntries) {
+    if (entry.duplicateKey === undefined || entry.summaryKey === undefined) {
+      continue;
+    }
+
+    afterCounts.set(entry.summaryKey, (afterCounts.get(entry.summaryKey) ?? 0) + 1);
+  }
+
+  const duplicateSummaries = [...beforeCounts.entries()]
+    .map(([key, occurrencesBeforePrune]) => {
+      const occurrencesAfterPrune = afterCounts.get(key) ?? 0;
+      return {
+        key,
+        occurrencesBeforePrune,
+        occurrencesAfterPrune,
+        droppedOccurrences: occurrencesBeforePrune - occurrencesAfterPrune,
+      };
+    })
+    .filter((entry) => entry.occurrencesBeforePrune > 1)
+    .sort(
+      (left, right) =>
+        right.droppedOccurrences - left.droppedOccurrences ||
+        right.occurrencesBeforePrune - left.occurrencesBeforePrune ||
+        left.key.localeCompare(right.key),
+    );
+
+  return {
+    stylesheetPath,
+    topLevelEntriesBeforePrune: entries.length,
+    topLevelEntriesAfterPrune: prunedEntries.length,
+    droppedDuplicateEntries: entries.length - prunedEntries.length,
+    duplicateSummaries,
   };
 }
 

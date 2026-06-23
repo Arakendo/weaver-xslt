@@ -5,6 +5,7 @@ import { compileStylesheetArtifactsFromFile } from './compile.js';
 export interface WeaverEsbuildPluginOptions {
   readonly runtimeModuleSpecifier?: string;
   readonly sampleDocumentPath?: string;
+  readonly onProgress?: (message: string) => void;
 }
 
 export interface EsbuildLoadArgs {
@@ -21,7 +22,9 @@ export interface EsbuildLoadResult {
 export interface EsbuildPluginBuild {
   onLoad(
     options: { readonly filter: RegExp },
-    callback: (args: EsbuildLoadArgs) => EsbuildLoadResult | null | Promise<EsbuildLoadResult | null>,
+    callback: (
+      args: EsbuildLoadArgs,
+    ) => EsbuildLoadResult | null | Promise<EsbuildLoadResult | null>,
   ): void;
 }
 
@@ -36,9 +39,10 @@ export function weaverEsbuildPlugin(options: WeaverEsbuildPluginOptions = {}): E
     setup(build) {
       build.onLoad({ filter: /\.xsl$/ }, (args) => {
         const artifacts = compileStylesheetArtifactsFromFile(args.path, options);
-        const watchFiles = options.sampleDocumentPath === undefined
-          ? [args.path]
-          : [args.path, options.sampleDocumentPath];
+        const watchFiles =
+          options.sampleDocumentPath === undefined
+            ? [args.path]
+            : [args.path, options.sampleDocumentPath];
 
         return {
           contents: artifacts.module,

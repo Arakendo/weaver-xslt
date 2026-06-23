@@ -19,6 +19,7 @@ import {
 export interface CliIo {
   readonly stdout: (text: string) => void;
   readonly stderr: (text: string) => void;
+  readonly progress?: (text: string) => void;
 }
 
 export interface RunCliOptions {
@@ -434,6 +435,7 @@ function renderUsage(): string {
 const defaultIo: CliIo = {
   stdout: (text) => process.stdout.write(text),
   stderr: (text) => process.stderr.write(text),
+  progress: (text) => process.stdout.write(`${text}\n`),
 };
 
 function tryReadSource(path: string): string | undefined {
@@ -537,8 +539,10 @@ function emitCompiledArtifactsFromFile(
   sampleDocumentPath?: string,
   stylesheet = readFileSync(resolvedInputPath, 'utf8'),
 ): string | undefined {
+  io.progress?.(`Compiling stylesheet ${resolvedInputPath}`);
   const output = compileStylesheetArtifactsFromFile(resolvedInputPath, {
     ...(sampleDocumentPath === undefined ? {} : { sampleDocumentPath }),
+    ...(io.progress === undefined ? {} : { onProgress: io.progress }),
   });
 
   const outputPath = `${resolvedInputPath}.ts`;

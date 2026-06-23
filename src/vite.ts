@@ -3,6 +3,7 @@ import { compileStylesheetArtifactsFromFile } from './compile.js';
 export interface WeaverVitePluginOptions {
   readonly runtimeModuleSpecifier?: string;
   readonly sampleDocumentPath?: string;
+  readonly onProgress?: (message: string) => void;
 }
 
 export interface ViteTransformResult {
@@ -14,7 +15,10 @@ export interface ViteLikePlugin {
   readonly name: string;
   readonly enforce?: 'pre' | 'post';
   load?(id: string): ViteTransformResult | null | Promise<ViteTransformResult | null>;
-  transform?(code: string, id: string): ViteTransformResult | null | Promise<ViteTransformResult | null>;
+  transform?(
+    code: string,
+    id: string,
+  ): ViteTransformResult | null | Promise<ViteTransformResult | null>;
 }
 
 export function weaverVitePlugin(options: WeaverVitePluginOptions = {}): ViteLikePlugin {

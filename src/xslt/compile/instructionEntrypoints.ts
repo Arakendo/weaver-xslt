@@ -21,6 +21,7 @@ import {
   type InstructionCompilerHelpers,
 } from './instructionCompilers.js';
 import type { Instruction, TemplateRule, WithParam } from './ir.js';
+import type { CompileIrStatsRecorder } from './compiler.js';
 import { compileLiteralResultElement } from './literalResult.js';
 
 type NodeListLike = {
@@ -48,6 +49,7 @@ export type InstructionEntrypointHelpers = {
   ): void;
   createInstructionSuggestion(element: Element): ErrorSuggestion | undefined;
   createXsltStaticError: StaticErrorFactory;
+  readonly irStats?: CompileIrStatsRecorder;
   parseXPathInContext(
     expression: string,
     location: TemplateRule['location'],
@@ -184,6 +186,7 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
     isXsltElement: helpers.isXsltElement,
     assertAllowedXsltAttributes: helpers.assertAllowedXsltAttributes,
     createXsltStaticError: helpers.createXsltStaticError,
+    ...(helpers.irStats === undefined ? {} : { irStats: helpers.irStats }),
     parseXPathInContext: helpers.parseXPathInContext,
     compileInstructions,
     childElements: helpers.childElements,
@@ -198,13 +201,18 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
     if (node.nodeType === node.TEXT_NODE || node.nodeType === node.CDATA_SECTION_NODE) {
       const text = node.nodeValue ?? '';
       const location = getNodeSourceLocation(stylesheetXml, node, helpers.stylesheetSourceName);
-      return text.trim().length === 0
-        ? undefined
-        : {
-            kind: 'literalText',
-            text,
-            ...(location === undefined ? {} : { location }),
-          };
+      const instruction: Extract<Instruction, { readonly kind: 'literalText' }> | undefined =
+        text.trim().length === 0
+          ? undefined
+          : {
+              kind: 'literalText',
+              text,
+              ...(location === undefined ? {} : { location }),
+            };
+      if (instruction !== undefined) {
+        helpers.irStats?.recordInstruction('literalText');
+      }
+      return instruction;
     }
 
     if (node.nodeType !== node.ELEMENT_NODE) {
@@ -213,55 +221,112 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
 
     const element = node as Element;
     if (helpers.isXsltElement(element, 'apply-templates')) {
-      return compileApplyTemplatesInstruction(element, stylesheetXml, instructionCompilerHelpers);
+      const instruction = compileApplyTemplatesInstruction(
+        element,
+        stylesheetXml,
+        instructionCompilerHelpers,
+      );
+      helpers.irStats?.recordInstruction('applyTemplates');
+      return instruction;
     }
 
     if (helpers.isXsltElement(element, 'attribute')) {
-      return compileAttributeInstruction(element, stylesheetXml, instructionCompilerHelpers);
+      const instruction = compileAttributeInstruction(
+        element,
+        stylesheetXml,
+        instructionCompilerHelpers,
+      );
+      helpers.irStats?.recordInstruction('attribute');
+      return instruction;
     }
 
     if (helpers.isXsltElement(element, 'call-template')) {
-      return compileCallTemplateInstruction(element, stylesheetXml, instructionCompilerHelpers);
+      const instruction = compileCallTemplateInstruction(
+        element,
+        stylesheetXml,
+        instructionCompilerHelpers,
+      );
+      helpers.irStats?.recordInstruction('callTemplate');
+      return instruction;
     }
 
     if (helpers.isXsltElement(element, 'variable')) {
-      return compileVariableInstruction(element, stylesheetXml, instructionCompilerHelpers);
+      const instruction = compileVariableInstruction(
+        element,
+        stylesheetXml,
+        instructionCompilerHelpers,
+      );
+      helpers.irStats?.recordInstruction('variable');
+      return instruction;
     }
 
     if (helpers.isXsltElement(element, 'if')) {
-      return compileIfInstruction(element, stylesheetXml, instructionCompilerHelpers);
+      const instruction = compileIfInstruction(element, stylesheetXml, instructionCompilerHelpers);
+      helpers.irStats?.recordInstruction('if');
+      return instruction;
     }
 
     if (helpers.isXsltElement(element, 'comment')) {
       helpers.assertAllowedXsltAttributes(element, stylesheetXml, 'xsl:comment', []);
 
       const location = getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
-
-      return {
+      const instruction: Extract<Instruction, { readonly kind: 'comment' }> = {
         kind: 'comment',
         body: compileInstructions(element.childNodes, stylesheetXml),
         ...(location === undefined ? {} : { location }),
       };
+      helpers.irStats?.recordInstruction('comment');
+      return instruction;
     }
 
     if (helpers.isXsltElement(element, 'choose')) {
-      return compileChooseInstruction(element, stylesheetXml, instructionCompilerHelpers);
+      const instruction = compileChooseInstruction(
+        element,
+        stylesheetXml,
+        instructionCompilerHelpers,
+      );
+      helpers.irStats?.recordInstruction('choose');
+      return instruction;
     }
 
     if (helpers.isXsltElement(element, 'for-each')) {
-      return compileForEachInstruction(element, stylesheetXml, instructionCompilerHelpers);
+      const instruction = compileForEachInstruction(
+        element,
+        stylesheetXml,
+        instructionCompilerHelpers,
+      );
+      helpers.irStats?.recordInstruction('forEach');
+      return instruction;
     }
 
     if (helpers.isXsltElement(element, 'value-of')) {
-      return compileValueOfInstruction(element, stylesheetXml, instructionCompilerHelpers);
+      const instruction = compileValueOfInstruction(
+        element,
+        stylesheetXml,
+        instructionCompilerHelpers,
+      );
+      helpers.irStats?.recordInstruction('valueOf');
+      return instruction;
     }
 
     if (helpers.isXsltElement(element, 'copy-of')) {
-      return compileCopyOfInstruction(element, stylesheetXml, instructionCompilerHelpers);
+      const instruction = compileCopyOfInstruction(
+        element,
+        stylesheetXml,
+        instructionCompilerHelpers,
+      );
+      helpers.irStats?.recordInstruction('copyOf');
+      return instruction;
     }
 
     if (helpers.isXsltElement(element, 'number')) {
-      return compileNumberInstruction(element, stylesheetXml, instructionCompilerHelpers);
+      const instruction = compileNumberInstruction(
+        element,
+        stylesheetXml,
+        instructionCompilerHelpers,
+      );
+      helpers.irStats?.recordInstruction('number');
+      return instruction;
     }
 
     if (helpers.isXsltElement(element, 'element')) {
@@ -286,13 +351,15 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
       }
 
       const location = getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
-      return {
+      const instruction: Extract<Instruction, { readonly kind: 'literalElement' }> = {
         kind: 'literalElement',
         name: rawName,
         attributes: [],
         body: compileInstructions(element.childNodes, stylesheetXml),
         ...(location === undefined ? {} : { location }),
       };
+      helpers.irStats?.recordInstruction('literalElement');
+      return instruction;
     }
 
     if (helpers.isXsltElement(element, 'text')) {
@@ -302,13 +369,14 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
 
       const location = getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
       const disableOutputEscaping = element.getAttribute('disable-output-escaping') === 'yes';
-
-      return {
+      const instruction: Extract<Instruction, { readonly kind: 'literalText' }> = {
         kind: 'literalText',
         text: element.textContent ?? '',
         ...(disableOutputEscaping ? { disableOutputEscaping: true } : {}),
         ...(location === undefined ? {} : { location }),
       };
+      helpers.irStats?.recordInstruction('literalText');
+      return instruction;
     }
 
     if (element.namespaceURI === helpers.xsltNamespace) {
@@ -324,7 +392,7 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
       );
     }
 
-    return compileLiteralResultElement(
+    const instruction = compileLiteralResultElement(
       element,
       stylesheetXml,
       compileInstructions,
@@ -332,6 +400,8 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
       helpers.stylesheetSourceName,
       helpers.parseXPathInContext,
     );
+    helpers.irStats?.recordInstruction('literalResult');
+    return instruction;
   }
 
   return {

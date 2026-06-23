@@ -7,10 +7,79 @@ import { describe, expect, it } from 'vitest';
 import {
   compileStylesheetArtifacts,
   compileStylesheetArtifactsFromFile,
+  summarizeComposedStylesheetFromFile,
 } from '../../src/compile.js';
+import { createSyntheticBenchmarkFixture } from '../../scripts/benchmark-fixtures.js';
 import { XsltProcessor } from '../../src/index.js';
 
 describe('compileStylesheetArtifactsFromFile', () => {
+  it('reports coarse progress while compiling from disk', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-compile-progress-'));
+
+    try {
+      const stylesheetPath = join(tempDir, 'progress.xsl');
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="/">',
+        '    <out/>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const progressMessages: string[] = [];
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+      compileStylesheetArtifactsFromFile(stylesheetPath, {
+        onProgress: (message) => progressMessages.push(message),
+      });
+
+      expect(progressMessages).toEqual([
+        expect.stringContaining('Composing stylesheet source from'),
+        expect.stringContaining('Compiling stylesheet IR for'),
+        expect.stringContaining('Emitting stylesheet module for'),
+        expect.stringContaining('Analyzing stylesheet diagnostics for'),
+        expect.stringContaining('Generating stylesheet declaration and source map for'),
+      ]);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
+  it('captures structured compile timings while compiling from disk', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-compile-profile-'));
+
+    try {
+      const stylesheetPath = join(tempDir, 'profile.xsl');
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="/">',
+        '    <out/>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+      const artifacts = compileStylesheetArtifactsFromFile(stylesheetPath, {
+        captureProfile: true,
+      });
+
+      expect(artifacts.profile).toBeDefined();
+      expect(artifacts.profile?.totalElapsedMs).toBeGreaterThanOrEqual(0);
+      expect(artifacts.profile?.phases.map((phase) => phase.key)).toEqual([
+        'compose',
+        'compileIr',
+        'emitModule',
+        'analyzeDiagnostics',
+        'emitDeclaration',
+        'emitSourceMap',
+      ]);
+      expect(artifacts.profile?.phases.every((phase) => phase.elapsedMs >= 0)).toBe(true);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
   it('loads stylesheet and sample document inputs from disk', () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'weaver-compile-file-'));
 
@@ -174,6 +243,131 @@ describe('compileStylesheetArtifactsFromFile', () => {
       expect(actual.module).not.toContain('low');
     } finally {
       rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
+  it('deduplicates identical unnamed templates pulled in through repeated imports', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-compile-duplicate-match-'));
+
+    try {
+      const stylesheetPath = join(tempDir, 'main.xsl');
+      const firstImportPath = join(tempDir, 'first.xsl');
+      const secondImportPath = join(tempDir, 'second.xsl');
+      const sharedPath = join(tempDir, 'shared.xsl');
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:import href="first.xsl"/>',
+        '  <xsl:import href="second.xsl"/>',
+        '  <xsl:template match="/">',
+        '    <xsl:apply-templates select="root/item"/>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const importer = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:import href="shared.xsl"/>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const shared = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="item">',
+        '    <out><xsl:value-of select="."/></out>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+      writeFileSync(firstImportPath, importer, 'utf8');
+      writeFileSync(secondImportPath, importer, 'utf8');
+      writeFileSync(sharedPath, shared, 'utf8');
+
+      const actual = compileStylesheetArtifactsFromFile(stylesheetPath, {
+        captureIrStats: true,
+      });
+
+      expect(actual.diagnostics).toEqual([]);
+      expect(actual.irStats?.templateRuleCount).toBe(2);
+      expect(
+        actual.irStats?.hottestTemplateKeys.find((entry) => entry.key === 'item')?.invocationCount,
+      ).toBe(1);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
+  it('summarizes duplicate composition entries for repeated imported match templates', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-compose-summary-'));
+
+    try {
+      const stylesheetPath = join(tempDir, 'main.xsl');
+      const firstImportPath = join(tempDir, 'first.xsl');
+      const secondImportPath = join(tempDir, 'second.xsl');
+      const sharedPath = join(tempDir, 'shared.xsl');
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:import href="first.xsl"/>',
+        '  <xsl:import href="second.xsl"/>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const importer = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:import href="shared.xsl"/>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const shared = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="item">',
+        '    <out><xsl:value-of select="."/></out>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+      writeFileSync(firstImportPath, importer, 'utf8');
+      writeFileSync(secondImportPath, importer, 'utf8');
+      writeFileSync(sharedPath, shared, 'utf8');
+
+      const summary = summarizeComposedStylesheetFromFile(stylesheetPath);
+
+      expect(summary.droppedDuplicateEntries).toBe(1);
+      expect(summary.duplicateSummaries).toContainEqual({
+        key: 'template:item',
+        occurrencesBeforePrune: 2,
+        occurrencesAfterPrune: 1,
+        droppedOccurrences: 1,
+      });
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
+  it('preserves the synthetic benchmark guardrail duplicate-collapse shape', () => {
+    const fixture = createSyntheticBenchmarkFixture('vision-guardrail');
+
+    try {
+      const stylesheetPath = fixture.stylesheetPaths[0];
+      if (stylesheetPath === undefined) {
+        throw new Error('Synthetic benchmark fixture did not produce a stylesheet path.');
+      }
+      const artifacts = compileStylesheetArtifactsFromFile(stylesheetPath, {
+        captureIrStats: true,
+      });
+      const summary = summarizeComposedStylesheetFromFile(stylesheetPath);
+
+      expect(artifacts.diagnostics).toEqual([]);
+      expect(artifacts.irStats?.templateRuleCount).toBe(76);
+      expect(artifacts.irStats?.xpathParseCount).toBe(871);
+      expect(summary.droppedDuplicateEntries).toBe(1725);
+      expect(summary.duplicateSummaries[0]).toMatchObject({
+        key: 'template:detail',
+        occurrencesBeforePrune: 24,
+        occurrencesAfterPrune: 1,
+        droppedOccurrences: 23,
+      });
+    } finally {
+      for (const cleanupDir of fixture.cleanupDirs) {
+        rmSync(cleanupDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+      }
     }
   });
 

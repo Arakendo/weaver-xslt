@@ -4,9 +4,18 @@ import {
   type DiagnosticReport,
   type SourceSpan,
 } from './diagnostics/index.js';
-import { compileStylesheetRuntimeArtifacts } from './processor/runtimeArtifacts.js';
+import {
+  compileStylesheetRuntimeArtifacts,
+  type CompilePerformanceProfile,
+} from './processor/runtimeArtifacts.js';
 import { XsltProcessor } from './processor/XsltProcessor.js';
-import type { TransformExecutionInfo, TransformExecutionFallbackReason, TransformOptions, XmlNodeHandle, XmlTracePause } from './processor/types.js';
+import type {
+  TransformExecutionInfo,
+  TransformExecutionFallbackReason,
+  TransformOptions,
+  XmlNodeHandle,
+  XmlTracePause,
+} from './processor/types.js';
 import {
   createCompiledDocument,
   resolveXmlNodeHandle as resolveRuntimeXmlNodeHandle,
@@ -45,6 +54,8 @@ export interface CompileRequest {
     readonly emitGeneratedTs?: boolean;
     readonly emitSourceMap?: boolean;
     readonly sampleDocument?: SourceDocument;
+    readonly onProgress?: (message: string) => void;
+    readonly captureProfile?: boolean;
   };
 }
 
@@ -54,6 +65,7 @@ export interface CompileSuccessResult {
   readonly stylesheet: CompiledStylesheet;
   readonly generatedTs?: string;
   readonly sourceMap?: WeaverSourceMap;
+  readonly profile?: CompilePerformanceProfile;
 }
 
 export interface CompileFailureResult {
@@ -127,6 +139,8 @@ export interface CompileAndTransformRequest {
     readonly emitGeneratedTs?: boolean;
     readonly emitSourceMap?: boolean;
     readonly sampleDocument?: SourceDocument;
+    readonly onProgress?: (message: string) => void;
+    readonly captureProfile?: boolean;
   };
 }
 
@@ -137,6 +151,7 @@ export interface CompileAndTransformSuccessResult {
   readonly stylesheet: CompiledStylesheet;
   readonly generatedTs?: string;
   readonly sourceMap?: WeaverSourceMap;
+  readonly profile?: CompilePerformanceProfile;
   readonly pause?: XmlTracePause;
   readonly execution?: TransformExecutionInfo;
   readonly notices?: readonly WorkbenchNotice[];
@@ -149,7 +164,9 @@ export interface CompileAndTransformFailureResult {
   readonly sourceMap?: WeaverSourceMap;
 }
 
-export type CompileAndTransformResult = CompileAndTransformSuccessResult | CompileAndTransformFailureResult;
+export type CompileAndTransformResult =
+  | CompileAndTransformSuccessResult
+  | CompileAndTransformFailureResult;
 
 export type GeneratedSpan = SourceSpan;
 
@@ -193,13 +210,7 @@ export class CompiledStylesheet {
     generatedTs?: string,
     sourceMap?: WeaverSourceMap,
   ): CompiledStylesheet {
-    return new CompiledStylesheet(
-      stylesheet,
-      diagnostics,
-      processor,
-      generatedTs,
-      sourceMap,
-    );
+    return new CompiledStylesheet(stylesheet, diagnostics, processor, generatedTs, sourceMap);
   }
 
   transform(sourceXml: SourceDocument, options?: TransformOptions): TransformResult {
@@ -231,13 +242,24 @@ export function compile(request: CompileRequest): CompileResult {
       ...(request.options?.sampleDocument === undefined
         ? {}
         : { sampleDocument: request.options.sampleDocument.text }),
+      ...(request.options?.onProgress === undefined
+        ? {}
+        : { onProgress: request.options.onProgress }),
+      ...(request.options?.captureProfile === undefined
+        ? {}
+        : { captureProfile: request.options.captureProfile }),
     });
     const processor = XsltProcessor.fromIr(request.stylesheet.text, artifacts.ir, {
       sourceName: request.stylesheet.uri,
     });
-    const sourceMap = request.options?.emitSourceMap === false
-      ? undefined
-      : StructuredWeaverSourceMap.create(request.stylesheet, artifacts.module, artifacts.sourceMap);
+    const sourceMap =
+      request.options?.emitSourceMap === false
+        ? undefined
+        : StructuredWeaverSourceMap.create(
+            request.stylesheet,
+            artifacts.module,
+            artifacts.sourceMap,
+          );
 
     return {
       ok: true,
@@ -251,6 +273,7 @@ export function compile(request: CompileRequest): CompileResult {
       ),
       ...(request.options?.emitGeneratedTs === false ? {} : { generatedTs: artifacts.module }),
       ...(sourceMap === undefined ? {} : { sourceMap }),
+      ...(artifacts.profile === undefined ? {} : { profile: artifacts.profile }),
     };
   } catch (error) {
     return {
@@ -289,7 +312,12 @@ export function resolveSourceXmlNodeHandleAtOffset(
 ): ResolveSourceXmlNodeHandleAtOffsetResult {
   try {
     const document = createCompiledDocument(request.sourceXml.text);
-    const handle = resolveRuntimeXmlNodeHandleAtOffset(document, request.sourceXml.uri, request.sourceXml.text, request.offset);
+    const handle = resolveRuntimeXmlNodeHandleAtOffset(
+      document,
+      request.sourceXml.uri,
+      request.sourceXml.text,
+      request.offset,
+    );
 
     return {
       ok: true,
@@ -330,13 +358,24 @@ export function resolveSourceXmlNodeHandleInRange(
   }
 }
 
-export function compileAndTransform(request: CompileAndTransformRequest): CompileAndTransformResult {
+export function compileAndTransform(
+  request: CompileAndTransformRequest,
+): CompileAndTransformResult {
   const compileResult = compile({
     stylesheet: request.stylesheet,
     options: {
-      ...(request.options?.emitGeneratedTs === undefined ? {} : { emitGeneratedTs: request.options.emitGeneratedTs }),
-      ...(request.options?.emitSourceMap === undefined ? {} : { emitSourceMap: request.options.emitSourceMap }),
-      ...(request.options?.sampleDocument === undefined ? {} : { sampleDocument: request.options.sampleDocument }),
+      ...(request.options?.emitGeneratedTs === undefined
+        ? {}
+        : { emitGeneratedTs: request.options.emitGeneratedTs }),
+      ...(request.options?.emitSourceMap === undefined
+        ? {}
+        : { emitSourceMap: request.options.emitSourceMap }),
+      ...(request.options?.sampleDocument === undefined
+        ? {}
+        : { sampleDocument: request.options.sampleDocument }),
+      ...(request.options?.onProgress === undefined
+        ? {}
+        : { onProgress: request.options.onProgress }),
     },
   });
   if (!compileResult.ok) {
@@ -351,7 +390,9 @@ export function compileAndTransform(request: CompileAndTransformRequest): Compil
   if (!transformResult.ok) {
     return {
       ...transformResult,
-      ...(compileResult.generatedTs === undefined ? {} : { generatedTs: compileResult.generatedTs }),
+      ...(compileResult.generatedTs === undefined
+        ? {}
+        : { generatedTs: compileResult.generatedTs }),
       ...(compileResult.sourceMap === undefined ? {} : { sourceMap: compileResult.sourceMap }),
     };
   }
@@ -379,7 +420,9 @@ function getTransformOptions(options: CompileAndTransformRequest['options']): Tr
   };
 }
 
-function createFallbackNotices(execution: TransformExecutionInfo | undefined): readonly WorkbenchNotice[] {
+function createFallbackNotices(
+  execution: TransformExecutionInfo | undefined,
+): readonly WorkbenchNotice[] {
   const fallbackReason = execution?.fallbackReason;
   if (execution === undefined || fallbackReason === undefined) {
     return [];
@@ -408,7 +451,9 @@ function createFallbackNotice(
             kind: suggestion.kind,
             label: suggestion.label,
             ...(suggestion.confidence === undefined ? {} : { confidence: suggestion.confidence }),
-            ...(suggestion.replacement === undefined ? {} : { replacement: suggestion.replacement }),
+            ...(suggestion.replacement === undefined
+              ? {}
+              : { replacement: suggestion.replacement }),
           })),
         }),
   };
@@ -474,7 +519,9 @@ class StructuredWeaverSourceMap implements WeaverSourceMap {
     }
 
     const matchedLines = this.mappings
-      .filter((mapping) => overlapsLineRange(span.lineStart, span.lineEnd, mapping.sourceLine, mapping.sourceLine))
+      .filter((mapping) =>
+        overlapsLineRange(span.lineStart, span.lineEnd, mapping.sourceLine, mapping.sourceLine),
+      )
       .map((mapping) => mapping.generatedLine);
 
     return createMergedLineSpans(this.generatedUri, this.generatedLineInfos, matchedLines);
@@ -486,7 +533,14 @@ class StructuredWeaverSourceMap implements WeaverSourceMap {
     }
 
     const matchedLines = this.mappings
-      .filter((mapping) => overlapsLineRange(span.lineStart, span.lineEnd, mapping.generatedLine, mapping.generatedLine))
+      .filter((mapping) =>
+        overlapsLineRange(
+          span.lineStart,
+          span.lineEnd,
+          mapping.generatedLine,
+          mapping.generatedLine,
+        ),
+      )
       .map((mapping) => mapping.sourceLine);
 
     return createMergedLineSpans(this.sourceUri, this.sourceLineInfos, matchedLines);
@@ -528,9 +582,7 @@ function splitMappedLines(text: string): readonly string[] {
     return [''];
   }
 
-  return text.endsWith('\n')
-    ? text.slice(0, -1).split('\n')
-    : text.split('\n');
+  return text.endsWith('\n') ? text.slice(0, -1).split('\n') : text.split('\n');
 }
 
 function parseLineMappings(mappingsText: string): readonly LineMapping[] {
@@ -543,7 +595,11 @@ function parseLineMappings(mappingsText: string): readonly LineMapping[] {
   let previousSourceLine = 0;
 
   const generatedLines = mappingsText.split(';');
-  for (let generatedLineIndex = 0; generatedLineIndex < generatedLines.length; generatedLineIndex += 1) {
+  for (
+    let generatedLineIndex = 0;
+    generatedLineIndex < generatedLines.length;
+    generatedLineIndex += 1
+  ) {
     const generatedLine = generatedLines[generatedLineIndex] ?? '';
     if (generatedLine.length === 0) {
       continue;

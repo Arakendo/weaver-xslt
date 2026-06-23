@@ -23,6 +23,7 @@ import type {
   StylesheetIR,
   TemplateRule,
 } from './ir.js';
+import type { CompileIrPhaseTiming, CompileIrStatsRecorder } from './compiler.js';
 import {
   descendantElements,
   isTunnelParamElement,
@@ -102,6 +103,7 @@ export type StylesheetCompilerHelpers = {
     rawName: string,
     allowedAttributeNames: readonly string[],
   ): ErrorSuggestion | undefined;
+  readonly irStats?: CompileIrStatsRecorder;
   childElements(element: Element): Element[];
   hasMeaningfulTemplateContent(element: Element): boolean;
   compileTemplateRule(element: Element, stylesheetXml: string): TemplateRule;
@@ -441,89 +443,146 @@ export function compileTopLevelDeclaration(
   stylesheetXml: string,
   helpers: StylesheetCompilerHelpers,
 ): TemplateRule | GlobalBinding | undefined {
+  const measureCompilePhase = <T>(
+    key: CompileIrPhaseTiming['key'],
+    label: string,
+    operation: () => T,
+  ): T => {
+    const startTime = helpers.irStats === undefined ? 0 : performance.now();
+    try {
+      return operation();
+    } finally {
+      if (helpers.irStats !== undefined) {
+        helpers.irStats.recordCompilePhase(key, label, performance.now() - startTime);
+      }
+    }
+  };
+
   if (helpers.isXsltElement(element, 'template')) {
-    return helpers.compileTemplateRule(element, stylesheetXml);
+    return measureCompilePhase(
+      'lowerTemplateDeclarations',
+      'Lowering xsl:template declarations',
+      () => helpers.compileTemplateRule(element, stylesheetXml),
+    );
   }
 
   if (helpers.isXsltElement(element, 'param')) {
-    return helpers.compileTopLevelParam(element, stylesheetXml);
+    return measureCompilePhase(
+      'lowerGlobalParamDeclarations',
+      'Lowering xsl:param declarations',
+      () => helpers.compileTopLevelParam(element, stylesheetXml),
+    );
   }
 
   if (helpers.isXsltElement(element, 'variable')) {
-    return helpers.compileTopLevelVariable(element, stylesheetXml);
+    return measureCompilePhase(
+      'lowerGlobalVariableDeclarations',
+      'Lowering xsl:variable declarations',
+      () => helpers.compileTopLevelVariable(element, stylesheetXml),
+    );
   }
 
   if (helpers.isXsltElement(element, 'strip-space')) {
-    validateStripSpaceDeclaration(element, stylesheetXml, helpers);
-    return undefined;
+    return measureCompilePhase(
+      'validateStripSpaceDeclarations',
+      'Validating xsl:strip-space declarations',
+      () => {
+        validateStripSpaceDeclaration(element, stylesheetXml, helpers);
+        return undefined;
+      },
+    );
   }
 
   if (helpers.isXsltElement(element, 'output')) {
-    validateOutputDeclaration(element, stylesheetXml, helpers);
-    return undefined;
+    return measureCompilePhase(
+      'validateOutputDeclarations',
+      'Validating xsl:output declarations',
+      () => {
+        validateOutputDeclaration(element, stylesheetXml, helpers);
+        return undefined;
+      },
+    );
   }
 
   if (helpers.isXsltElement(element, 'include') || helpers.isXsltElement(element, 'import')) {
-    const href = element.getAttribute('href') ?? '';
-    throw helpers.createXsltStaticError(
-      `Stylesheet ${element.localName ?? element.nodeName} declarations are not yet implemented in the current MVP+3 slice.`,
-      getAttributeValueSourceLocation(
-        stylesheetXml,
-        element,
-        'href',
-        helpers.stylesheetSourceName,
-      ) ?? getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName),
-      {
-        href,
-      },
-      {
-        suggestions: [
+    return measureCompilePhase(
+      'rejectIncludeImportDeclarations',
+      'Rejecting xsl:include and xsl:import declarations',
+      () => {
+        const href = element.getAttribute('href') ?? '';
+        throw helpers.createXsltStaticError(
+          `Stylesheet ${element.localName ?? element.nodeName} declarations are not yet implemented in the current MVP+3 slice.`,
+          getAttributeValueSourceLocation(
+            stylesheetXml,
+            element,
+            'href',
+            helpers.stylesheetSourceName,
+          ) ?? getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName),
           {
-            kind: 'fix',
-            label: `inline or remove xsl:${element.localName ?? element.nodeName} in the current MVP+3 slice`,
-            confidence: 1,
+            href,
           },
-        ],
+          {
+            suggestions: [
+              {
+                kind: 'fix',
+                label: `inline or remove xsl:${element.localName ?? element.nodeName} in the current MVP+3 slice`,
+                confidence: 1,
+              },
+            ],
+          },
+          XTSE0165,
+        );
       },
-      XTSE0165,
     );
   }
 
   if (element.namespaceURI === helpers.xsltNamespace) {
-    throw helpers.createXsltStaticError(
-      `Unsupported top-level XSLT declaration ${element.nodeName} in current MVP+3 slice.`,
-      getElementNameSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName) ??
-        getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName),
-      {
-        declarationName: element.nodeName,
-      },
-      {
-        suggestions: [
+    return measureCompilePhase(
+      'rejectUnsupportedTopLevelDeclarations',
+      'Rejecting unsupported top-level XSLT declarations',
+      () => {
+        throw helpers.createXsltStaticError(
+          `Unsupported top-level XSLT declaration ${element.nodeName} in current MVP+3 slice.`,
+          getElementNameSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName) ??
+            getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName),
           {
-            kind: 'fix',
-            label: `remove unsupported top-level declaration ${element.nodeName} in the current MVP+3 slice`,
-            confidence: 1,
+            declarationName: element.nodeName,
           },
-        ],
+          {
+            suggestions: [
+              {
+                kind: 'fix',
+                label: `remove unsupported top-level declaration ${element.nodeName} in the current MVP+3 slice`,
+                confidence: 1,
+              },
+            ],
+          },
+        );
       },
     );
   }
 
-  throw helpers.createXsltStaticError(
-    `Unsupported top-level stylesheet element ${element.nodeName} in current MVP+3 slice.`,
-    getElementNameSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName) ??
-      getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName),
-    {
-      elementName: element.nodeName,
-    },
-    {
-      suggestions: [
+  return measureCompilePhase(
+    'rejectUnsupportedTopLevelElements',
+    'Rejecting unsupported top-level stylesheet elements',
+    () => {
+      throw helpers.createXsltStaticError(
+        `Unsupported top-level stylesheet element ${element.nodeName} in current MVP+3 slice.`,
+        getElementNameSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName) ??
+          getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName),
         {
-          kind: 'fix',
-          label: 'move result elements inside xsl:template bodies in the current MVP+3 slice',
-          confidence: 1,
+          elementName: element.nodeName,
         },
-      ],
+        {
+          suggestions: [
+            {
+              kind: 'fix',
+              label: 'move result elements inside xsl:template bodies in the current MVP+3 slice',
+              confidence: 1,
+            },
+          ],
+        },
+      );
     },
   );
 }

@@ -43,6 +43,36 @@ describe('workbench boundary', () => {
     expect(result.sourceMap?.raw).toContain('"sources": [');
   });
 
+  it('reports coarse compile progress through workbench callbacks', () => {
+    const progressMessages: string[] = [];
+
+    const result = compile({
+      stylesheet: {
+        uri: 'memory:/progress.xsl',
+        text: [
+          '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+          '  <xsl:template match="/">',
+          '    <out/>',
+          '  </xsl:template>',
+          '</xsl:stylesheet>',
+        ].join('\n'),
+      },
+      options: {
+        onProgress: (message) => progressMessages.push(message),
+      },
+    });
+
+    expect(result.ok).toBe(true);
+    expect(progressMessages).toEqual([
+      expect.stringContaining('Compiling stylesheet IR for memory:/progress.xsl'),
+      expect.stringContaining('Emitting stylesheet module for memory:/progress.xsl'),
+      expect.stringContaining('Analyzing stylesheet diagnostics for memory:/progress.xsl'),
+      expect.stringContaining(
+        'Generating stylesheet declaration and source map for memory:/progress.xsl',
+      ),
+    ]);
+  });
+
   it('maps stylesheet instruction spans to generated TS lines and back', () => {
     const stylesheetText = [
       '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',

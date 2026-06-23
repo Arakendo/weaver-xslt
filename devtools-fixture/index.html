@@ -7,7 +7,7 @@
     <style>
       :root {
         color-scheme: light;
-        font-family: "Segoe UI", sans-serif;
+        font-family: 'Segoe UI', sans-serif;
       }
 
       body {
@@ -25,6 +25,25 @@
         box-shadow: 0 24px 60px rgba(29, 41, 53, 0.12);
       }
 
+      .grid {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .panel {
+        padding: 1rem;
+        border-radius: 14px;
+        background: rgba(16, 32, 51, 0.94);
+        color: #eef5ff;
+      }
+
+      .panel h2 {
+        margin-top: 0;
+        font-size: 0.95rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
       button {
         border: 0;
         border-radius: 999px;
@@ -37,23 +56,35 @@
 
       pre {
         overflow: auto;
-        padding: 1rem;
+        margin: 0;
+        padding: 0.9rem 1rem;
         border-radius: 12px;
-        background: #102033;
-        color: #eef5ff;
+        background: rgba(255, 255, 255, 0.08);
+        color: inherit;
       }
     </style>
   </head>
   <body>
     <main>
-      <h1>Weaver DevTools Fixture</h1>
-      <p>
-        Use this page for the MVP+6 Chrome DevTools source-map verification.
-        Set a breakpoint in <code>demo.xsl</code>, then click the render button.
-      </p>
-      <button id="render" type="button">Render Transform</button>
-      <h2>Output</h2>
-      <pre id="output"></pre>
+      <div class="grid">
+        <div>
+          <h1>Weaver DevTools Fixture</h1>
+          <p>
+            Use this page to watch stylesheet compilation phases and inspect the transformed output.
+          </p>
+          <button id="render" type="button">Render Transform</button>
+        </div>
+
+        <section class="panel">
+          <h2>Compile Progress</h2>
+          <pre id="progress"></pre>
+        </section>
+
+        <section class="panel">
+          <h2>Output</h2>
+          <pre id="output"></pre>
+        </section>
+      </div>
     </main>
     <script type="module" src="./main.ts"></script>
   </body>

@@ -48,15 +48,11 @@ export function evaluateEffectiveBooleanValue(ast: XPathAst, context: DynamicCon
   return effectiveBooleanValue(evaluateExpression(ast, context), ast.span);
 }
 
-const {
-  requireContextItem,
-  requireContextNode,
-  isXdmNode,
-  resolveVariableReference,
-} = createContextHelpers({
-  createXPathError,
-  describeItemsType,
-});
+const { requireContextItem, requireContextNode, isXdmNode, resolveVariableReference } =
+  createContextHelpers({
+    createXPathError,
+    describeItemsType,
+  });
 
 function evaluateExpression(ast: XPathAst, context: DynamicContext): XdmItem[] {
   switch (ast.kind) {
@@ -91,12 +87,17 @@ function evaluateExpression(ast: XPathAst, context: DynamicContext): XdmItem[] {
     case 'sequence':
       return ast.items.flatMap((item) => evaluateExpression(item, context));
     case 'unary': {
-      const operand = requireSingleNumber(evaluateExpression(ast.operand, context), ast.operand.span);
+      const operand = requireSingleNumber(
+        evaluateExpression(ast.operand, context),
+        ast.operand.span,
+      );
       if (ast.operand.kind === 'number' && isDecimalLiteralLexeme(ast.operand.lexeme)) {
-        return [createXdmNumber(
-          ast.operator === '-' ? -operand : operand,
-          normalizeSignedDecimalLiteralLexeme(ast.operator, ast.operand.lexeme),
-        )];
+        return [
+          createXdmNumber(
+            ast.operator === '-' ? -operand : operand,
+            normalizeSignedDecimalLiteralLexeme(ast.operator, ast.operand.lexeme),
+          ),
+        ];
       }
       return [createXdmNumber(ast.operator === '-' ? -operand : operand)];
     }
@@ -123,7 +124,8 @@ function evaluateBinaryExpression(
         contextItem: item,
         contextPosition: index + 1,
         contextSize: size,
-      }));
+      }),
+    );
   }
 
   if (operator === 'and') {
@@ -131,7 +133,9 @@ function evaluateBinaryExpression(
     if (!leftValue) {
       return [createXdmBoolean(false)];
     }
-    return [createXdmBoolean(effectiveBooleanValue(evaluateExpression(rightAst, context), rightAst.span))];
+    return [
+      createXdmBoolean(effectiveBooleanValue(evaluateExpression(rightAst, context), rightAst.span)),
+    ];
   }
 
   if (operator === 'or') {
@@ -139,10 +143,19 @@ function evaluateBinaryExpression(
     if (leftValue) {
       return [createXdmBoolean(true)];
     }
-    return [createXdmBoolean(effectiveBooleanValue(evaluateExpression(rightAst, context), rightAst.span))];
+    return [
+      createXdmBoolean(effectiveBooleanValue(evaluateExpression(rightAst, context), rightAst.span)),
+    ];
   }
 
-  if (operator === '+' || operator === '-' || operator === '*' || operator === 'div' || operator === 'idiv' || operator === 'mod') {
+  if (
+    operator === '+' ||
+    operator === '-' ||
+    operator === '*' ||
+    operator === 'div' ||
+    operator === 'idiv' ||
+    operator === 'mod'
+  ) {
     const left = evaluateNumericOperand(evaluateExpression(leftAst, context), leftAst.span);
     const right = evaluateNumericOperand(evaluateExpression(rightAst, context), rightAst.span);
     if ((operator === 'idiv' || operator === 'mod') && right === 0) {
@@ -170,10 +183,12 @@ function evaluateBinaryExpression(
   }
 
   if (operator === '||') {
-    return [createXdmString(
-      evaluateConcatOperandString(leftAst, context, span)
-      + evaluateConcatOperandString(rightAst, context, span),
-    )];
+    return [
+      createXdmString(
+        evaluateConcatOperandString(leftAst, context, span) +
+          evaluateConcatOperandString(rightAst, context, span),
+      ),
+    ];
   }
 
   if (operator === '|') {
@@ -185,18 +200,35 @@ function evaluateBinaryExpression(
 
   if (operator === 'intersect') {
     const left = requireNodeSequence(evaluateExpression(leftAst, context), leftAst.span);
-    const right = new Set(requireNodeSequence(evaluateExpression(rightAst, context), rightAst.span).map((item) => item.node));
+    const right = new Set(
+      requireNodeSequence(evaluateExpression(rightAst, context), rightAst.span).map(
+        (item) => item.node,
+      ),
+    );
     return normalizeNodeSequence(left.filter((item) => right.has(item.node)));
   }
 
   if (operator === 'except') {
-    const right = new Set(requireNodeSequence(evaluateExpression(rightAst, context), rightAst.span).map((item) => item.node));
+    const right = new Set(
+      requireNodeSequence(evaluateExpression(rightAst, context), rightAst.span).map(
+        (item) => item.node,
+      ),
+    );
     return normalizeNodeSequence(
-      requireNodeSequence(evaluateExpression(leftAst, context), leftAst.span).filter((item) => !right.has(item.node)),
+      requireNodeSequence(evaluateExpression(leftAst, context), leftAst.span).filter(
+        (item) => !right.has(item.node),
+      ),
     );
   }
 
-  if (operator === 'eq' || operator === 'ne' || operator === 'lt' || operator === 'le' || operator === 'gt' || operator === 'ge') {
+  if (
+    operator === 'eq' ||
+    operator === 'ne' ||
+    operator === 'lt' ||
+    operator === 'le' ||
+    operator === 'gt' ||
+    operator === 'ge'
+  ) {
     return compareValue(
       operator,
       evaluateExpression(leftAst, context),
@@ -228,31 +260,25 @@ function evaluateBinaryExpression(
 
 function evaluateNumericOperand(items: readonly XdmItem[], span: SpanLike): number {
   const item = items[0];
-  if (items.length !== 1 || item === undefined) {
+  if (
+    items.length !== 1 ||
+    (item?.xdmKind !== 'atomic' && item?.xdmKind !== 'node') ||
+    (item?.xdmKind === 'atomic' &&
+      (item as XdmAtomicValue).type !== 'xs:double' &&
+      (item as XdmAtomicValue).type !== 'xs:integer')
+  ) {
     throw createXPathError(XPTY0004, 'Expected a single numeric value.', span, {
-      expectedType: 'singleton item()',
+      expectedType: 'xs:double or xs:integer',
       actualType: describeItemsType(items),
     });
   }
 
-  if (item.xdmKind === 'node') {
+  if (item?.xdmKind === 'node') {
     return Number((item as XdmNode).node.textContent ?? '');
   }
 
-  if (item.xdmKind !== 'atomic') {
-    throw createXPathError(XPTY0004, 'Expected a single numeric value.', span, {
-      expectedType: 'singleton numeric item()',
-      actualType: describeItemsType(items),
-    });
-  }
-
   const atomicItem = item as XdmAtomicValue;
-
-  if (atomicItem.type === 'xs:boolean') {
-    return atomicItem.value === true ? 1 : 0;
-  }
-
-  return Number(atomicItem.value);
+  return atomicItem.value as number;
 }
 
 function evaluateRangeExpression(
@@ -260,8 +286,16 @@ function evaluateRangeExpression(
   rightAst: XPathAst,
   context: DynamicContext,
 ): XdmItem[] {
-  const start = requireSingleInteger(evaluateExpression(leftAst, context), leftAst.span, 'Range expression start');
-  const end = requireSingleInteger(evaluateExpression(rightAst, context), rightAst.span, 'Range expression end');
+  const start = requireSingleInteger(
+    evaluateExpression(leftAst, context),
+    leftAst.span,
+    'Range expression start',
+  );
+  const end = requireSingleInteger(
+    evaluateExpression(rightAst, context),
+    rightAst.span,
+    'Range expression end',
+  );
 
   if (start > end) {
     return [];
@@ -273,7 +307,6 @@ function evaluateRangeExpression(
   }
   return items;
 }
-
 
 function isDecimalLiteralLexeme(lexeme: string): boolean {
   return lexeme.includes('.') && !/[eE]/.test(lexeme);
@@ -305,10 +338,15 @@ function effectiveBooleanValue(items: readonly XdmItem[], span: SpanLike): boole
   }
 
   if (items.length !== 1 || items[0]?.xdmKind !== 'atomic') {
-    throw createXPathError(FORG0006, 'Effective boolean value is not defined for this sequence.', span, {
-      expectedType: 'node(), xs:boolean, xs:string, or xs:double',
-      actualType: describeItemsType(items),
-    });
+    throw createXPathError(
+      FORG0006,
+      'Effective boolean value is not defined for this sequence.',
+      span,
+      {
+        expectedType: 'node(), xs:boolean, xs:string, or xs:double',
+        actualType: describeItemsType(items),
+      },
+    );
   }
 
   const atomic = items[0] as XdmAtomicValue;
@@ -322,17 +360,19 @@ function effectiveBooleanValue(items: readonly XdmItem[], span: SpanLike): boole
     return (atomic.value as string).length > 0;
   }
 
-  throw createXPathError(FORG0006, 'Effective boolean value is not defined for this atomic type.', span, {
-    expectedType: 'node(), xs:boolean, xs:string, xs:double, or xs:integer',
-    actualType: atomic.type,
-  });
+  throw createXPathError(
+    FORG0006,
+    'Effective boolean value is not defined for this atomic type.',
+    span,
+    {
+      expectedType: 'node(), xs:boolean, xs:string, xs:double, or xs:integer',
+      actualType: atomic.type,
+    },
+  );
 }
 
-const {
-  requireArity,
-  validateFunctionCallSignature,
-  throwArityError,
-} = createArityValidationHelpers(createXPathError);
+const { requireArity, validateFunctionCallSignature, throwArityError } =
+  createArityValidationHelpers(createXPathError);
 
 const {
   compareGeneral,
@@ -397,25 +437,34 @@ const { evaluateFilterExpression, evaluatePath } = createPathEvaluator({
   validateFunctionCallSignature,
 });
 
-const {
-  evaluateLetExpression,
-  evaluateForExpression,
-  evaluateQuantifiedExpression,
-} = createFlowExpressionEvaluator({
-  evaluateExpression,
-  effectiveBooleanValue,
-});
+const { evaluateLetExpression, evaluateForExpression, evaluateQuantifiedExpression } =
+  createFlowExpressionEvaluator({
+    evaluateExpression,
+    effectiveBooleanValue,
+  });
 
-function createXPathError(code: string, message: string, span: SpanLike, details?: ErrorDetails, context?: ErrorContext): XPathError {
-  return new XPathError(code, message, {
-    source: '<xpath>',
-    line: span.line,
-    column: span.column,
-    offset: span.start,
-    endLine: span.endLine,
-    endColumn: span.endColumn,
-    endOffset: span.end,
-  }, details, context);
+function createXPathError(
+  code: string,
+  message: string,
+  span: SpanLike,
+  details?: ErrorDetails,
+  context?: ErrorContext,
+): XPathError {
+  return new XPathError(
+    code,
+    message,
+    {
+      source: '<xpath>',
+      line: span.line,
+      column: span.column,
+      offset: span.start,
+      endLine: span.endLine,
+      endColumn: span.endColumn,
+      endOffset: span.end,
+    },
+    details,
+    context,
+  );
 }
 
 function describeItemsType(items: readonly XdmItem[]): string {
@@ -446,4 +495,3 @@ function describeItemType(item: XdmItem): string {
 
   return (item as XdmAtomicValue).type;
 }
-

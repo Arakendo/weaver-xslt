@@ -5,7 +5,11 @@ import { join, relative, resolve } from 'node:path';
 import { build, type Plugin } from 'esbuild';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { weaverEsbuildPlugin, type EsbuildLoadArgs, type EsbuildLoadResult } from '../../src/esbuild.js';
+import {
+  weaverEsbuildPlugin,
+  type EsbuildLoadArgs,
+  type EsbuildLoadResult,
+} from '../../src/esbuild.js';
 
 const WORKSPACE_ROOT = resolve(import.meta.dirname, '../..');
 
@@ -32,7 +36,9 @@ describe('esbuild plugin', () => {
 
     writeFileSync(stylesheetPath, stylesheet, 'utf8');
 
-    let onLoadCallback: ((args: EsbuildLoadArgs) => EsbuildLoadResult | null | Promise<EsbuildLoadResult | null>) | undefined;
+    let onLoadCallback:
+      | ((args: EsbuildLoadArgs) => EsbuildLoadResult | null | Promise<EsbuildLoadResult | null>)
+      | undefined;
     const plugin = weaverEsbuildPlugin();
 
     plugin.setup({
@@ -57,12 +63,53 @@ describe('esbuild plugin', () => {
     expect(result?.contents).toContain('//# sourceMappingURL=hello.xsl.map');
   });
 
+  it('reports compile progress through the plugin options callback', async () => {
+    tempDir = mkdtempSync(join(WORKSPACE_ROOT, 'tmp-weaver-esbuild-plugin-'));
+    const stylesheetPath = join(tempDir, 'hello.xsl');
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:template match="/">',
+      '    <hello><xsl:value-of select="/root/name"/></hello>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+
+    writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+    const progressMessages: string[] = [];
+    const plugin = weaverEsbuildPlugin({
+      onProgress: (message) => progressMessages.push(message),
+    });
+
+    let onLoadCallback:
+      | ((args: EsbuildLoadArgs) => EsbuildLoadResult | null | Promise<EsbuildLoadResult | null>)
+      | undefined;
+    plugin.setup({
+      onLoad(options, callback) {
+        expect(options.filter.test('hello.xsl')).toBe(true);
+        onLoadCallback = callback;
+      },
+    });
+
+    await onLoadCallback?.({ path: stylesheetPath });
+
+    expect(progressMessages).toEqual([
+      expect.stringContaining('Composing stylesheet source from'),
+      expect.stringContaining('Compiling stylesheet IR for'),
+      expect.stringContaining('Emitting stylesheet module for'),
+      expect.stringContaining('Analyzing stylesheet diagnostics for'),
+      expect.stringContaining('Generating stylesheet declaration and source map for'),
+    ]);
+  });
+
   it('bundles and runs a stylesheet import through esbuild', async () => {
     tempDir = mkdtempSync(join(WORKSPACE_ROOT, 'tmp-weaver-esbuild-plugin-'));
     const stylesheetPath = join(tempDir, 'hello.xsl');
     const entryPath = join(tempDir, 'entry.ts');
     const bundlePath = join(tempDir, 'bundle.mjs');
-    const runtimeSpecifier = toPosixPath(relative(tempDir, join(WORKSPACE_ROOT, 'src', 'runtime', 'index.ts')));
+    const runtimeSpecifier = toPosixPath(
+      relative(tempDir, join(WORKSPACE_ROOT, 'src', 'runtime', 'index.ts')),
+    );
     const stylesheet = [
       '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
       '  <xsl:template match="/">',
@@ -86,9 +133,13 @@ describe('esbuild plugin', () => {
       format: 'esm',
       outfile: bundlePath,
       platform: 'node',
-      plugins: [weaverEsbuildPlugin({
-        runtimeModuleSpecifier: runtimeSpecifier.startsWith('.') ? runtimeSpecifier : `./${runtimeSpecifier}`,
-      }) as Plugin],
+      plugins: [
+        weaverEsbuildPlugin({
+          runtimeModuleSpecifier: runtimeSpecifier.startsWith('.')
+            ? runtimeSpecifier
+            : `./${runtimeSpecifier}`,
+        }) as Plugin,
+      ],
       write: true,
     });
 

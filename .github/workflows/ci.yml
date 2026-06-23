@@ -79,5 +79,58 @@ jobs:
         shell: pwsh
         run: exit 1
 
+      - name: Compile benchmark guardrail
+        if: runner.os == 'Linux' && matrix.node == 22
+        id: vision_benchmark
+        shell: bash
+        run: |
+          report_dir="$RUNNER_TEMP/vision-benchmark"
+          mkdir -p "$report_dir"
+          report_path="$report_dir/vision-benchmark.json"
+          summary_path="$report_dir/vision-benchmark-summary.txt"
+
+          npx tsx scripts/benchmark-compile.ts \
+            --synthetic vision-guardrail \
+            --compose-summary \
+            --summary \
+            --out "$report_path" \
+            --fail-if-total-ms 2000 \
+            --fail-if-compile-ir-ms 500 \
+            --fail-if-lower-template-ms 250 \
+            --fail-if-template-rules-over 200 \
+            --fail-if-xpath-parses-over 2000 \
+            --fail-if-dropped-duplicates-below 1000 | tee "$summary_path"
+          benchmark_exit_code=${PIPESTATUS[0]}
+
+          echo "report_path=$report_path" >> "$GITHUB_OUTPUT"
+          echo "summary_path=$summary_path" >> "$GITHUB_OUTPUT"
+          echo "exit_code=$benchmark_exit_code" >> "$GITHUB_OUTPUT"
+
+          exit "$benchmark_exit_code"
+
+      - name: Add benchmark summary
+        if: runner.os == 'Linux' && matrix.node == 22 && always()
+        shell: bash
+        run: |
+          echo '## Compile benchmark guardrail' >> "$GITHUB_STEP_SUMMARY"
+          if [[ "${{ steps.vision_benchmark.outputs.exit_code }}" != "0" ]]; then
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Benchmark thresholds exceeded.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat "${{ steps.vision_benchmark.outputs.summary_path }}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload benchmark artifact
+        if: runner.os == 'Linux' && matrix.node == 22 && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vision-compile-benchmark-node-${{ matrix.node }}
+          path: |
+            ${{ steps.vision_benchmark.outputs.report_path }}
+            ${{ steps.vision_benchmark.outputs.summary_path }}
+          if-no-files-found: error
+
       - name: Build
         run: npm run build

@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { diagnosticReportFromError, formatDiagnostic, assertValidDiagnostic } from '../../../src/diagnostics/index.js';
+import {
+  diagnosticReportFromError,
+  formatDiagnostic,
+  assertValidDiagnostic,
+} from '../../../src/diagnostics/index.js';
 import { XsltProcessor } from '../../../src/index.js';
 import { captureError } from './helpers.js';
 
 describe('XSLT diagnostics', () => {
-  it('adds a suggestion when xsl:apply-templates uses mode', () => {
+  it('supports xsl:apply-templates mode without diagnostics', () => {
     const stylesheet = [
       '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
       '  <xsl:template match="/">',
@@ -13,28 +17,9 @@ describe('XSLT diagnostics', () => {
       '  </xsl:template>',
       '</xsl:stylesheet>',
     ].join('\n');
-    const error = captureError(() => {
-      new XsltProcessor(stylesheet).transform('<root><item>apple</item></root>');
-    });
-    const report = diagnosticReportFromError(error);
+    const result = new XsltProcessor(stylesheet).transform('<root><item>apple</item></root>');
 
-    assertValidDiagnostic(report);
-    expect(report.suggestions).toEqual([
-      {
-        kind: 'fix',
-        label: 'remove mode="..." and use the default mode in the current MVP+3 slice',
-        replacement: 'mode',
-        confidence: 1,
-      },
-    ]);
-
-    expect(formatDiagnostic(report, stylesheet)).toBe([
-      'error[XTSE0010]: xsl:apply-templates mode is not yet implemented in the current MVP+3 slice.',
-      '--> <stylesheet>:3:57',
-      '3 |     <out><xsl:apply-templates select="/root/item" mode="special"/></out>',
-      '  |                                                         ^^^^^^^',
-      '  help: remove mode="..." and use the default mode in the current MVP+3 slice',
-    ].join('\n'));
+    expect(result.output).toBe('<out>apple</out>');
   });
 
   it('adds a suggestion when xsl:apply-templates has non-xsl:with-param children', () => {
@@ -61,13 +46,15 @@ describe('XSLT diagnostics', () => {
       },
     ]);
 
-    expect(formatDiagnostic(report, stylesheet)).toBe([
-      'error[XTSE0010]: xsl:apply-templates only supports xsl:with-param children; found xsl:text.',
-      '--> <stylesheet>:4:8',
-      '4 |       <xsl:text>ignored</xsl:text>',
-      '  |        ^^^^^^^^',
-      '  help: replace the child with xsl:with-param or remove it from xsl:apply-templates',
-    ].join('\n'));
+    expect(formatDiagnostic(report, stylesheet)).toBe(
+      [
+        'error[XTSE0010]: xsl:apply-templates only supports xsl:with-param children; found xsl:text.',
+        '--> <stylesheet>:4:8',
+        '4 |       <xsl:text>ignored</xsl:text>',
+        '  |        ^^^^^^^^',
+        '  help: replace the child with xsl:with-param or remove it from xsl:apply-templates',
+      ].join('\n'),
+    );
   });
 
   it('adds a suggestion when xsl:call-template has non-xsl:with-param children', () => {
@@ -97,13 +84,15 @@ describe('XSLT diagnostics', () => {
       },
     ]);
 
-    expect(formatDiagnostic(report, stylesheet)).toBe([
-      'error[XTSE0010]: xsl:call-template only supports xsl:with-param children; found xsl:text.',
-      '--> <stylesheet>:4:8',
-      '4 |       <xsl:text>ignored</xsl:text>',
-      '  |        ^^^^^^^^',
-      '  help: replace the child with xsl:with-param or remove it from xsl:call-template',
-    ].join('\n'));
+    expect(formatDiagnostic(report, stylesheet)).toBe(
+      [
+        'error[XTSE0010]: xsl:call-template only supports xsl:with-param children; found xsl:text.',
+        '--> <stylesheet>:4:8',
+        '4 |       <xsl:text>ignored</xsl:text>',
+        '  |        ^^^^^^^^',
+        '  help: replace the child with xsl:with-param or remove it from xsl:call-template',
+      ].join('\n'),
+    );
   });
 
   it('adds a suggestion when xsl:value-of is missing select', () => {
@@ -129,13 +118,15 @@ describe('XSLT diagnostics', () => {
       },
     ]);
 
-    expect(formatDiagnostic(report, stylesheet)).toBe([
-      'error[XTSE0010]: xsl:value-of requires a select attribute.',
-      '--> <stylesheet>:3:10',
-      '3 |     <out><xsl:value-of/></out>',
-      '  |          ^',
-      '  help: add a select="..." attribute to xsl:value-of',
-    ].join('\n'));
+    expect(formatDiagnostic(report, stylesheet)).toBe(
+      [
+        'error[XTSE0010]: xsl:value-of requires a select attribute.',
+        '--> <stylesheet>:3:10',
+        '3 |     <out><xsl:value-of/></out>',
+        '  |          ^',
+        '  help: add a select="..." attribute to xsl:value-of',
+      ].join('\n'),
+    );
   });
 
   it('adds a suggestion when xsl:if is missing test', () => {
@@ -161,13 +152,15 @@ describe('XSLT diagnostics', () => {
       },
     ]);
 
-    expect(formatDiagnostic(report, stylesheet)).toBe([
-      'error[XTSE0010]: xsl:if requires a test attribute.',
-      '--> <stylesheet>:3:5',
-      '3 |     <xsl:if><out/></xsl:if>',
-      '  |     ^',
-      '  help: add a test="..." attribute to xsl:if',
-    ].join('\n'));
+    expect(formatDiagnostic(report, stylesheet)).toBe(
+      [
+        'error[XTSE0010]: xsl:if requires a test attribute.',
+        '--> <stylesheet>:3:5',
+        '3 |     <xsl:if><out/></xsl:if>',
+        '  |     ^',
+        '  help: add a test="..." attribute to xsl:if',
+      ].join('\n'),
+    );
   });
 
   it('adds a suggestion when xsl:call-template is missing name', () => {
@@ -193,13 +186,15 @@ describe('XSLT diagnostics', () => {
       },
     ]);
 
-    expect(formatDiagnostic(report, stylesheet)).toBe([
-      'error[XTSE0010]: xsl:call-template requires a name attribute.',
-      '--> <stylesheet>:3:5',
-      '3 |     <xsl:call-template/>',
-      '  |     ^',
-      '  help: add a name="..." attribute to xsl:call-template',
-    ].join('\n'));
+    expect(formatDiagnostic(report, stylesheet)).toBe(
+      [
+        'error[XTSE0010]: xsl:call-template requires a name attribute.',
+        '--> <stylesheet>:3:5',
+        '3 |     <xsl:call-template/>',
+        '  |     ^',
+        '  help: add a name="..." attribute to xsl:call-template',
+      ].join('\n'),
+    );
   });
 
   it('adds a suggestion when local xsl:variable is missing name', () => {
@@ -225,13 +220,15 @@ describe('XSLT diagnostics', () => {
       },
     ]);
 
-    expect(formatDiagnostic(report, stylesheet)).toBe([
-      'error[XTSE0010]: xsl:variable requires a name attribute.',
-      '--> <stylesheet>:3:5',
-      '3 |     <xsl:variable select="\'hello\'"/>',
-      '  |     ^',
-      '  help: add a name="..." attribute to xsl:variable',
-    ].join('\n'));
+    expect(formatDiagnostic(report, stylesheet)).toBe(
+      [
+        'error[XTSE0010]: xsl:variable requires a name attribute.',
+        '--> <stylesheet>:3:5',
+        '3 |     <xsl:variable select="\'hello\'"/>',
+        '  |     ^',
+        '  help: add a name="..." attribute to xsl:variable',
+      ].join('\n'),
+    );
   });
 
   it('adds a suggestion when local xsl:variable mixes select and content', () => {
@@ -253,24 +250,26 @@ describe('XSLT diagnostics', () => {
       phase: 'compile',
       category: 'analysis',
       message: 'xsl:variable cannot specify both a select attribute and a sequence constructor.',
-      details: [
-        { key: 'variableName', value: 'greeting' },
+      details: [{ key: 'variableName', value: 'greeting' }],
+      suggestions: [
+        {
+          kind: 'fix',
+          label: 'remove select="..." or remove xsl:variable content',
+          confidence: 1,
+        },
       ],
-      suggestions: [{
-        kind: 'fix',
-        label: 'remove select="..." or remove xsl:variable content',
-        confidence: 1,
-      }],
     });
 
-    expect(formatDiagnostic(report, stylesheet)).toBe([
-      'error[XTSE0620]: xsl:variable cannot specify both a select attribute and a sequence constructor.',
-      '--> <stylesheet>:3:43',
-      '3 |     <xsl:variable name="greeting" select="\'hello\'">ignored</xsl:variable>',
-      '  |                                           ^^^^^^^',
-      '  = variableName: greeting',
-      '  help: remove select="..." or remove xsl:variable content',
-    ].join('\n'));
+    expect(formatDiagnostic(report, stylesheet)).toBe(
+      [
+        'error[XTSE0620]: xsl:variable cannot specify both a select attribute and a sequence constructor.',
+        '--> <stylesheet>:3:43',
+        '3 |     <xsl:variable name="greeting" select="\'hello\'">ignored</xsl:variable>',
+        '  |                                           ^^^^^^^',
+        '  = variableName: greeting',
+        '  help: remove select="..." or remove xsl:variable content',
+      ].join('\n'),
+    );
   });
 
   it('surfaces malformed XPath syntax in xsl:if test attributes', () => {
@@ -322,14 +321,16 @@ describe('XSLT diagnostics', () => {
       ],
     });
 
-    expect(formatDiagnostic(report, stylesheet)).toBe([
-      'error[XPST0081]: Unknown namespace prefix "missing" in xsl:call-template name.',
-      '--> <stylesheet>:3:30',
-      '3 |     <xsl:call-template name="missing:main"/>',
-      '  |                              ^^^^^^^^^^^^',
-      '  = namespacePrefix: missing',
-      '  = qName: missing:main',
-    ].join('\n'));
+    expect(formatDiagnostic(report, stylesheet)).toBe(
+      [
+        'error[XPST0081]: Unknown namespace prefix "missing" in xsl:call-template name.',
+        '--> <stylesheet>:3:30',
+        '3 |     <xsl:call-template name="missing:main"/>',
+        '  |                              ^^^^^^^^^^^^',
+        '  = namespacePrefix: missing',
+        '  = qName: missing:main',
+      ].join('\n'),
+    );
   });
 
   it('surfaces malformed XPath syntax in xsl:value-of select attributes', () => {
@@ -406,15 +407,17 @@ describe('XSLT diagnostics', () => {
       },
     ]);
 
-    expect(formatDiagnostic(report, '1 + ')).toBe([
-      'error[XPST0003]: Unexpected token "".',
-      '--> <xpath>:1:5',
-      '1 | 1 + ',
-      '  |     ^',
-      '  in instruction xsl:value-of select="1 + " (<stylesheet>:3:32)',
-      'related:',
-      '  containing instruction (<stylesheet>:3:32)',
-    ].join('\n'));
+    expect(formatDiagnostic(report, '1 + ')).toBe(
+      [
+        'error[XPST0003]: Unexpected token "".',
+        '--> <xpath>:1:5',
+        '1 | 1 + ',
+        '  |     ^',
+        '  in instruction xsl:value-of select="1 + " (<stylesheet>:3:32)',
+        'related:',
+        '  containing instruction (<stylesheet>:3:32)',
+      ].join('\n'),
+    );
   });
 
   it('surfaces malformed XPath syntax in xsl:apply-templates select attributes', () => {
@@ -566,15 +569,17 @@ describe('XSLT diagnostics', () => {
       },
     ]);
 
-    expect(formatDiagnostic(report, '1 + ')).toBe([
-      'error[XPST0003]: Unexpected token "".',
-      '--> <xpath>:1:5',
-      '1 | 1 + ',
-      '  |     ^',
-      '  in template match="1 + " (<stylesheet>:2:24)',
-      'related:',
-      '  containing template (<stylesheet>:2:24)',
-    ].join('\n'));
+    expect(formatDiagnostic(report, '1 + ')).toBe(
+      [
+        'error[XPST0003]: Unexpected token "".',
+        '--> <xpath>:1:5',
+        '1 | 1 + ',
+        '  |     ^',
+        '  in template match="1 + " (<stylesheet>:2:24)',
+        'related:',
+        '  containing template (<stylesheet>:2:24)',
+      ].join('\n'),
+    );
   });
 
   it('surfaces malformed XPath syntax in xsl:param select attributes', () => {
@@ -651,15 +656,17 @@ describe('XSLT diagnostics', () => {
       },
     ]);
 
-    expect(formatDiagnostic(report, '1 + ')).toBe([
-      'error[XPST0003]: Unexpected token "".',
-      '--> <xpath>:1:5',
-      '1 | 1 + ',
-      '  |     ^',
-      '  in instruction xsl:param select="1 + " (<stylesheet>:3:40)',
-      'related:',
-      '  containing instruction (<stylesheet>:3:40)',
-    ].join('\n'));
+    expect(formatDiagnostic(report, '1 + ')).toBe(
+      [
+        'error[XPST0003]: Unexpected token "".',
+        '--> <xpath>:1:5',
+        '1 | 1 + ',
+        '  |     ^',
+        '  in instruction xsl:param select="1 + " (<stylesheet>:3:40)',
+        'related:',
+        '  containing instruction (<stylesheet>:3:40)',
+      ].join('\n'),
+    );
   });
 
   it('surfaces malformed XPath syntax in top-level xsl:variable select attributes', () => {

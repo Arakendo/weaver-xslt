@@ -15,6 +15,7 @@ import type {
   TemplateParam,
   TemplateRule,
 } from './ir.js';
+import type { CompileIrStatsRecorder, CompileIrTemplateMetrics } from './compiler.js';
 
 type StaticErrorFactory = (
   message: string,
@@ -34,6 +35,7 @@ export type TopLevelCompilerHelpers = {
     allowedAttributes: readonly string[],
   ): void;
   createXsltStaticError: StaticErrorFactory;
+  readonly irStats?: CompileIrStatsRecorder;
   parseXPathInContext(
     expression: string,
     location: TemplateRule['location'],
@@ -124,6 +126,7 @@ export function compileTopLevelVariableDeclaration(
     getAttributeValueSourceLocation(stylesheetXml, element, 'name', helpers.stylesheetSourceName) ??
     getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
   const name = helpers.normalizeXsltQName(rawName, element, stylesheetXml, 'name', 'xsl:variable');
+  helpers.irStats?.recordGlobalBinding('variable');
 
   return {
     kind: 'variable',
@@ -154,6 +157,7 @@ export function compileTemplateRuleDeclaration(
   stylesheetXml: string,
   helpers: TopLevelCompilerHelpers,
 ): TemplateRule {
+  const templateStartTime = helpers.irStats === undefined ? 0 : performance.now();
   helpers.assertAllowedXsltAttributes(templateElement, stylesheetXml, 'xsl:template', [
     'exclude-result-prefixes',
     'match',
@@ -177,6 +181,7 @@ export function compileTemplateRuleDeclaration(
   const rawName = templateElement.getAttribute('name') ?? undefined;
   const priorityText = templateElement.getAttribute('priority');
   const priority = priorityText === null ? undefined : Number(priorityText);
+  helpers.irStats?.beginTemplateLowering(rawName, matchText, templateElement.childNodes.length);
 
   if (matchText === undefined && rawName === undefined) {
     throw helpers.createXsltStaticError(
@@ -243,6 +248,13 @@ export function compileTemplateRuleDeclaration(
     templateElement,
     stylesheetXml,
     helpers,
+  );
+  const templateMetrics = collectTemplateMetrics(body);
+
+  helpers.irStats?.recordTemplateRule();
+  helpers.irStats?.endTemplateLowering(
+    templateMetrics,
+    helpers.irStats === undefined ? 0 : performance.now() - templateStartTime,
   );
 
   return {
@@ -327,6 +339,74 @@ export function compileTemplateContentDeclaration(
   }
 
   return { params, body };
+}
+
+function collectTemplateMetrics(instructions: readonly Instruction[]): CompileIrTemplateMetrics {
+  let instructionCount = 0;
+  let callTemplateCount = 0;
+  let applyTemplatesCount = 0;
+  let chooseCount = 0;
+  let variableCount = 0;
+  let literalResultCount = 0;
+  const calledTemplateNames = new Set<string>();
+  const applyTemplateModes = new Set<string>();
+
+  const walkInstructions = (entries: readonly Instruction[]): void => {
+    for (const instruction of entries) {
+      instructionCount += 1;
+      if (instruction.kind === 'callTemplate') {
+        callTemplateCount += 1;
+        calledTemplateNames.add(instruction.name);
+      }
+      if (instruction.kind === 'applyTemplates') {
+        applyTemplatesCount += 1;
+        for (const mode of instruction.modes) {
+          applyTemplateModes.add(mode);
+        }
+      }
+      if (instruction.kind === 'choose') {
+        chooseCount += 1;
+      }
+      if (instruction.kind === 'variable') {
+        variableCount += 1;
+      }
+      if (instruction.kind === 'literalElement') {
+        literalResultCount += 1;
+      }
+
+      if ('body' in instruction && Array.isArray(instruction.body)) {
+        walkInstructions(instruction.body);
+      }
+      if (instruction.kind === 'choose') {
+        for (const clause of instruction.whenBranches) {
+          walkInstructions(clause.body);
+        }
+        if (instruction.otherwiseBody !== undefined) {
+          walkInstructions(instruction.otherwiseBody);
+        }
+      }
+      if ('withParams' in instruction) {
+        for (const withParam of instruction.withParams) {
+          if (withParam.body !== undefined) {
+            walkInstructions(withParam.body);
+          }
+        }
+      }
+    }
+  };
+
+  walkInstructions(instructions);
+
+  return {
+    instructionCount,
+    callTemplateCount,
+    applyTemplatesCount,
+    chooseCount,
+    variableCount,
+    literalResultCount,
+    calledTemplateNames: [...calledTemplateNames].sort(),
+    applyTemplateModes: [...applyTemplateModes].sort(),
+  };
 }
 
 export function compileTemplateParamDeclaration(
@@ -434,6 +514,7 @@ export function compileTemplateParamDeclaration(
     getAttributeValueSourceLocation(stylesheetXml, element, 'name', helpers.stylesheetSourceName) ??
     getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
   const name = helpers.normalizeXsltQName(rawName, element, stylesheetXml, 'name', 'xsl:param');
+  helpers.irStats?.recordGlobalBinding('param');
 
   return {
     name,

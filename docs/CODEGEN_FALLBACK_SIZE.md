@@ -6,14 +6,35 @@ artifact, and what those findings imply for browser delivery.
 
 The short version is:
 
-- The scary `111 MB` generated module was mostly **pretty-print whitespace**.
-- The remaining `32.8 MB` minified IR was mostly **provenance**, not transform logic.
-- The actual stylesheet logic is compact.
-- On the wire, the full IR already compresses to **2.28 MB gzip** or **0.97 MB brotli**.
-- That makes this primarily a **browser parse / memory** question, not a network question.
+- The scary `111 MB` generated module was a **historical pre-Phase-0 baseline** dominated by pretty-print whitespace.
+- The earlier `32.8 MB` minified fallback IR was also a **historical baseline**; after composition dedupe and source-location fixes, the real Vision entry now emits a **6.49 MB** generated module.
+- That is an `~81%` raw-size reduction from the earlier `34,386,683` byte module baseline, even before any separate web-only fallback transport redesign.
+- The original byte-attribution findings still matter: provenance dominates the remaining payload more than transform logic does.
+- The earlier **2.28 MB gzip / 0.97 MB brotli** transfer numbers should now be treated as an **upper-bound reference from the older larger artifact**, not the current exact compressed size.
 
 These findings changed the design conversation from "How do we force this under
 1 MB?" to "What problem are we actually solving?"
+
+## Status update
+
+The historical baseline on this page is still useful, but it is no longer the
+current size story for the Vision stylesheet.
+
+The latest measured file-based compile of the real Vision entry stylesheet
+`.workbench/vision xslts/S1000D/S1000D_main.xslt` now reports:
+
+| Metric               | Historical baseline         | Current post-fix measurement |
+| -------------------- | --------------------------- | ---------------------------- |
+| Wall-clock           | `~31m23s`                   | `899.3 ms`                   |
+| Generated module     | `34,386,683 bytes (~34 MB)` | `6.49 MB`                    |
+| Template rules       | `3,493`                     | `754`                        |
+| XPath parses         | `31,388`                    | `5,972`                      |
+| Diagnostics produced | `3,053`                     | `199`                        |
+
+So the dedicated fallback-size investigation still explains where the weight
+comes from, but the current practical question is narrower than it was when this
+document started: the browser-facing fallback path is no longer dealing with a
+34 MB raw generated module for this corpus.
 
 ## 1. Problem
 
@@ -43,9 +64,16 @@ consumed by [src/xslt/codegen/emit.ts](../src/xslt/codegen/emit.ts#L194):
 '  return transformCompiledStylesheet(stylesheet, sourceXml, ctx);',
 ```
 
-For the real Vision `S1000D_main.xslt`, this produced a **111 MB / 3.1M-line**
-generated module before Phase 0 minification. That is unreasonable to ship as
-JavaScript, even if it is only sent once.
+For the real Vision `S1000D_main.xslt`, this historically produced a
+**111 MB / 3.1M-line** generated module before Phase 0 minification. That was
+unreasonable to ship as JavaScript, even if it was only sent once.
+
+Today that exact number is no longer current. After the later composition-dedupe
+and source-location fixes described in
+[CODEGEN_COMPILE_PERFORMANCE.md](./CODEGEN_COMPILE_PERFORMANCE.md), the same
+entry stylesheet currently emits a **6.49 MB** generated module. The fallback
+transport question still matters for the browser path, but the raw-size pressure
+is materially lower than the original baseline that motivated this document.
 
 ## 2. Executive Summary
 
@@ -78,6 +106,10 @@ ordinary HTTP compression:
 
 - **full IR**: `32.79 MB raw -> 2.28 MB gzip / 0.97 MB brotli`
 
+Those transfer numbers came from the older larger minified fallback artifact.
+They remain useful as proof that the payload compresses well, but they are not a
+fresh measurement of the current post-fix 6.49 MB module.
+
 So the next engineering question is not wire size. It is whether browser
 **fetch + parse + heap growth + first transform latency** are acceptable on the
 real payload.
@@ -108,52 +140,52 @@ already good enough.
 
 Profiling the current emitted artifact:
 
-| Metric | Value |
-|---|---|
-| Total chars | 116.7 M |
-| Leading-indent whitespace | 76.9 M (65.8%) |
-| `"location"` objects | 82,465 |
-| `"source"` string repeats | 84,413 |
-| line/column/endLine/endColumn fields | 233,590 each |
-| `"kind"` fields | 212,969 |
+| Metric                               | Value          |
+| ------------------------------------ | -------------- |
+| Total chars                          | 116.7 M        |
+| Leading-indent whitespace            | 76.9 M (65.8%) |
+| `"location"` objects                 | 82,465         |
+| `"source"` string repeats            | 84,413         |
+| line/column/endLine/endColumn fields | 233,590 each   |
+| `"kind"` fields                      | 212,969        |
 
 Two facts dominate:
 
 1. Pretty-print whitespace is most of the current file.
 2. The IR is highly repetitive, so it compresses extremely well.
 
-### Byte attribution of the minified IR (32.8 MB)
+### Byte attribution of the historical minified IR baseline (32.8 MB)
 
-Counts hide cost; the question is where the *bytes* go. Partitioning every byte
+Counts hide cost; the question is where the _bytes_ go. Partitioning every byte
 of the minified IR to its owning field name (exact partition, sums to 32.79 MB):
 
-| Field | MB | % | Count |
-|---|---|---|---|
-| `kind` | 3.37 | 10.3% | 212,969 |
-| `endColumn` | 3.07 | 9.4% | 233,590 |
-| `endLine` | 2.79 | 8.5% | 233,590 |
-| `column` | 2.33 | 7.1% | 233,590 |
-| `source` | 2.17 | 6.6% | 84,413 |
-| `line` | 2.12 | 6.5% | 233,590 |
-| `span` | 1.99 | 6.1% | 149,177 |
-| `endOffset` | 1.51 | 4.6% | 84,413 |
-| `location` | 1.49 | 4.6% | 82,462 |
-| `start` | 1.33 | 4.0% | 149,177 |
-| `offset` | 1.27 | 3.9% | 84,413 |
-| `name` | 1.21 | 3.7% | 73,913 |
-| `end` | 1.11 | 3.4% | 149,177 |
-| `body` | 0.63 | 1.9% | 37,716 |
-| `axis` | 0.57 | 1.7% | 33,880 |
+| Field       | MB   | %     | Count   |
+| ----------- | ---- | ----- | ------- |
+| `kind`      | 3.37 | 10.3% | 212,969 |
+| `endColumn` | 3.07 | 9.4%  | 233,590 |
+| `endLine`   | 2.79 | 8.5%  | 233,590 |
+| `column`    | 2.33 | 7.1%  | 233,590 |
+| `source`    | 2.17 | 6.6%  | 84,413  |
+| `line`      | 2.12 | 6.5%  | 233,590 |
+| `span`      | 1.99 | 6.1%  | 149,177 |
+| `endOffset` | 1.51 | 4.6%  | 84,413  |
+| `location`  | 1.49 | 4.6%  | 82,462  |
+| `start`     | 1.33 | 4.0%  | 149,177 |
+| `offset`    | 1.27 | 3.9%  | 84,413  |
+| `name`      | 1.21 | 3.7%  | 73,913  |
+| `end`       | 1.11 | 3.4%  | 149,177 |
+| `body`      | 0.63 | 1.9%  | 37,716  |
+| `axis`      | 0.57 | 1.7%  | 33,880  |
 
-### The 14 KB -> 32.8 MB expansion is provenance, not include-graph blowup
+### The 14 KB -> 32.8 MB historical expansion is provenance, not include-graph blowup
 
 Aggregating the position-bearing subtrees:
 
-| Position metadata | MB | % of minified IR |
-|---|---|---|
-| whole `location` subtrees | 10.48 | 31.9% |
-| whole `span` subtrees | 10.71 | 32.7% |
-| **position metadata total** | **21.19** | **64.6%** |
+| Position metadata           | MB        | % of minified IR |
+| --------------------------- | --------- | ---------------- |
+| whole `location` subtrees   | 10.48     | 31.9%            |
+| whole `span` subtrees       | 10.71     | 32.7%            |
+| **position metadata total** | **21.19** | **64.6%**        |
 
 So ~65% of the "real" structure after whitespace removal is **source position
 data**, and the genuine structural payload (`kind`, `name`, `body`, `axis`,
@@ -164,7 +196,7 @@ import/include graph.
 
 Two concrete smells fall out of the report:
 
-1. **Every node carries *two* overlapping position records** — a `location`
+1. **Every node carries _two_ overlapping position records** — a `location`
    (10.48 MB) **and** a `span` (10.71 MB), each holding line/column/offset data.
    That redundancy is worth questioning on its own, independent of file size.
 2. **The `source` filename is stored 84,413 times** (2.17 MB) when one interned
@@ -182,12 +214,12 @@ an exotic IR-compression project.
 
 Stripping the position metadata and re-measuring isolates the genuine logic:
 
-| Variant | Raw | gzip | brotli |
-|---|---|---|---|
-| full IR | 32.79 MB | 2330 KB | 989 KB |
-| no `location` | 22.32 MB | 859 KB | **110 KB** |
-| no `span` | 22.08 MB | 1876 KB | 957 KB |
-| **structure only (no both)** | **11.61 MB** | 509 KB | **84 KB** |
+| Variant                      | Raw          | gzip    | brotli     |
+| ---------------------------- | ------------ | ------- | ---------- |
+| full IR                      | 32.79 MB     | 2330 KB | 989 KB     |
+| no `location`                | 22.32 MB     | 859 KB  | **110 KB** |
+| no `span`                    | 22.08 MB     | 1876 KB | 957 KB     |
+| **structure only (no both)** | **11.61 MB** | 509 KB  | **84 KB**  |
 
 Two takeaways:
 
@@ -205,15 +237,15 @@ essentially free post-compression.** And on the wire none of it is urgent — ev
 the full IR is 0.99 MB brotli, well under the `<10 MB` budget. This only changes
 parse/memory math: ~11.6 MB to parse and allocate instead of ~32.8 MB.
 
-### Encoding experiments (same IR)
+### Encoding experiments (historical same-IR baseline)
 
-| Encoding | Raw size | Transfer shape |
-|---|---|---|
-| Current pretty JSON | 111 MB | not acceptable |
-| Minified JSON | 32.8 MB | acceptable only if HTTP-compressed |
-| Minified, locations stripped | 22.3 MB | unnecessary for current target |
-| gzip of full IR | 2.28 MB | comfortably within target |
-| brotli of full IR | 0.97 MB | far within target |
+| Encoding                     | Raw size | Transfer shape                     |
+| ---------------------------- | -------- | ---------------------------------- |
+| Current pretty JSON          | 111 MB   | not acceptable                     |
+| Minified JSON                | 32.8 MB  | acceptable only if HTTP-compressed |
+| Minified, locations stripped | 22.3 MB  | unnecessary for current target     |
+| gzip of full IR              | 2.28 MB  | comfortably within target          |
+| brotli of full IR            | 0.97 MB  | far within target                  |
 
 ## 5. Main conclusion
 
@@ -227,9 +259,10 @@ The practical answer is:
 4. Fetch it once, cache it by **digest/version**, and reuse it for the rest of
    the session or across sessions.
 
-On the measured corpus, the full IR already compresses to **2.28 MB with gzip**
-and **0.97 MB with brotli** without removing diagnostics data. That is already a
-good fit for an IIS-backed web client on the network side.
+On the historical measured corpus, the full IR already compressed to
+**2.28 MB with gzip** and **0.97 MB with brotli** without removing diagnostics
+data. The current post-fix artifact should be smaller than that on the wire, but
+this document does not yet include a fresh compressed-size measurement.
 
 The remaining unknown is **cold-start client cost**:
 
@@ -273,12 +306,12 @@ Recommended shape:
 Recommended contract:
 
 - **Browser fallback loading should be explicitly async.** A browser host should
-   `await` stylesheet availability before first transform rather than pretending
-   the fallback artifact is synchronously available at module import time.
+  `await` stylesheet availability before first transform rather than pretending
+  the fallback artifact is synchronously available at module import time.
 - **Node/CLI can keep the current synchronous path** if that remains convenient;
-   this plan is specifically about making the web delivery path reasonable.
+  this plan is specifically about making the web delivery path reasonable.
 - The async boundary should live at stylesheet acquisition, not deep inside the
-   interpreter, so the runtime surface stays predictable.
+  interpreter, so the runtime surface stays predictable.
 
 This keeps the browser path simple:
 
@@ -329,20 +362,22 @@ transport.
 Change the serializer from pretty JSON to minified JSON.
 
 ```ts
-JSON.stringify(ir)
+JSON.stringify(ir);
 ```
 
 Effect:
 
-- 111 MB raw module becomes ~32.8 MB raw serialized IR.
+- Historical 111 MB raw module became ~32.8 MB raw serialized IR.
+- Later compiler fixes reduced the real Vision generated module further to
+  **6.49 MB** raw.
 - Removes the worst-case file explosion immediately.
-- Still not good as inline JavaScript, but good enough as the source for a static
+- Still not ideal as inline JavaScript, but much closer to a reasonable static
   compressed asset.
 
 This phase is now reflected in the compiler source:
 
 ```ts
-JSON.stringify(ir)
+JSON.stringify(ir);
 ```
 
 ### Phase 1 — Web-first fallback asset
@@ -357,11 +392,11 @@ Recommended output:
 Recommendation on output shape:
 
 - Treat this as a **separate web-targeted fallback emit mode first**, not an
-   immediate universal replacement for every fallback consumer.
+  immediate universal replacement for every fallback consumer.
 - Once the browser path is proven and any host assumptions are flushed out, it
-   can become the default fallback form for web-facing outputs.
+  can become the default fallback form for web-facing outputs.
 - This keeps the first rollout narrow and avoids forcing CLI/test/tooling hosts
-   to absorb an async fetch contract before the browser case is validated.
+  to absorb an async fetch contract before the browser case is validated.
 
 Conceptually:
 
@@ -369,7 +404,7 @@ Conceptually:
 export const source = { path, digest };
 
 export async function loadStylesheet(): Promise<StylesheetIR> {
-  const response = await fetch(stylesheetUrl, { cache: "force-cache" });
+  const response = await fetch(stylesheetUrl, { cache: 'force-cache' });
   return response.json();
 }
 ```
@@ -407,9 +442,9 @@ approve the simple JSON asset path if a representative client shows roughly:
 - cold-cache transfer and decode comfortably under normal session-start latency,
 - `JSON.parse` in the low hundreds of milliseconds rather than multi-second,
 - heap growth that stays well below the point where a few concurrent open
-   documents would pressure the tab or renderer process,
+  documents would pressure the tab or renderer process,
 - time-to-first-usable-transform that is acceptable for a one-time session
-   bootstrap.
+  bootstrap.
 
 The exact numbers should be filled in from the target browser/hardware mix, but
 the important part is that Phase 1.5 should end with **pass/fail thresholds**,
@@ -486,14 +521,14 @@ acceptable parse and memory measurements.
 - [x] Switch fallback serialization from pretty JSON to minified JSON in
       [src/xslt/codegen/plan.ts](../src/xslt/codegen/plan.ts#L24).
 - [ ] Implement the web path as a separate fallback emit mode first, then decide
-   after Phase 1.5 whether it should become the default browser-facing form.
+      after Phase 1.5 whether it should become the default browser-facing form.
 - [ ] Update fallback emission in [src/xslt/codegen/emit.ts](../src/xslt/codegen/emit.ts#L194)
       so browser-facing artifacts can point at a static IR asset rather than embed
       the full literal.
 - [x] Build a small browser proof-of-concept that measures fetch time, parse time,
-  and heap growth for the real S1000D IR payload.
+      and heap growth for the real S1000D IR payload.
 - [ ] Write down explicit Phase 1.5 pass/fail thresholds for representative
-   client hardware and browser targets before calling the POC successful.
+      client hardware and browser targets before calling the POC successful.
 - [ ] Add a small loader/cache helper for digest-keyed client reuse.
 - [ ] Verify IIS compression and cache headers for the emitted asset type.
 - [ ] Refresh any golden fixtures affected by the serializer change.
@@ -504,9 +539,11 @@ Risks:
 
 - Moving from inline JS to fetched JSON changes host expectations; some tooling or
   tests may assume the stylesheet is immediately present at module import time.
-- Parsing a 30+ MB minified JSON asset may still be a meaningful cold-start CPU
-  and memory cost, even if network transfer is small; this is the main thing to
-  measure before declaring the design good enough.
+- Parsing a multi-megabyte minified fallback asset may still be a meaningful
+  cold-start CPU and memory cost, even if network transfer is small; this is the
+  main thing to measure before declaring the design good enough. The current
+  Vision module is far smaller than the old 30+ MB baseline, but browser parse
+  and heap behavior should still be measured rather than assumed.
 - Browser storage quotas vary; Cache Storage / IndexedDB are better candidates
   than `localStorage`.
 

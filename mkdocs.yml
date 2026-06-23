@@ -40,6 +40,7 @@ nav:
   - Lessons Learned: LESSONS_LEARNED.md
   - Progress Artifacts: PROGRESS_ARTIFACTS.md
   - Fallback File Size Findings: CODEGEN_FALLBACK_SIZE.md
+  - Compile Performance Plan: CODEGEN_COMPILE_PERFORMANCE.md
   - Errors: ERRORS.md
   - XPath: XPATH.md
   - Semantic Boundaries: SEMANTIC_BOUNDARIES.md

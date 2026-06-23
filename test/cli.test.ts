@@ -1,5 +1,5 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import { describe, expect, it, vi } from 'vitest';
@@ -40,9 +40,11 @@ describe('CLI', () => {
         '  </xsl:template>',
         '</xsl:stylesheet>',
       ].join('\n');
-      const firstExpected = compileStylesheetArtifacts(stylesheet, { path: 'hello.xsl' });
+      const firstExpected = compileStylesheetArtifacts(stylesheet, {
+        filePath: firstStylesheetPath,
+      });
       const secondExpected = compileStylesheetArtifacts(stylesheet.replaceAll('hello', 'goodbye'), {
-        path: 'goodbye.xsl',
+        filePath: secondStylesheetPath,
       });
       const { io, stderr, stdout } = createTestIo();
 
@@ -78,9 +80,11 @@ describe('CLI', () => {
       expect(readFileSync(secondDeclarationPath, 'utf8')).toBe(secondExpected.declaration);
       expect(readFileSync(secondDigestPath, 'utf8')).toBe(`${secondExpected.digest}\n`);
       expect(readFileSync(secondSourceMapPath, 'utf8')).toBe(secondExpected.sourceMap);
-      expect(readFileSync(firstOutputPath, 'utf8')).toContain('//# sourceMappingURL=hello.xsl.map');
+      expect(readFileSync(firstOutputPath, 'utf8')).toContain(
+        `//# sourceMappingURL=${basename(firstSourceMapPath)}`,
+      );
       expect(readFileSync(secondOutputPath, 'utf8')).toContain(
-        '//# sourceMappingURL=goodbye.xsl.map',
+        `//# sourceMappingURL=${basename(secondSourceMapPath)}`,
       );
     } finally {
       rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
@@ -185,8 +189,8 @@ describe('CLI', () => {
       expect(stderr[0]).toContain('warning[WEAVER_ANALYZE_UNUSED_GLOBAL_VARIABLE]');
       expect(stderr[0]).toContain('version');
       expect(existsSync(outputPath)).toBe(true);
-      expect(readFileSync(outputPath, 'utf8')).toContain('"globalBindings": [');
-      expect(readFileSync(outputPath, 'utf8')).toContain('"templates": []');
+      expect(readFileSync(outputPath, 'utf8')).toContain('"globalBindings":[{');
+      expect(readFileSync(outputPath, 'utf8')).toContain('"templates":[]');
     } finally {
       rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
     }

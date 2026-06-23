@@ -44,6 +44,34 @@ describe('vite plugin', () => {
     });
   });
 
+  it('reports compile progress through plugin callbacks', async () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'weaver-vite-plugin-'));
+    const stylesheetPath = join(tempDir, 'hello.xsl');
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:template match="/">',
+      '    <hello><xsl:value-of select="/root/name"/></hello>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+
+    writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+    const progressMessages: string[] = [];
+    const plugin = weaverVitePlugin({
+      onProgress: (message) => progressMessages.push(message),
+    });
+    await plugin.load?.(`${stylesheetPath}?import`);
+
+    expect(progressMessages).toEqual([
+      expect.stringContaining('Composing stylesheet source from'),
+      expect.stringContaining('Compiling stylesheet IR for'),
+      expect.stringContaining('Emitting stylesheet module for'),
+      expect.stringContaining('Analyzing stylesheet diagnostics for'),
+      expect.stringContaining('Generating stylesheet declaration and source map for'),
+    ]);
+  });
+
   it('transforms .xsl modules for live Vite module requests', async () => {
     tempDir = mkdtempSync(join(tmpdir(), 'weaver-vite-plugin-'));
     const stylesheetPath = join(tempDir, 'hello.xsl');
