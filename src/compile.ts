@@ -13,4 +13,5 @@ export {
   type CompileStylesheetArtifacts,
   type CompileStylesheetArtifactsFromFileOptions,
   type CompileStylesheetToTsOptions,
+  type EmitTarget,
 } from './processor/compile.js';

@@ -12,6 +12,7 @@ import {
   type CompileStylesheetArtifacts,
   type CompilePerformancePhase,
   type CompileStylesheetRuntimeArtifacts,
+  type EmitTarget,
 } from './runtimeArtifacts.js';
 
 export { createStylesheetDigest };
@@ -22,6 +23,7 @@ export type {
   CompilePerformanceProfile,
   CompileStylesheetArtifacts,
   CompileStylesheetRuntimeArtifacts,
+  EmitTarget,
 } from './runtimeArtifacts.js';
 
 const XSLT_NAMESPACE = 'http://www.w3.org/1999/XSL/Transform';
@@ -58,6 +60,8 @@ export interface CompileStylesheetToTsOptions {
   readonly onProgress?: (message: string) => void;
   readonly captureProfile?: boolean;
   readonly captureIrStats?: boolean;
+  /** Additional emit targets beyond the default TS module. e.g. ['js'] for JS emission. */
+  readonly emitTargets?: EmitTarget[];
 }
 
 export interface CompileStylesheetArtifactsFromFileOptions {
@@ -66,6 +70,8 @@ export interface CompileStylesheetArtifactsFromFileOptions {
   readonly onProgress?: (message: string) => void;
   readonly captureProfile?: boolean;
   readonly captureIrStats?: boolean;
+  /** Additional emit targets beyond the default TS module. e.g. ['js'] for JS emission. */
+  readonly emitTargets?: EmitTarget[];
 }
 
 export function compileStylesheetToTs(
@@ -118,6 +124,7 @@ export function compileStylesheetRuntimeArtifacts(
     ...(options.onProgress === undefined ? {} : { onProgress: options.onProgress }),
     ...(options.captureProfile === undefined ? {} : { captureProfile: options.captureProfile }),
     ...(options.captureIrStats === undefined ? {} : { captureIrStats: options.captureIrStats }),
+    ...(options.emitTargets === undefined ? {} : { emitTargets: options.emitTargets }),
   });
 }
 
@@ -149,6 +156,7 @@ export function compileStylesheetArtifactsFromFile(
     ...(options.onProgress === undefined ? {} : { onProgress: options.onProgress }),
     ...(options.captureProfile === undefined ? {} : { captureProfile: options.captureProfile }),
     ...(options.captureIrStats === undefined ? {} : { captureIrStats: options.captureIrStats }),
+    ...(options.emitTargets === undefined ? {} : { emitTargets: options.emitTargets }),
   });
 
   if (

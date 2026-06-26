@@ -1,4 +1,12 @@
-import { existsSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -14,7 +22,9 @@ import {
   compileStylesheetArtifactsFromFile,
   composeStylesheetSourceFromFile,
   createStylesheetDigest,
+  type EmitTarget,
 } from './processor/compile.js';
+import { transpileTsToJs, writeJsArtifact } from './processor/emitJs.js';
 
 export interface CliIo {
   readonly stdout: (text: string) => void;
@@ -53,10 +63,10 @@ export async function runCli(
 }
 
 function runCompileCommand(args: readonly string[], io: CliIo): number {
-  const parsed = parseCompileLikeArguments(args);
+  const parsed = parseCompileLikeArguments(args, { allowEmit: true });
 
   if (parsed === undefined) {
-    io.stderr('Usage: weaver-xslt compile <glob> [--sample <xml>]\n');
+    io.stderr('Usage: weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|ts,js]\n');
     return 1;
   }
 
@@ -81,7 +91,7 @@ function runCompileCommand(args: readonly string[], io: CliIo): number {
   }
 
   for (const resolvedInputPath of matchedPaths) {
-    if (!emitCompiledArtifacts(resolvedInputPath, io, parsed.samplePath)) {
+    if (!emitCompiledArtifacts(resolvedInputPath, io, parsed.samplePath, parsed.emitTargets)) {
       return 1;
     }
   }
@@ -180,13 +190,21 @@ async function runWatchCommand(
     const recompileAllMatchedStylesheets = (): void => {
       recompileStylesheets(listMatchedStylesheets());
     };
+    const invalidateWatchedDigests = (stylesheetPaths: readonly string[]): void => {
+      for (const stylesheetPath of stylesheetPaths) {
+        watchedDigests.delete(stylesheetPath);
+      }
+    };
     const findDependencyAffectedStylesheets = (dependencyPath: string): string[] => {
       if (!isExtensionFunctionCatalogPath(dependencyPath)) {
         return [];
       }
 
       return listMatchedStylesheets().filter((matchedPath) => {
-        return resolve(join(dirname(matchedPath), 'functions.ts')) === dependencyPath;
+        return (
+          canonicalizePath(resolve(join(dirname(matchedPath), 'functions.ts'))) ===
+          canonicalizePath(dependencyPath)
+        );
       });
     };
 
@@ -218,6 +236,7 @@ async function runWatchCommand(
       }
 
       trackTask(() => {
+        invalidateWatchedDigests(affectedStylesheets);
         recompileStylesheets(affectedStylesheets);
       });
     });
@@ -249,6 +268,7 @@ async function runWatchCommand(
       }
 
       trackTask(() => {
+        invalidateWatchedDigests(affectedStylesheets);
         recompileStylesheets(affectedStylesheets);
       });
     });
@@ -276,6 +296,7 @@ async function runWatchCommand(
       }
 
       trackTask(() => {
+        invalidateWatchedDigests(affectedStylesheets);
         recompileStylesheets(affectedStylesheets);
       });
     });
@@ -425,7 +446,7 @@ function renderExecutionFallbackWarning(fallbackReason: TransformExecutionFallba
 function renderUsage(): string {
   return [
     'Usage:',
-    '  weaver-xslt compile <glob> [--sample <xml>]',
+    '  weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|ts,js]',
     '  weaver-xslt watch <glob> [--sample <xml>]',
     '  weaver-xslt run <stylesheet> --input <xml> [--execution <interpreter|native|auto>] [--param <name=value> ...]',
     '  weaver-xslt --help',
@@ -462,9 +483,18 @@ function emitCompiledArtifacts(
   resolvedInputPath: string,
   io: CliIo,
   sampleDocumentPath?: string,
+  emitTargets?: EmitTarget[],
 ): boolean {
   try {
-    return emitCompiledArtifactsFromFile(resolvedInputPath, io, sampleDocumentPath) !== undefined;
+    return (
+      emitCompiledArtifactsFromFile(
+        resolvedInputPath,
+        io,
+        sampleDocumentPath,
+        undefined,
+        emitTargets,
+      ) !== undefined
+    );
   } catch (error) {
     const stylesheet = tryReadSource(resolvedInputPath);
     io.stderr(`${renderDiagnosticError(error, stylesheet)}\n`);
@@ -494,6 +524,7 @@ function emitWatchedArtifacts(
   watchedDigests: Map<string, string>,
   sampleDocument?: string,
   sampleDocumentPath?: string,
+  emitTargets?: EmitTarget[],
 ): void {
   try {
     const stylesheet = readFileSync(resolvedInputPath, 'utf8');
@@ -517,6 +548,7 @@ function emitWatchedArtifacts(
       io,
       sampleDocumentPath,
       stylesheet,
+      emitTargets,
     );
     if (emittedDigest !== undefined) {
       watchedDigests.set(resolvedInputPath, watchInputDigest);
@@ -538,11 +570,15 @@ function emitCompiledArtifactsFromFile(
   io: CliIo,
   sampleDocumentPath?: string,
   stylesheet = readFileSync(resolvedInputPath, 'utf8'),
+  emitTargets?: EmitTarget[],
 ): string | undefined {
+  const hasTsTarget = emitTargets === undefined || emitTargets.includes('ts');
+  const hasJsTarget = emitTargets?.includes('js') ?? false;
   io.progress?.(`Compiling stylesheet ${resolvedInputPath}`);
   const output = compileStylesheetArtifactsFromFile(resolvedInputPath, {
     ...(sampleDocumentPath === undefined ? {} : { sampleDocumentPath }),
     ...(io.progress === undefined ? {} : { onProgress: io.progress }),
+    ...(emitTargets === undefined ? {} : { emitTargets }),
   });
 
   const outputPath = `${resolvedInputPath}.ts`;
@@ -550,36 +586,72 @@ function emitCompiledArtifactsFromFile(
   const digestPath = `${resolvedInputPath}.digest`;
   const sourceMapPath = `${resolvedInputPath}.map`;
   const digestContents = `${output.digest}\n`;
+  const jsArtifacts = !hasJsTarget
+    ? undefined
+    : transpileTsToJs(output.module, {
+        sourcePath: resolvedInputPath,
+      });
+  const jsOutputPath = `${resolvedInputPath}.js`;
+  const jsSourceMapPath = `${resolvedInputPath}.js.map`;
 
-  if (
-    tryReadSource(outputPath) === output.module &&
-    tryReadSource(declarationPath) === output.declaration &&
-    tryReadSource(digestPath) === digestContents &&
-    tryReadSource(sourceMapPath) === output.sourceMap
-  ) {
+  if (hasTsTarget && !hasJsTarget) {
+    if (
+      tryReadSource(outputPath) === output.module &&
+      tryReadSource(declarationPath) === output.declaration &&
+      tryReadSource(digestPath) === digestContents &&
+      tryReadSource(sourceMapPath) === output.sourceMap
+    ) {
+      writeDiagnostics(output.diagnostics, stylesheet, io);
+      io.stdout(`Up to date ${outputPath}\n`);
+      return output.digest;
+    }
+
+    replaceFileContents(outputPath, output.module);
+    replaceFileContents(declarationPath, output.declaration);
+    replaceFileContents(digestPath, digestContents);
+    replaceFileContents(sourceMapPath, output.sourceMap);
     writeDiagnostics(output.diagnostics, stylesheet, io);
-    io.stdout(`Up to date ${outputPath}\n`);
+    io.stdout(`Wrote ${outputPath}\n`);
     return output.digest;
   }
 
-  replaceFileContents(outputPath, output.module);
-  replaceFileContents(declarationPath, output.declaration);
-  replaceFileContents(digestPath, digestContents);
-  replaceFileContents(sourceMapPath, output.sourceMap);
+  if (hasTsTarget) {
+    replaceFileContents(outputPath, output.module);
+    replaceFileContents(declarationPath, output.declaration);
+    replaceFileContents(digestPath, digestContents);
+    replaceFileContents(sourceMapPath, output.sourceMap);
+    io.stdout(`Wrote ${outputPath}\n`);
+  }
+
+  if (jsArtifacts !== undefined) {
+    const jsOutput = writeJsArtifact(jsArtifacts.js, jsArtifacts.sourceMap, resolvedInputPath);
+    if (jsOutput.jsPath !== jsOutputPath || jsOutput.sourceMapPath !== jsSourceMapPath) {
+      throw new Error(`Unexpected JS artifact paths for ${resolvedInputPath}`);
+    }
+    io.stdout(`Wrote ${jsOutput.jsPath}\n`);
+  }
+
   writeDiagnostics(output.diagnostics, stylesheet, io);
-  io.stdout(`Wrote ${outputPath}\n`);
   return output.digest;
 }
 
 function parseCompileLikeArguments(
   args: readonly string[],
-): { readonly inputPattern: string; readonly samplePath?: string } | undefined {
+  options: { readonly allowEmit?: boolean } = {},
+):
+  | {
+      readonly inputPattern: string;
+      readonly samplePath?: string;
+      readonly emitTargets?: EmitTarget[];
+    }
+  | undefined {
   const [inputPattern, ...rest] = args;
   if (inputPattern === undefined) {
     return undefined;
   }
 
   let samplePath: string | undefined;
+  let emitTargetsRaw: string | undefined;
   for (let index = 0; index < rest.length; index += 1) {
     const token = rest[index];
     if (token === '--sample') {
@@ -591,13 +663,52 @@ function parseCompileLikeArguments(
       continue;
     }
 
+    if (token === '--emit') {
+      if (options.allowEmit !== true) {
+        return undefined;
+      }
+      emitTargetsRaw = rest[index + 1];
+      if (emitTargetsRaw === undefined) {
+        return undefined;
+      }
+      index += 1;
+      continue;
+    }
+
+    return undefined;
+  }
+
+  if (emitTargetsRaw === undefined) {
+    return {
+      inputPattern,
+      ...(samplePath === undefined ? {} : { samplePath }),
+    };
+  }
+
+  const emitTargets = parseEmitTargets(emitTargetsRaw);
+  if (emitTargets === undefined) {
     return undefined;
   }
 
   return {
     inputPattern,
     ...(samplePath === undefined ? {} : { samplePath }),
+    emitTargets,
   };
+}
+
+function parseEmitTargets(raw: string): EmitTarget[] | undefined {
+  if (raw === 'ts' || raw === 'js') {
+    return [raw as EmitTarget];
+  }
+
+  const targets = raw.split(',').map((t) => t.trim() as EmitTarget);
+  for (const target of targets) {
+    if (target !== 'ts' && target !== 'js') {
+      return undefined;
+    }
+  }
+  return targets;
 }
 
 function readSampleDocument(samplePath: string): string | undefined {
@@ -633,6 +744,19 @@ function isExtensionFunctionCatalogPath(path: string): boolean {
 
 function readExtensionFunctionCatalogSource(resolvedInputPath: string): string | undefined {
   return tryReadSource(resolve(join(dirname(resolvedInputPath), 'functions.ts')));
+}
+
+function canonicalizePath(path: string): string {
+  const resolvedPath = resolve(path);
+  try {
+    return realpathSync.native(resolvedPath);
+  } catch {
+    try {
+      return join(realpathSync.native(dirname(resolvedPath)), basename(resolvedPath));
+    } catch {
+      return resolvedPath;
+    }
+  }
 }
 
 function replaceFileContents(targetPath: string, contents: string): void {

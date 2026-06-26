@@ -16,6 +16,9 @@ import { emitStylesheetDeclarationModule, emitStylesheetModule } from '../xslt/c
 
 export type { CompileIrStats } from '../xslt/compile/compiler.js';
 
+/** Emit target types for the compile pipeline. */
+export type EmitTarget = 'ts' | 'js';
+
 export interface CompileMemoryUsageSnapshot {
   readonly rss: number;
   readonly heapTotal: number;
@@ -53,6 +56,8 @@ export interface CompileStylesheetRuntimeArtifactsOptions {
   readonly onProgress?: (message: string) => void;
   readonly captureProfile?: boolean;
   readonly captureIrStats?: boolean;
+  /** Targets to emit alongside the default TS module. e.g. ['js'] for JS emission. */
+  readonly emitTargets?: EmitTarget[];
 }
 
 export interface CompileStylesheetArtifacts {

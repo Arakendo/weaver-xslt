@@ -91,6 +91,73 @@ describe('CLI', () => {
     }
   });
 
+  it('writes only .xsl.js and .xsl.js.map outputs for --emit js', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
+
+    try {
+      const stylesheetPath = join(tempDir, 'emit-js.xsl');
+      const jsOutputPath = `${stylesheetPath}.js`;
+      const jsSourceMapPath = `${stylesheetPath}.js.map`;
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="/">',
+        '    <hello>ok</hello>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const { io, stderr, stdout } = createTestIo();
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+      const exitCode = await runCli(['compile', stylesheetPath, '--emit', 'js'], io);
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toEqual([]);
+      expect(stdout).toEqual([`Wrote ${jsOutputPath}\n`]);
+      expect(existsSync(jsOutputPath)).toBe(true);
+      expect(existsSync(jsSourceMapPath)).toBe(true);
+      expect(existsSync(`${stylesheetPath}.ts`)).toBe(false);
+      expect(existsSync(`${stylesheetPath}.d.ts`)).toBe(false);
+      expect(existsSync(`${stylesheetPath}.digest`)).toBe(false);
+      expect(existsSync(`${stylesheetPath}.map`)).toBe(false);
+      expect(readFileSync(jsOutputPath, 'utf8')).toContain('export const source =');
+      expect(readFileSync(jsOutputPath, 'utf8')).toContain('export function transform');
+      expect(readFileSync(jsOutputPath, 'utf8')).toContain(
+        `//# sourceMappingURL=${basename(jsSourceMapPath)}`,
+      );
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
+  it('rejects unsupported emit targets', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
+
+    try {
+      const stylesheetPath = join(tempDir, 'emit-invalid.xsl');
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="/">',
+        '    <hello>ok</hello>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const { io, stderr, stdout } = createTestIo();
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+      const exitCode = await runCli(['compile', stylesheetPath, '--emit', 'bundle'], io);
+
+      expect(exitCode).toBe(1);
+      expect(stdout).toEqual([]);
+      expect(stderr).toEqual([
+        'Usage: weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|ts,js]\n',
+      ]);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
   it('formats compile errors instead of throwing stacks', async () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
 
@@ -765,7 +832,7 @@ describe('CLI', () => {
   });
 
   it('recompiles watched stylesheets when adjacent functions.ts changes and removes stale outputs on compile failure', async () => {
-    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
+    const tempDir = mkdtempSync(join(process.cwd(), '.tmp-weaver-cli-'));
 
     try {
       const stylesheetPath = join(tempDir, 'functions-watch.xsl');
@@ -818,18 +885,21 @@ describe('CLI', () => {
 
       writeFileSync(functionsPath, invalidFunctions, 'utf8');
 
-      await vi.waitFor(() => {
-        expect(existsSync(outputPath)).toBe(false);
-        expect(existsSync(declarationPath)).toBe(false);
-        expect(existsSync(digestPath)).toBe(false);
-        expect(existsSync(sourceMapPath)).toBe(false);
-        expect(stdout).toContain(`Removed stale outputs for ${stylesheetPath}\n`);
-        expect(
-          stderr.some((entry) =>
-            entry.includes('Unknown function demo:formatAmount with arity 1.'),
-          ),
-        ).toBe(true);
-      });
+      await vi.waitFor(
+        () => {
+          expect(existsSync(outputPath)).toBe(false);
+          expect(existsSync(declarationPath)).toBe(false);
+          expect(existsSync(digestPath)).toBe(false);
+          expect(existsSync(sourceMapPath)).toBe(false);
+          expect(stdout).toContain(`Removed stale outputs for ${stylesheetPath}\n`);
+          expect(
+            stderr.some((entry) =>
+              entry.includes('Unknown function demo:formatAmount with arity 1.'),
+            ),
+          ).toBe(true);
+        },
+        { timeout: 2500 },
+      );
 
       writeFileSync(functionsPath, validFunctions, 'utf8');
 
@@ -857,7 +927,7 @@ describe('CLI', () => {
     expect(stdout).toEqual([
       [
         'Usage:',
-        '  weaver-xslt compile <glob> [--sample <xml>]',
+        '  weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|ts,js]',
         '  weaver-xslt watch <glob> [--sample <xml>]',
         '  weaver-xslt run <stylesheet> --input <xml> [--execution <interpreter|native|auto>] [--param <name=value> ...]',
         '  weaver-xslt --help',
