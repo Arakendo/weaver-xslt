@@ -17,7 +17,7 @@ import { emitStylesheetDeclarationModule, emitStylesheetModule } from '../xslt/c
 export type { CompileIrStats } from '../xslt/compile/compiler.js';
 
 /** Emit target types for the compile pipeline. */
-export type EmitTarget = 'ts' | 'js';
+export type EmitTarget = 'ts' | 'js' | 'bundle';
 
 export interface CompileMemoryUsageSnapshot {
   readonly rss: number;

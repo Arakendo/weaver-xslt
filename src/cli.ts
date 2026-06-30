@@ -24,6 +24,7 @@ import {
   createStylesheetDigest,
   type EmitTarget,
 } from './processor/compile.js';
+import { bundleJs } from './processor/bundleJs.js';
 import { transpileTsToJs, writeJsArtifact } from './processor/emitJs.js';
 
 export interface CliIo {
@@ -66,7 +67,9 @@ function runCompileCommand(args: readonly string[], io: CliIo): number {
   const parsed = parseCompileLikeArguments(args, { allowEmit: true });
 
   if (parsed === undefined) {
-    io.stderr('Usage: weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|ts,js]\n');
+    io.stderr(
+      'Usage: weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|bundle|ts,js|ts,bundle|js,bundle]\n',
+    );
     return 1;
   }
 
@@ -104,10 +107,12 @@ async function runWatchCommand(
   io: CliIo,
   options: RunCliOptions,
 ): Promise<number> {
-  const parsed = parseCompileLikeArguments(args);
+  const parsed = parseCompileLikeArguments(args, { allowEmit: true });
 
   if (parsed === undefined) {
-    io.stderr('Usage: weaver-xslt watch <glob> [--sample <xml>]\n');
+    io.stderr(
+      'Usage: weaver-xslt watch <glob> [--sample <xml>] [--emit ts|js|bundle|ts,js|ts,bundle|js,bundle]\n',
+    );
     return 1;
   }
 
@@ -184,7 +189,14 @@ async function runWatchCommand(
       }
 
       for (const matchedPath of stylesheetPaths) {
-        emitWatchedArtifacts(matchedPath, io, watchedDigests, sampleDocument, resolvedSamplePath);
+        emitWatchedArtifacts(
+          matchedPath,
+          io,
+          watchedDigests,
+          sampleDocument,
+          resolvedSamplePath,
+          parsed.emitTargets,
+        );
       }
     };
     const recompileAllMatchedStylesheets = (): void => {
@@ -225,6 +237,7 @@ async function runWatchCommand(
             watchedDigests,
             readWatchedSampleDocument(),
             resolvedSamplePath,
+            parsed.emitTargets,
           );
         });
         return;
@@ -257,6 +270,7 @@ async function runWatchCommand(
             watchedDigests,
             readWatchedSampleDocument(),
             resolvedSamplePath,
+            parsed.emitTargets,
           );
         });
         return;
@@ -446,8 +460,8 @@ function renderExecutionFallbackWarning(fallbackReason: TransformExecutionFallba
 function renderUsage(): string {
   return [
     'Usage:',
-    '  weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|ts,js]',
-    '  weaver-xslt watch <glob> [--sample <xml>]',
+    '  weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|bundle|ts,js|ts,bundle|js,bundle]',
+    '  weaver-xslt watch <glob> [--sample <xml>] [--emit ts|js|bundle|ts,js|ts,bundle|js,bundle]',
     '  weaver-xslt run <stylesheet> --input <xml> [--execution <interpreter|native|auto>] [--param <name=value> ...]',
     '  weaver-xslt --help',
   ].join('\n');
@@ -503,18 +517,12 @@ function emitCompiledArtifacts(
 }
 
 function removeCompiledArtifacts(resolvedInputPath: string, io: CliIo): void {
-  rmSync(`${resolvedInputPath}.ts`, { force: true });
-  rmSync(`${resolvedInputPath}.d.ts`, { force: true });
-  rmSync(`${resolvedInputPath}.digest`, { force: true });
-  rmSync(`${resolvedInputPath}.map`, { force: true });
+  removeEmittedArtifacts(resolvedInputPath);
   io.stdout(`Removed ${resolvedInputPath}\n`);
 }
 
 function removeStaleCompiledArtifacts(resolvedInputPath: string, io: CliIo): void {
-  rmSync(`${resolvedInputPath}.ts`, { force: true });
-  rmSync(`${resolvedInputPath}.d.ts`, { force: true });
-  rmSync(`${resolvedInputPath}.digest`, { force: true });
-  rmSync(`${resolvedInputPath}.map`, { force: true });
+  removeEmittedArtifacts(resolvedInputPath);
   io.stdout(`Removed stale outputs for ${resolvedInputPath}\n`);
 }
 
@@ -527,17 +535,18 @@ function emitWatchedArtifacts(
   emitTargets?: EmitTarget[],
 ): void {
   try {
+    const effectiveEmitTargets = normalizeEmitTargets(emitTargets);
     const stylesheet = readFileSync(resolvedInputPath, 'utf8');
     const watchInputDigest = createWatchInputDigest(
       stylesheet,
       sampleDocument,
       readExtensionFunctionCatalogSource(resolvedInputPath),
     );
-    const outputPath = `${resolvedInputPath}.ts`;
+    const outputPath = getPrimaryArtifactPath(resolvedInputPath, effectiveEmitTargets);
 
     if (
       watchedDigests.get(resolvedInputPath) === watchInputDigest &&
-      hasCompiledArtifacts(resolvedInputPath)
+      hasCompiledArtifacts(resolvedInputPath, effectiveEmitTargets)
     ) {
       io.stdout(`Unchanged ${outputPath}\n`);
       return;
@@ -557,7 +566,7 @@ function emitWatchedArtifacts(
     }
   } catch (error) {
     watchedDigests.delete(resolvedInputPath);
-    if (hasCompiledArtifacts(resolvedInputPath)) {
+    if (hasCompiledArtifacts(resolvedInputPath, normalizeEmitTargets(emitTargets))) {
       removeStaleCompiledArtifacts(resolvedInputPath, io);
     }
     const stylesheet = tryReadSource(resolvedInputPath);
@@ -572,8 +581,10 @@ function emitCompiledArtifactsFromFile(
   stylesheet = readFileSync(resolvedInputPath, 'utf8'),
   emitTargets?: EmitTarget[],
 ): string | undefined {
-  const hasTsTarget = emitTargets === undefined || emitTargets.includes('ts');
-  const hasJsTarget = emitTargets?.includes('js') ?? false;
+  const effectiveEmitTargets = normalizeEmitTargets(emitTargets);
+  const hasTsTarget = effectiveEmitTargets.includes('ts');
+  const hasJsTarget = effectiveEmitTargets.includes('js');
+  const hasBundleTarget = effectiveEmitTargets.includes('bundle');
   io.progress?.(`Compiling stylesheet ${resolvedInputPath}`);
   const output = compileStylesheetArtifactsFromFile(resolvedInputPath, {
     ...(sampleDocumentPath === undefined ? {} : { sampleDocumentPath }),
@@ -586,15 +597,18 @@ function emitCompiledArtifactsFromFile(
   const digestPath = `${resolvedInputPath}.digest`;
   const sourceMapPath = `${resolvedInputPath}.map`;
   const digestContents = `${output.digest}\n`;
-  const jsArtifacts = !hasJsTarget
-    ? undefined
-    : transpileTsToJs(output.module, {
-        sourcePath: resolvedInputPath,
-      });
+  const jsArtifacts =
+    !hasJsTarget && !hasBundleTarget
+      ? undefined
+      : transpileTsToJs(output.module, {
+          sourcePath: resolvedInputPath,
+        });
   const jsOutputPath = `${resolvedInputPath}.js`;
   const jsSourceMapPath = `${resolvedInputPath}.js.map`;
+  const bundleOutputPath = `${resolvedInputPath}.bundle.js`;
+  const bundleSourceMapPath = `${resolvedInputPath}.bundle.js.map`;
 
-  if (hasTsTarget && !hasJsTarget) {
+  if (hasTsTarget && !hasJsTarget && !hasBundleTarget) {
     if (
       tryReadSource(outputPath) === output.module &&
       tryReadSource(declarationPath) === output.declaration &&
@@ -623,12 +637,25 @@ function emitCompiledArtifactsFromFile(
     io.stdout(`Wrote ${outputPath}\n`);
   }
 
-  if (jsArtifacts !== undefined) {
+  if (hasJsTarget && jsArtifacts !== undefined) {
     const jsOutput = writeJsArtifact(jsArtifacts.js, jsArtifacts.sourceMap, resolvedInputPath);
     if (jsOutput.jsPath !== jsOutputPath || jsOutput.sourceMapPath !== jsSourceMapPath) {
       throw new Error(`Unexpected JS artifact paths for ${resolvedInputPath}`);
     }
     io.stdout(`Wrote ${jsOutput.jsPath}\n`);
+  }
+
+  if (hasBundleTarget && jsArtifacts !== undefined) {
+    const bundleOutput = bundleJs({
+      jsModule: jsArtifacts.js,
+      sourcePath: resolvedInputPath,
+    });
+    replaceFileContents(
+      bundleOutputPath,
+      `${bundleOutput.js}\n//# sourceMappingURL=${basename(bundleSourceMapPath)}\n`,
+    );
+    replaceFileContents(bundleSourceMapPath, bundleOutput.sourceMap);
+    io.stdout(`Wrote ${bundleOutputPath}\n`);
   }
 
   writeDiagnostics(output.diagnostics, stylesheet, io);
@@ -698,13 +725,9 @@ function parseCompileLikeArguments(
 }
 
 function parseEmitTargets(raw: string): EmitTarget[] | undefined {
-  if (raw === 'ts' || raw === 'js') {
-    return [raw as EmitTarget];
-  }
-
   const targets = raw.split(',').map((t) => t.trim() as EmitTarget);
   for (const target of targets) {
-    if (target !== 'ts' && target !== 'js') {
+    if (target !== 'ts' && target !== 'js' && target !== 'bundle') {
       return undefined;
     }
   }
@@ -729,13 +752,81 @@ function createWatchInputDigest(
   );
 }
 
-function hasCompiledArtifacts(resolvedInputPath: string): boolean {
-  return (
-    existsSync(`${resolvedInputPath}.ts`) &&
-    existsSync(`${resolvedInputPath}.d.ts`) &&
-    existsSync(`${resolvedInputPath}.digest`) &&
-    existsSync(`${resolvedInputPath}.map`)
-  );
+function hasCompiledArtifactsForTargets(
+  resolvedInputPath: string,
+  emitTargets: readonly EmitTarget[],
+): boolean {
+  const expectsTs = emitTargets.includes('ts');
+  const expectsJs = emitTargets.includes('js');
+  const expectsBundle = emitTargets.includes('bundle');
+
+  if (
+    expectsTs &&
+    (!existsSync(`${resolvedInputPath}.ts`) ||
+      !existsSync(`${resolvedInputPath}.d.ts`) ||
+      !existsSync(`${resolvedInputPath}.digest`) ||
+      !existsSync(`${resolvedInputPath}.map`))
+  ) {
+    return false;
+  }
+
+  if (
+    expectsJs &&
+    (!existsSync(`${resolvedInputPath}.js`) || !existsSync(`${resolvedInputPath}.js.map`))
+  ) {
+    return false;
+  }
+
+  if (
+    expectsBundle &&
+    (!existsSync(`${resolvedInputPath}.bundle.js`) ||
+      !existsSync(`${resolvedInputPath}.bundle.js.map`))
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function hasCompiledArtifacts(
+  resolvedInputPath: string,
+  emitTargets: readonly EmitTarget[] = ['ts'],
+): boolean {
+  return hasCompiledArtifactsForTargets(resolvedInputPath, emitTargets);
+}
+
+function normalizeEmitTargets(emitTargets?: readonly EmitTarget[]): EmitTarget[] {
+  if (emitTargets === undefined || emitTargets.length === 0) {
+    return ['ts'];
+  }
+
+  return [...new Set(emitTargets)];
+}
+
+function getPrimaryArtifactPath(
+  resolvedInputPath: string,
+  emitTargets: readonly EmitTarget[],
+): string {
+  if (emitTargets.includes('bundle')) {
+    return `${resolvedInputPath}.bundle.js`;
+  }
+
+  if (emitTargets.includes('js')) {
+    return `${resolvedInputPath}.js`;
+  }
+
+  return `${resolvedInputPath}.ts`;
+}
+
+function removeEmittedArtifacts(resolvedInputPath: string): void {
+  rmSync(`${resolvedInputPath}.ts`, { force: true });
+  rmSync(`${resolvedInputPath}.d.ts`, { force: true });
+  rmSync(`${resolvedInputPath}.digest`, { force: true });
+  rmSync(`${resolvedInputPath}.map`, { force: true });
+  rmSync(`${resolvedInputPath}.js`, { force: true });
+  rmSync(`${resolvedInputPath}.js.map`, { force: true });
+  rmSync(`${resolvedInputPath}.bundle.js`, { force: true });
+  rmSync(`${resolvedInputPath}.bundle.js.map`, { force: true });
 }
 
 function isExtensionFunctionCatalogPath(path: string): boolean {

@@ -524,6 +524,11 @@ Unsupported-native note: [NATIVE_EXECUTION_BOUNDARY.md](./NATIVE_EXECUTION_BOUND
 
 ## MVP+6.4 — JS renderer artifacts
 
+Status: partially delivered. The CLI now supports `compile/watch --emit js`,
+`bundle`, `ts,js`, and `ts,bundle`, and the emitted bundle is runnable as a
+self-contained Node ESM renderer. The remaining work is the broader host-facing
+swap-renderer story and a browser-neutral bundle path.
+
 **Goal:** make the emitted JavaScript renderer a first-class compiler output,
 not just something inferred from the generated TypeScript path. This is the
 increment where `*.xsl.js` becomes a supported artifact for browser, test, and
@@ -562,15 +567,16 @@ explicitly selectable.
 
 **Exit criteria:**
 
-- [ ] `compile --emit js` writes a `*.xsl.js` artifact next to the stylesheet
+- [x] `compile --emit js` writes a `*.xsl.js` artifact next to the stylesheet
       and leaves the default `ts` path unchanged
-- [ ] `compile --emit bundle` produces a self-contained renderer artifact that
+- [x] `compile --emit bundle` produces a self-contained renderer artifact that
       can be loaded and run without invoking the CLI or installing the package
-- [ ] The emitted JS artifact exposes the same stable renderer contract as the
+      in a Node 20+ host
+- [x] The emitted JS artifact exposes the same stable renderer contract as the
       generated TS module, including source identity and transform entrypoints
-- [ ] Representative parity fixtures cover interpreter, generated TS, and
+- [x] Representative parity fixtures cover interpreter, generated TS, and
       emitted JS outputs for the supported slice
-- [ ] The architecture and roadmap docs describe the JS emission boundary and
+- [x] The architecture and roadmap docs describe the JS emission boundary and
       where it sits in the compile pipeline
 
 Working checklist: [JS_RENDERER_ARTIFACTS.md](./JS_RENDERER_ARTIFACTS.md)

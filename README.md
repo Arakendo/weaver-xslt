@@ -164,12 +164,35 @@ node dist/cli.js compile ./hello.xsl
 That writes `./hello.xsl.ts`, `./hello.xsl.d.ts`, `./hello.xsl.digest`, and
 `./hello.xsl.map` using the current codegen backend.
 
+When you want JavaScript output explicitly, use `--emit`:
+
+```bash
+node dist/cli.js compile ./hello.xsl --emit js
+node dist/cli.js compile ./hello.xsl --emit bundle
+node dist/cli.js compile ./hello.xsl --emit ts,bundle
+```
+
+- `--emit js` writes `./hello.xsl.js` plus `./hello.xsl.js.map` and keeps the
+  shared runtime as an external package import.
+- `--emit bundle` writes `./hello.xsl.bundle.js` plus
+  `./hello.xsl.bundle.js.map` and inlines the Weaver runtime and package
+  dependencies into a single Node ESM renderer artifact.
+- `--emit ts,bundle` writes both the default TS artifact set and the bundled
+  JS artifact in one compile pass.
+
+The current `bundle` flavor is intended for Node 20+ hosts. It is self-contained
+with respect to Weaver package installs, but it is not yet a browser-neutral
+drop-in renderer because some runtime paths still depend on Node builtins.
+
 For iterative work, the CLI can also watch the same glob and keep those
 artifacts in sync as stylesheets are added, edited, or deleted:
 
 ```bash
 node dist/cli.js watch ./hello.xsl
 ```
+
+`watch` accepts the same `--emit` values as `compile`, including `js`,
+`bundle`, `ts,js`, and `ts,bundle`.
 
 You can also run a stylesheet directly through the interpreter:
 
@@ -230,18 +253,18 @@ For the manual Chrome DevTools source-map verification pass, use the fixture in
 
 ## Scripts
 
-| Script              | Description                               |
-| ------------------- | ----------------------------------------- |
-| `npm run build`     | Compile TypeScript to `dist/`             |
-| `npm run dev`       | Run `src/index.ts` in watch mode via tsx  |
+| Script                     | Description                                                                             |
+| -------------------------- | --------------------------------------------------------------------------------------- |
+| `npm run build`            | Compile TypeScript to `dist/`                                                           |
+| `npm run dev`              | Run `src/index.ts` in watch mode via tsx                                                |
 | `npm run devtools:fixture` | Start the local browser fixture used for Chrome DevTools `.xsl` breakpoint verification |
-| `npm test`          | Run the Vitest test suite once            |
-| `npm run benchmark:watch` | Measure a real `weaver-xslt watch` round-trip on a generated 200-line stylesheet |
-| `npm run test:packaging` | Build and dry-run the published package surface |
-| `npm run test:watch`| Run Vitest in watch mode                  |
-| `npm run typecheck` | Type-check without emitting               |
-| `npm run lint`      | Lint sources with ESLint                  |
-| `npm run format`    | Format sources with Prettier              |
+| `npm test`                 | Run the Vitest test suite once                                                          |
+| `npm run benchmark:watch`  | Measure a real `weaver-xslt watch` round-trip on a generated 200-line stylesheet        |
+| `npm run test:packaging`   | Build and dry-run the published package surface                                         |
+| `npm run test:watch`       | Run Vitest in watch mode                                                                |
+| `npm run typecheck`        | Type-check without emitting                                                             |
+| `npm run lint`             | Lint sources with ESLint                                                                |
+| `npm run format`           | Format sources with Prettier                                                            |
 
 ## Project layout
 

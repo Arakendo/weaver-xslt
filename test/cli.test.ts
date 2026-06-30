@@ -1,12 +1,21 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { basename, join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { pathToFileURL } from 'node:url';
 
 import { describe, expect, it, vi } from 'vitest';
 
 import { formatDiagnostics, projectDiagnosticReports } from '../src/diagnostics/index.js';
 import { compileStylesheetArtifacts } from '../src/index.js';
 import { runCli } from '../src/cli.js';
+import * as compileFileModule from '../src/processor/compile.js';
 
 function createTestIo() {
   const stdout: string[] = [];
@@ -130,6 +139,212 @@ describe('CLI', () => {
     }
   });
 
+  it('writes only .xsl.bundle.js and .xsl.bundle.js.map outputs for --emit bundle', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
+
+    try {
+      const stylesheetPath = join(tempDir, 'emit-bundle.xsl');
+      const bundleOutputPath = `${stylesheetPath}.bundle.js`;
+      const bundleSourceMapPath = `${stylesheetPath}.bundle.js.map`;
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="/">',
+        '    <hello>ok</hello>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const { io, stderr, stdout } = createTestIo();
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+      const exitCode = await runCli(['compile', stylesheetPath, '--emit', 'bundle'], io);
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toEqual([]);
+      expect(stdout).toEqual([`Wrote ${bundleOutputPath}\n`]);
+      expect(existsSync(bundleOutputPath)).toBe(true);
+      expect(existsSync(bundleSourceMapPath)).toBe(true);
+      expect(existsSync(`${stylesheetPath}.ts`)).toBe(false);
+      expect(existsSync(`${stylesheetPath}.d.ts`)).toBe(false);
+      expect(existsSync(`${stylesheetPath}.digest`)).toBe(false);
+      expect(existsSync(`${stylesheetPath}.map`)).toBe(false);
+      const bundleContents = readFileSync(bundleOutputPath, 'utf8');
+      expect(bundleContents).not.toMatch(/from ['"]@arakendo\/weaver-xslt\/runtime['"]/);
+      expect(bundleContents).not.toMatch(/from ['"]@xmldom\/xmldom['"]/);
+      expect(bundleContents).toContain('export {');
+      expect(bundleContents).toContain(`//# sourceMappingURL=${basename(bundleSourceMapPath)}`);
+
+      const bundledModule = (await import(pathToFileURL(bundleOutputPath).href)) as {
+        readonly transform: (xml: string) => { readonly output: string };
+      };
+      expect(bundledModule.transform('<root/>').output).toContain('<hello>ok</hello>');
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
+  it('writes both TS and JS artifacts for --emit ts,js', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
+
+    try {
+      const stylesheetPath = join(tempDir, 'emit-ts-js.xsl');
+      const tsOutputPath = `${stylesheetPath}.ts`;
+      const declarationPath = `${stylesheetPath}.d.ts`;
+      const digestPath = `${stylesheetPath}.digest`;
+      const sourceMapPath = `${stylesheetPath}.map`;
+      const jsOutputPath = `${stylesheetPath}.js`;
+      const jsSourceMapPath = `${stylesheetPath}.js.map`;
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="/">',
+        '    <hello>ok</hello>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const expected = compileStylesheetArtifacts(stylesheet, {
+        filePath: stylesheetPath,
+      });
+      const { io, stderr, stdout } = createTestIo();
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+      const exitCode = await runCli(['compile', stylesheetPath, '--emit', 'ts,js'], io);
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toEqual([]);
+      expect(stdout).toEqual([`Wrote ${tsOutputPath}\n`, `Wrote ${jsOutputPath}\n`]);
+      expect(readFileSync(tsOutputPath, 'utf8')).toBe(expected.module);
+      expect(readFileSync(declarationPath, 'utf8')).toBe(expected.declaration);
+      expect(readFileSync(digestPath, 'utf8')).toBe(`${expected.digest}\n`);
+      expect(readFileSync(sourceMapPath, 'utf8')).toBe(expected.sourceMap);
+      expect(readFileSync(jsOutputPath, 'utf8')).toContain('export function transform');
+      expect(readFileSync(jsOutputPath, 'utf8')).toContain(
+        `//# sourceMappingURL=${basename(jsSourceMapPath)}`,
+      );
+      expect(existsSync(`${stylesheetPath}.bundle.js`)).toBe(false);
+      expect(existsSync(`${stylesheetPath}.bundle.js.map`)).toBe(false);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
+  it('writes both TS and bundle artifacts for --emit ts,bundle', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
+
+    try {
+      const stylesheetPath = join(tempDir, 'emit-ts-bundle.xsl');
+      const tsOutputPath = `${stylesheetPath}.ts`;
+      const declarationPath = `${stylesheetPath}.d.ts`;
+      const digestPath = `${stylesheetPath}.digest`;
+      const sourceMapPath = `${stylesheetPath}.map`;
+      const bundleOutputPath = `${stylesheetPath}.bundle.js`;
+      const bundleSourceMapPath = `${stylesheetPath}.bundle.js.map`;
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="/">',
+        '    <hello>ok</hello>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const expected = compileStylesheetArtifacts(stylesheet, {
+        filePath: stylesheetPath,
+      });
+      const { io, stderr, stdout } = createTestIo();
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+      const exitCode = await runCli(['compile', stylesheetPath, '--emit', 'ts,bundle'], io);
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toEqual([]);
+      expect(stdout).toEqual([`Wrote ${tsOutputPath}\n`, `Wrote ${bundleOutputPath}\n`]);
+      expect(readFileSync(tsOutputPath, 'utf8')).toBe(expected.module);
+      expect(readFileSync(declarationPath, 'utf8')).toBe(expected.declaration);
+      expect(readFileSync(digestPath, 'utf8')).toBe(`${expected.digest}\n`);
+      expect(readFileSync(sourceMapPath, 'utf8')).toBe(expected.sourceMap);
+      const bundleContents = readFileSync(bundleOutputPath, 'utf8');
+      expect(bundleContents).not.toMatch(/from ['"]@arakendo\/weaver-xslt\/runtime['"]/);
+      expect(bundleContents).toContain(`//# sourceMappingURL=${basename(bundleSourceMapPath)}`);
+      expect(existsSync(`${stylesheetPath}.js`)).toBe(false);
+      expect(existsSync(`${stylesheetPath}.js.map`)).toBe(false);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
+  it('writes both JS and bundle artifacts for --emit js,bundle', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
+
+    try {
+      const stylesheetPath = join(tempDir, 'emit-js-bundle.xsl');
+      const jsOutputPath = `${stylesheetPath}.js`;
+      const jsSourceMapPath = `${stylesheetPath}.js.map`;
+      const bundleOutputPath = `${stylesheetPath}.bundle.js`;
+      const bundleSourceMapPath = `${stylesheetPath}.bundle.js.map`;
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="/">',
+        '    <hello>ok</hello>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const { io, stderr, stdout } = createTestIo();
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+      const exitCode = await runCli(['compile', stylesheetPath, '--emit', 'js,bundle'], io);
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toEqual([]);
+      expect(stdout).toEqual([`Wrote ${jsOutputPath}\n`, `Wrote ${bundleOutputPath}\n`]);
+      expect(readFileSync(jsOutputPath, 'utf8')).toContain('export function transform');
+      expect(readFileSync(jsOutputPath, 'utf8')).toContain(
+        `//# sourceMappingURL=${basename(jsSourceMapPath)}`,
+      );
+      const bundleContents = readFileSync(bundleOutputPath, 'utf8');
+      expect(bundleContents).not.toMatch(/from ['"]@arakendo\/weaver-xslt\/runtime['"]/);
+      expect(bundleContents).toContain(`//# sourceMappingURL=${basename(bundleSourceMapPath)}`);
+      expect(existsSync(`${stylesheetPath}.ts`)).toBe(false);
+      expect(existsSync(`${stylesheetPath}.d.ts`)).toBe(false);
+      expect(existsSync(`${stylesheetPath}.digest`)).toBe(false);
+      expect(existsSync(`${stylesheetPath}.map`)).toBe(false);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
+  it('compiles once for multi-target emission', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
+    const compileSpy = vi.spyOn(compileFileModule, 'compileStylesheetArtifactsFromFile');
+
+    try {
+      const stylesheetPath = join(tempDir, 'compile-once.xsl');
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="/">',
+        '    <hello>ok</hello>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const { io, stderr } = createTestIo();
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+      const exitCode = await runCli(['compile', stylesheetPath, '--emit', 'ts,bundle'], io);
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toEqual([]);
+      expect(compileSpy).toHaveBeenCalledTimes(1);
+      expect(compileSpy).toHaveBeenCalledWith(
+        stylesheetPath,
+        expect.objectContaining({ emitTargets: ['ts', 'bundle'] }),
+      );
+    } finally {
+      compileSpy.mockRestore();
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
   it('rejects unsupported emit targets', async () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
 
@@ -146,12 +361,12 @@ describe('CLI', () => {
 
       writeFileSync(stylesheetPath, stylesheet, 'utf8');
 
-      const exitCode = await runCli(['compile', stylesheetPath, '--emit', 'bundle'], io);
+      const exitCode = await runCli(['compile', stylesheetPath, '--emit', 'xyz'], io);
 
       expect(exitCode).toBe(1);
       expect(stdout).toEqual([]);
       expect(stderr).toEqual([
-        'Usage: weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|ts,js]\n',
+        'Usage: weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|bundle|ts,js|ts,bundle|js,bundle]\n',
       ]);
     } finally {
       rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
@@ -741,6 +956,211 @@ describe('CLI', () => {
     }
   });
 
+  it('watches stylesheets with --emit bundle and removes bundle outputs on delete', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
+
+    try {
+      const stylesheetPath = join(tempDir, 'watch-bundle.xsl');
+      const bundleOutputPath = `${stylesheetPath}.bundle.js`;
+      const bundleSourceMapPath = `${stylesheetPath}.bundle.js.map`;
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="/">',
+        '    <hello>ok</hello>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const updatedStylesheet = stylesheet.replace('ok', 'updated');
+      const { io, stderr, stdout } = createTestIo();
+      const abortController = new AbortController();
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+      const exitCodePromise = runCli(['watch', stylesheetPath, '--emit', 'bundle'], io, {
+        signal: abortController.signal,
+      });
+
+      await vi.waitFor(() => {
+        expect(existsSync(bundleOutputPath)).toBe(true);
+        expect(existsSync(bundleSourceMapPath)).toBe(true);
+        expect(existsSync(`${stylesheetPath}.ts`)).toBe(false);
+        expect(existsSync(`${stylesheetPath}.d.ts`)).toBe(false);
+        expect(existsSync(`${stylesheetPath}.digest`)).toBe(false);
+        expect(existsSync(`${stylesheetPath}.map`)).toBe(false);
+        expect(stdout).toContain(`Wrote ${bundleOutputPath}\n`);
+      });
+      const initialBundleContents = readFileSync(bundleOutputPath, 'utf8');
+
+      writeFileSync(stylesheetPath, updatedStylesheet, 'utf8');
+
+      await vi.waitFor(() => {
+        expect(readFileSync(bundleOutputPath, 'utf8')).not.toBe(initialBundleContents);
+      });
+
+      const importedBundlePath = join(tempDir, 'watch-bundle-imported.mjs');
+      copyFileSync(bundleOutputPath, importedBundlePath);
+
+      const bundledModule = (await import(pathToFileURL(importedBundlePath).href)) as {
+        readonly transform: (xml: string) => { readonly output: string };
+      };
+      expect(bundledModule.transform('<root/>').output).toContain('<hello>updated</hello>');
+
+      rmSync(stylesheetPath);
+
+      await vi.waitFor(() => {
+        expect(existsSync(bundleOutputPath)).toBe(false);
+        expect(existsSync(bundleSourceMapPath)).toBe(false);
+        expect(stdout).toContain(`Removed ${stylesheetPath}\n`);
+      });
+
+      abortController.abort();
+      expect(await exitCodePromise).toBe(0);
+      expect(stderr).toEqual([]);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
+  it('watches stylesheets with --emit ts,bundle and keeps both artifact sets in sync', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
+
+    try {
+      const stylesheetPath = join(tempDir, 'watch-ts-bundle.xsl');
+      const tsOutputPath = `${stylesheetPath}.ts`;
+      const declarationPath = `${stylesheetPath}.d.ts`;
+      const digestPath = `${stylesheetPath}.digest`;
+      const sourceMapPath = `${stylesheetPath}.map`;
+      const bundleOutputPath = `${stylesheetPath}.bundle.js`;
+      const bundleSourceMapPath = `${stylesheetPath}.bundle.js.map`;
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="/">',
+        '    <hello>ok</hello>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const updatedStylesheet = stylesheet.replace('ok', 'updated');
+      const initialExpected = compileStylesheetArtifacts(stylesheet, {
+        filePath: stylesheetPath,
+      });
+      const updatedExpected = compileStylesheetArtifacts(updatedStylesheet, {
+        filePath: stylesheetPath,
+      });
+      const { io, stderr, stdout } = createTestIo();
+      const abortController = new AbortController();
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+      const exitCodePromise = runCli(['watch', stylesheetPath, '--emit', 'ts,bundle'], io, {
+        signal: abortController.signal,
+      });
+
+      await vi.waitFor(() => {
+        expect(readFileSync(tsOutputPath, 'utf8')).toBe(initialExpected.module);
+        expect(readFileSync(declarationPath, 'utf8')).toBe(initialExpected.declaration);
+        expect(readFileSync(digestPath, 'utf8')).toBe(`${initialExpected.digest}\n`);
+        expect(readFileSync(sourceMapPath, 'utf8')).toBe(initialExpected.sourceMap);
+        expect(existsSync(bundleOutputPath)).toBe(true);
+        expect(existsSync(bundleSourceMapPath)).toBe(true);
+        expect(existsSync(`${stylesheetPath}.js`)).toBe(false);
+        expect(existsSync(`${stylesheetPath}.js.map`)).toBe(false);
+      });
+
+      const initialBundleContents = readFileSync(bundleOutputPath, 'utf8');
+      writeFileSync(stylesheetPath, updatedStylesheet, 'utf8');
+
+      await vi.waitFor(() => {
+        expect(readFileSync(tsOutputPath, 'utf8')).toBe(updatedExpected.module);
+        expect(readFileSync(declarationPath, 'utf8')).toBe(updatedExpected.declaration);
+        expect(readFileSync(digestPath, 'utf8')).toBe(`${updatedExpected.digest}\n`);
+        expect(readFileSync(sourceMapPath, 'utf8')).toBe(updatedExpected.sourceMap);
+        expect(readFileSync(bundleOutputPath, 'utf8')).not.toBe(initialBundleContents);
+      });
+
+      rmSync(stylesheetPath);
+
+      await vi.waitFor(() => {
+        expect(existsSync(tsOutputPath)).toBe(false);
+        expect(existsSync(declarationPath)).toBe(false);
+        expect(existsSync(digestPath)).toBe(false);
+        expect(existsSync(sourceMapPath)).toBe(false);
+        expect(existsSync(bundleOutputPath)).toBe(false);
+        expect(existsSync(bundleSourceMapPath)).toBe(false);
+        expect(stdout).toContain(`Removed ${stylesheetPath}\n`);
+      });
+
+      abortController.abort();
+      expect(await exitCodePromise).toBe(0);
+      expect(stderr).toEqual([]);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
+  it('watches stylesheets with --emit js,bundle and keeps both artifact sets in sync', async () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
+
+    try {
+      const stylesheetPath = join(tempDir, 'watch-js-bundle.xsl');
+      const jsOutputPath = `${stylesheetPath}.js`;
+      const jsSourceMapPath = `${stylesheetPath}.js.map`;
+      const bundleOutputPath = `${stylesheetPath}.bundle.js`;
+      const bundleSourceMapPath = `${stylesheetPath}.bundle.js.map`;
+      const stylesheet = [
+        '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+        '  <xsl:template match="/">',
+        '    <hello>ok</hello>',
+        '  </xsl:template>',
+        '</xsl:stylesheet>',
+      ].join('\n');
+      const updatedStylesheet = stylesheet.replace('ok', 'updated');
+      const { io, stderr, stdout } = createTestIo();
+      const abortController = new AbortController();
+
+      writeFileSync(stylesheetPath, stylesheet, 'utf8');
+
+      const exitCodePromise = runCli(['watch', stylesheetPath, '--emit', 'js,bundle'], io, {
+        signal: abortController.signal,
+      });
+
+      await vi.waitFor(() => {
+        expect(existsSync(jsOutputPath)).toBe(true);
+        expect(existsSync(jsSourceMapPath)).toBe(true);
+        expect(existsSync(bundleOutputPath)).toBe(true);
+        expect(existsSync(bundleSourceMapPath)).toBe(true);
+        expect(existsSync(`${stylesheetPath}.ts`)).toBe(false);
+        expect(existsSync(`${stylesheetPath}.d.ts`)).toBe(false);
+        expect(existsSync(`${stylesheetPath}.digest`)).toBe(false);
+        expect(existsSync(`${stylesheetPath}.map`)).toBe(false);
+      });
+
+      const initialJsContents = readFileSync(jsOutputPath, 'utf8');
+      const initialBundleContents = readFileSync(bundleOutputPath, 'utf8');
+      writeFileSync(stylesheetPath, updatedStylesheet, 'utf8');
+
+      await vi.waitFor(() => {
+        expect(readFileSync(jsOutputPath, 'utf8')).not.toBe(initialJsContents);
+        expect(readFileSync(bundleOutputPath, 'utf8')).not.toBe(initialBundleContents);
+      });
+
+      rmSync(stylesheetPath);
+
+      await vi.waitFor(() => {
+        expect(existsSync(jsOutputPath)).toBe(false);
+        expect(existsSync(jsSourceMapPath)).toBe(false);
+        expect(existsSync(bundleOutputPath)).toBe(false);
+        expect(existsSync(bundleSourceMapPath)).toBe(false);
+        expect(stdout).toContain(`Removed ${stylesheetPath}\n`);
+      });
+
+      abortController.abort();
+      expect(await exitCodePromise).toBe(0);
+      expect(stderr).toEqual([]);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
   it('recompiles watched stylesheets when the sample document changes', async () => {
     const tempDir = mkdtempSync(join(tmpdir(), 'weaver-cli-'));
 
@@ -927,8 +1347,8 @@ describe('CLI', () => {
     expect(stdout).toEqual([
       [
         'Usage:',
-        '  weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|ts,js]',
-        '  weaver-xslt watch <glob> [--sample <xml>]',
+        '  weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|bundle|ts,js|ts,bundle|js,bundle]',
+        '  weaver-xslt watch <glob> [--sample <xml>] [--emit ts|js|bundle|ts,js|ts,bundle|js,bundle]',
         '  weaver-xslt run <stylesheet> --input <xml> [--execution <interpreter|native|auto>] [--param <name=value> ...]',
         '  weaver-xslt --help',
       ].join('\n'),

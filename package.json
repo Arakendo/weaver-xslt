@@ -84,6 +84,7 @@
   "dependencies": {
     "@xmldom/xmldom": "^0.9.5",
     "chokidar": "^4.0.3",
+    "esbuild": "^0.27.7",
     "typescript": "^5.7.2"
   },
   "devDependencies": {
@@ -91,7 +92,6 @@
     "@typescript-eslint/eslint-plugin": "^8.18.0",
     "@typescript-eslint/parser": "^8.18.0",
     "@vitest/coverage-v8": "^2.1.8",
-    "esbuild": "^0.27.7",
     "eslint": "^9.17.0",
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",

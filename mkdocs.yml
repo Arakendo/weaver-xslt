@@ -49,6 +49,7 @@ nav:
   - Native Execution Boundary: NATIVE_EXECUTION_BOUNDARY.md
   - Native Plan Boundary: NATIVE_PLAN_BOUNDARY.md
   - Native Execution Checklist: NATIVE_EXECUTION_CHECKLIST.md
+  - NuGet Integration: NUGET_INTEGRATION.md
   - Workbench API: WORKBENCH_API.md
   - Workbench Embed: WORKBENCH_EMBED.md
   - Workbench Checklist: WORKBENCH_CHECKLIST.md

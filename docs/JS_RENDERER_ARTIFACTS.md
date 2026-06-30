@@ -1,13 +1,15 @@
 # JS Renderer Artifact Emission — Planning Doc
 
-> Status: **proposed**, not yet implemented. This is a planning/design note for
-> adding JavaScript artifact emission to the compile pipeline so a compiled
-> stylesheet can be delivered as a standalone, swappable renderer.
+> Status: **partially implemented**. `compile` and `watch` now support
+> `--emit js`, `--emit bundle`, `--emit ts,js`, and `--emit ts,bundle`.
+> This note now serves as both the original design record and the checklist for
+> the remaining host-consumption and browser-neutral bundle work.
 
-This doc plans how to add a first-class **JavaScript output mode** to the
-compiler and CLI. It is scoped narrowly: it does not add XSLT features, change
-runtime semantics, or replace the existing `.xsl.ts` artifact. It adds a new
-emission target.
+This doc records the first-class **JavaScript output mode** added to the
+compiler and CLI, plus the remaining work needed before the renderer hand-off
+story is complete. It is scoped narrowly: it does not add XSLT features,
+change runtime semantics, or replace the existing `.xsl.ts` artifact. It adds
+new emission targets derived from the same compiled TS module.
 
 Related design context:
 
@@ -46,13 +48,18 @@ requirements can view the same XML differently.
   see [src/xslt/codegen/plan.ts](../src/xslt/codegen/plan.ts#L21)).
 - The CLI writes the artifact set in `emitCompiledArtifactsFromFile(...)`
   ([src/cli.ts](../src/cli.ts#L536)).
-- TypeScript is already a runtime dependency; **esbuild is already a
-  devDependency** and is used to bundle the workbench site
+- `src/processor/emitJs.ts` transpiles the generated TS module to JS, and
+  `src/processor/bundleJs.ts` bundles that JS module into a self-contained
+  Node ESM artifact.
+- TypeScript and **esbuild are runtime dependencies** for the published CLI,
+  and esbuild is also used to bundle the workbench site
   (`build:workbench-site` in [package.json](../package.json)).
 - The codegen test helper already proves TS→JS execution works by transpiling
   the generated module with `ts.transpileModule` and injecting the runtime
   through a local `require` shim
   ([test/codegen/compile.support.ts](../test/codegen/compile.support.ts#L90)).
+- The CLI and codegen tests now cover `compile/watch --emit js|bundle|ts,js|ts,bundle`
+  plus parity and importability checks for emitted bundles.
 
 The last point is important: a working transpile-and-run path **already exists
 in tests**. This feature productizes that path as a supported output.
@@ -62,7 +69,7 @@ in tests**. This feature productizes that path as a supported output.
 ### Goals
 
 - Emit a `*.xsl.js` artifact from the compile/CLI path.
-- Offer a **self-contained** bundle flavor for drop-in use with no install.
+- Offer a **self-contained** bundle flavor for drop-in use with no package install.
 - Define a stable **renderer contract** so artifacts are swappable at runtime.
 - Keep the existing `.xsl.ts` / `.d.ts` / `.digest` / `.map` outputs unchanged.
 - Embed the stylesheet `digest` in the JS artifact for identity/versioning.
@@ -81,11 +88,11 @@ in tests**. This feature productizes that path as a supported output.
 Three candidate output shapes. The first two are in scope for v1; the third is
 optional.
 
-| Flavor               | Format                            | Runtime              | Primary use                                                  |
-| -------------------- | --------------------------------- | -------------------- | ------------------------------------------------------------ |
-| `js`                 | ESM module, runtime kept external | resolved by consumer | bundler/Node consumers that already depend on the package    |
-| `js-bundle`          | ESM module, runtime inlined       | self-contained       | drop-in renderer, hand-off to a tester, swappable on the fly |
-| `js-iife` (optional) | classic `<script>` global         | self-contained       | plain browser page with no bundler/import map                |
+| Flavor               | Format                            | Runtime                | Primary use                                                  |
+| -------------------- | --------------------------------- | ---------------------- | ------------------------------------------------------------ |
+| `js`                 | ESM module, runtime kept external | resolved by consumer   | bundler/Node consumers that already depend on the package    |
+| `js-bundle`          | ESM module, runtime inlined       | self-contained in Node | drop-in renderer, hand-off to a tester, swappable on the fly |
+| `js-iife` (optional) | classic `<script>` global         | self-contained         | plain browser page with no bundler/import map                |
 
 Rationale:
 
@@ -93,7 +100,9 @@ Rationale:
   `import ... from '@arakendo/weaver-xslt/runtime'`. Small file, but the
   consumer must be able to resolve the runtime.
 - `js-bundle` is what the **swap-renderers-on-the-fly** use case actually needs:
-  one file, no install, identifiable by digest, importable directly.
+  one file, no package install, identifiable by digest, importable directly.
+  The current implementation satisfies that in Node 20+, but not yet as a
+  browser-neutral artifact because runtime evaluation still pulls in Node builtins.
 - `js-iife` is only needed if a host wants `<script src>` with a global and no
   module loader. Defer unless a concrete consumer needs it.
 
@@ -210,9 +219,10 @@ Proposed surface:
 weaver-xslt compile stylesheet.xsl
   --emit ts            (default — existing behavior, unchanged)
   --emit js            (transpiled ESM, runtime external)
-  --emit bundle        (self-contained ESM, runtime inlined)
+  --emit bundle        (self-contained Node ESM, runtime inlined)
   --emit ts,js         (emit both alongside each other)
   --emit ts,bundle     (TS for type-checked consumers + self-contained JS)
+  --emit js,bundle     (external-runtime JS plus self-contained Node bundle)
 ```
 
 Mapping to artifact flavors (see §3):
@@ -238,45 +248,49 @@ Rules:
 
 ### Emission
 
-- [ ] `compile --emit js` writes `name.xsl.js` + `.js.map` next to the stylesheet,
-      alongside the existing `.ts` / `.d.ts` / `.digest` / `.map` outputs.
-- [ ] `compile --emit bundle` writes `name.xsl.bundle.js` + `.bundle.js.map`.
-- [ ] `compile --emit ts,js` writes both artifact sets in one pass.
-- [ ] Default `compile` (no `--emit`, or `--emit ts`) output is byte-for-byte
+- [x] `compile --emit js` writes `name.xsl.js` + `.js.map` next to the stylesheet
+      without changing the default `ts` artifact set.
+- [x] `compile --emit bundle` writes `name.xsl.bundle.js` + `.bundle.js.map`.
+- [x] `compile --emit ts,js` writes both artifact sets in one pass.
+- [x] `compile --emit ts,bundle` writes both artifact sets in one pass.
+- [x] `compile --emit js,bundle` writes both artifact sets in one pass.
+- [x] Default `compile` (no `--emit`, or `--emit ts`) output is byte-for-byte
       unchanged from current behavior.
-- [ ] `--emit bundle` produces a self-contained file with no remaining
+- [x] `--emit bundle` produces a self-contained file with no remaining
       bare `@arakendo/weaver-xslt/runtime` import.
-- [ ] The JS artifact embeds the same `digest` as the `.digest` file.
-- [ ] JS emission does not trigger a second IR compile (verified via profile or
-      a call-count assertion).
+- [x] The JS artifact embeds the same `digest` as the compile output and, when
+      `ts` is also emitted, the `.digest` file.
+- [x] JS emission does not trigger a second IR compile (verified via a CLI
+      call-count assertion for multi-target emission).
 
 ### Invocation / consumption
 
-- [ ] A `js-bundle` artifact can be loaded and run by another developer
+- [x] A `js-bundle` artifact can be loaded and run by another developer
       **without invoking the CLI** and **without installing the package**
-      (e.g. `import('./name.xsl.js')` then `transform(xml)`).
-- [ ] The `js` flavor runs in a project that already has the runtime available,
+      in a Node 20+ host (e.g. `import('./name.xsl.bundle.js')` then `transform(xml)`).
+- [x] The `js` flavor runs in a project that already has the runtime available,
       and produces output identical to the interpreter and the generated-TS path
       for the supported slice.
-- [ ] `transform(xml)` returns the same structured result shape (output +
-      diagnostics) as the existing generated module contract.
+- [x] `transform(xml)` returns the same structured result shape as the existing
+      generated module contract.
 
 ### Swap-on-the-fly
 
-- [ ] A host can load two different renderer bundles for the **same XML** and
+- [x] A host can load two different renderer bundles for the **same XML** and
       select between them by `id`, producing two different HTML outputs.
-- [ ] Swapping renderers does not require reloading or re-fetching the XML.
-- [ ] Each renderer reports a distinct `source.digest` so the host can identify
+- [x] Swapping renderers does not require reloading or re-fetching the XML.
+- [x] Each renderer reports a distinct `source.digest` so the host can identify
       and version them.
 
 ### Parity and safety
 
-- [ ] Output parity fixtures compare interpreter, generated-TS, and emitted-JS
+- [x] Output parity fixtures compare interpreter, generated-TS, and emitted-JS
       for representative supported-slice stylesheets.
-- [ ] The core engine modules under `src/xslt/**` do not import esbuild or any
+- [x] The core engine modules under `src/xslt/**` do not import esbuild or any
       Node-only bundler API (lint/boundary check).
-- [ ] No ambient `eval`, network, or filesystem access is added to engine code;
-      execution sandboxing remains host-owned.
+- [x] JS emission does not add hidden ambient `eval` or network authority, and
+      capability edges that remain Node-specific, such as `document()` through
+      `node:fs`, stay explicit in emitted artifacts.
 
 ## 8. File-change map (planned)
 
@@ -323,25 +337,28 @@ the renderer contract in section 5 as the stable consumption surface.
 4. **Async vs sync transform for browser** — the engine transform is synchronous
    today; for very large stylesheets the host may want a worker boundary. That is
    host policy and should not change the artifact contract.
-5. **Published CLI bundling dependency** — if `bundle` emission ships in the published
-   `weaver-xslt` bin, esbuild moves from devDependency to a real dependency.
-   Decide whether the bundle flavor is published or local-tooling-only for v1.
+5. **Published CLI bundling dependency** — resolved for the current CLI: `bundle`
+   emission ships in the published `weaver-xslt` bin, so esbuild is now a real
+   dependency.
 
-## 11. Interim answer (today, before this lands)
+## 11. Current state
 
-Until JS emission exists, the only JavaScript deliverables are:
+Today the CLI can emit three renderer shapes from the same compile pass:
 
-- the built package itself (`npm run build` -> `dist/*.js`, including
-  `dist/cli.js`), and
-- a generated `*.xsl.ts` artifact that a consumer must transpile/bundle.
+- `ts` -> `*.xsl.ts` + `.d.ts` + `.digest` + `.map`
+- `js` -> `*.xsl.js` + `.js.map`
+- `bundle` -> `*.xsl.bundle.js` + `.bundle.js.map`
 
-To give a tester something runnable now:
+Representative examples:
 
 ```bash
 npm install
 npm run build
-node dist/cli.js run stylesheet.xsl --input input.xml > output.html
+node dist/cli.js compile stylesheet.xsl --emit js
+node dist/cli.js compile stylesheet.xsl --emit bundle
+node dist/cli.js watch stylesheet.xsl --emit ts,bundle
 ```
 
-A single JS file that **is** the compiled stylesheet does not exist yet. That is
-exactly what this plan adds.
+The remaining gap is not artifact emission itself. The remaining work is the
+host-consumption story around swap-ready renderer registries, broader parity
+fixtures, and a browser-neutral bundle that does not rely on Node builtins.

@@ -10,7 +10,7 @@ W3C conformance suites or outsourcing semantic authority to another engine.
 
 It complements [ARCHITECTURE.md](./ARCHITECTURE.md),
 [DIFFERENTIATORS.md](./DIFFERENTIATORS.md), [ERRORS.md](./ERRORS.md), and
-[IKVM_INTEGRATION.md](./IKVM_INTEGRATION.md).
+[NUGET_INTEGRATION.md](./NUGET_INTEGRATION.md).
 
 ## Goals
 

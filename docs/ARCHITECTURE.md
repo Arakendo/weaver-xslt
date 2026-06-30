@@ -3,15 +3,16 @@
 > Status: design draft. Decisions here are **pinned** — change with intent, not
 > drift. Update this file when a decision changes.
 >
-> See [DIFFERENTIATORS.md](./DIFFERENTIATORS.md) for the *why*. This file is
-> the *how*. See [SEMANTIC_BOUNDARIES.md](./SEMANTIC_BOUNDARIES.md) for
+> See [DIFFERENTIATORS.md](./DIFFERENTIATORS.md) for the _why_. This file is
+> the _how_. See [SEMANTIC_BOUNDARIES.md](./SEMANTIC_BOUNDARIES.md) for
 > cross-cutting rules about where meaning boundaries must stay explicit.
-> See [IKVM_INTEGRATION.md](./IKVM_INTEGRATION.md) for the later-stage plan
-> for .NET/NuGet hosting without creating a second semantic engine.
+> See [NUGET_INTEGRATION.md](./NUGET_INTEGRATION.md) for the current .NET/NuGet
+> hosting plan without creating a second semantic engine.
 
 ## 1. Goals & non-goals
 
 ### Thesis (one sentence)
+
 Weaver (`@arakendo/weaver-xslt`) is a **TypeScript-native XSLT platform** with
 two first-class execution backends: interpreter and native. The native backend
 can execute in-process or emit inspectable, typed, debuggable TS/JS transform
@@ -19,6 +20,7 @@ modules; emitted TypeScript is the first delivery mode, not the definition of
 native execution.
 
 ### Goals
+
 - **XSLT 3.0** basic-conformance engine in TypeScript
 - **XPath 3.1** engine written from scratch (no external XPath dependency)
 - **Two execution backends**: interpreter (reference) and native
@@ -36,9 +38,10 @@ native execution.
   (`npx weaver-xslt compile stylesheet.xsl`)
 
 ### Non-goals (for now)
-- Streaming (XSLT 3.0 streamability) — design should not *preclude* it, but
+
+- Streaming (XSLT 3.0 streamability) — design should not _preclude_ it, but
   we will not build it in the first milestone. A practical streaming
-  *subset* (forward-only, explicit opt-in) is in scope later.
+  _subset_ (forward-only, explicit opt-in) is in scope later.
 - Schema-aware processing (XSD-typed data)
 - XQuery 3.1
 - XSLT 1.0 bug-compat mode
@@ -75,7 +78,7 @@ native execution.
  └─────────────────────┘                 └──────────────────────┘
      │                                         │
    both call into XPath engine              direct execute or emit
-     │                              TS/JS render artifacts
+     │                        `.xsl.ts` / `.xsl.js` / `.xsl.bundle.js`
      ▼                                         │
  ┌─────────────────────┐                 ┌──────────────────────┐
  │ XPath 3.1 Engine    │  ◄───────────── │ emitted TS/JS modules │
@@ -98,12 +101,14 @@ parity. A feature is not "done" until both pass.
 ## 3. Pinned decisions
 
 ### DEC-001 — XML parser: `@xmldom/xmldom`
+
 W3C-DOM compatible, pure-JS, works in Node & browser. Alternative was
 `sax`/`saxes` (streaming) — rejected for M1 since we're not streaming yet.
 Wrapped in a thin `parseXml(source): Document` helper so we can swap later.
 
 ### DEC-002 — Node model: **wrap DOM, do not copy**
-XSLT operates on the XDM (XPath Data Model). XDM is *not* DOM:
+
+XSLT operates on the XDM (XPath Data Model). XDM is _not_ DOM:
 
 - DOM has adjacent text nodes; XDM text nodes are merged
 - DOM exposes namespace nodes differently
@@ -138,6 +143,7 @@ calls sprinkled across the engine. If the same DOM node yields two distinct
 wrappers, the `is` operator and duplicate-elimination logic will lie.
 
 ### DEC-003 — XPath engine: **hand-rolled, owned in-tree**
+
 Rejected: `fontoxpath` (MIT, mature). Chosen: build our own under
 `src/xpath/`. Reasons:
 
@@ -163,12 +169,14 @@ Where practical, tests and feature gates should enforce the current tier so
 "just one more function" does not drag M7 semantics back into M2.
 
 ### DEC-004 — Parser style: **recursive descent + Pratt for expressions**
+
 - Statement/path structure → recursive descent
 - Binary/unary operator precedence → Pratt parser
 - Hand-written, no parser generator
 - AST nodes are plain, discriminated unions keyed on `kind`
 
 ### DEC-005 — Intermediate Representation (the contract)
+
 Stylesheet compilation produces a `StylesheetIR`: a plain-data tree of
 **instruction objects** keyed by `kind` (`'literal-result-element'`,
 `'apply-templates'`, `'value-of'`, `'choose'`, `'for-each'`, …).
@@ -180,22 +188,22 @@ It must be:
 
 1. **Pure, JSON-serializable data.** No DOM refs, no closures, no cycles.
 2. **Source-located exhaustively.** Every node carries
-  a full source span compatible with [ERRORS.md](./ERRORS.md)
-  `SourceSpan` (`uri`, UTF-16 offsets, start/end line + column).
-  Non-negotiable — see DEC-013.
+   a full source span compatible with [ERRORS.md](./ERRORS.md)
+   `SourceSpan` (`uri`, UTF-16 offsets, start/end line + column).
+   Non-negotiable — see DEC-013.
 3. **Semantically annotated** by a static-analysis pass: `purity`,
    `streamability`, `mayThrow`, `refersToContext`, `referencedNames`.
    Backends query these rather than recomputing them.
 4. **Versioned.** Adding a node kind = minor bump. Changing a shape =
-  major bump. The root `StylesheetIR` object carries an explicit `version`
-  field; external tools should not infer version from package metadata.
-  The authoritative constant is `STYLESHEET_IR_VERSION` in
-  `src/xslt/compile/ir.ts`; any IR schema change must update that value in
-  the same change.
+   major bump. The root `StylesheetIR` object carries an explicit `version`
+   field; external tools should not infer version from package metadata.
+   The authoritative constant is `STYLESHEET_IR_VERSION` in
+   `src/xslt/compile/ir.ts`; any IR schema change must update that value in
+   the same change.
 5. **Free of execution caches.** Pre-resolved bindings, dispatch tables,
-  memoized analysis artifacts, and runtime helpers live in a separate
-  `RuntimePlan` / `EmitPlan` overlay keyed off the IR, not on IR nodes
-  themselves.
+   memoized analysis artifacts, and runtime helpers live in a separate
+   `RuntimePlan` / `EmitPlan` overlay keyed off the IR, not on IR nodes
+   themselves.
 
 If the native emitter can't be written as a (mostly) pure function
 `IR → string`, the IR is doing too little. Fix the IR, not the backend.
@@ -221,6 +229,7 @@ XPath expressions inside instructions are **pre-parsed once at compile
 time** into XPath ASTs and embedded in the IR. No re-parsing per call.
 
 ### DEC-006 — Sequences: owned lazy sequence abstraction
+
 Sequences are lazy, but not exposed as naked JS iterables across the engine.
 We provide an engine-owned sequence abstraction backed by generators /
 iterables internally, with explicit operations for iteration,
@@ -254,7 +263,8 @@ A materialized `Sequence` helper is still provided for cases that need
 count or indexed access, but the abstraction boundary is ours, not the JS
 iterator protocol's.
 
-### DEC-007 — Error model: `XdmError` with codes *and context*
+### DEC-007 — Error model: `XdmError` with codes _and context_
+
 One error class hierarchy:
 
 ```
@@ -297,6 +307,7 @@ span ordering, and required detail fields for the small set of codes
 where missing structure would materially weaken the diagnostic.
 
 An error message is not considered acceptable unless it identifies:
+
 - the W3C code
 - a human-friendly description
 - the stylesheet file, line, and column
@@ -309,6 +320,7 @@ See DEC-013, [DIFFERENTIATORS.md](./DIFFERENTIATORS.md) D1, and
 compiler-recognized observability/intrinsics surface.
 
 ### DEC-013 — Diagnostics-first, always
+
 This project's reason to exist is better XSLT ergonomics. Therefore:
 
 1. **Source locations propagate everywhere.** XML parser → stylesheet
@@ -323,21 +335,22 @@ This project's reason to exist is better XSLT ergonomics. Therefore:
    happy-path tests but produces `XPTY0004: type mismatch` at runtime
    for simple misuse is incomplete.
 5. **Diagnostics are testable artifacts.** Formatter output and
-  structured diagnostic shape get fixture or snapshot coverage; they are
-  not left to ad hoc manual inspection.
+   structured diagnostic shape get fixture or snapshot coverage; they are
+   not left to ad hoc manual inspection.
 6. **One report contract across surfaces.** Parse errors, static
-  analysis, runtime failures, serialization failures, watch-mode output,
-  and codegen diagnostics all project to the same `DiagnosticReport`
-  shape. Different renderers are allowed; different meanings are not.
-  Canonical ordering and shared presentation policy belong at this
-  boundary layer (shared diagnostics helpers / boundary adapters), not
-  inside individual analysis passes.
+   analysis, runtime failures, serialization failures, watch-mode output,
+   and codegen diagnostics all project to the same `DiagnosticReport`
+   shape. Different renderers are allowed; different meanings are not.
+   Canonical ordering and shared presentation policy belong at this
+   boundary layer (shared diagnostics helpers / boundary adapters), not
+   inside individual analysis passes.
 7. **Parity is semantic, not cosmetic.** Where interpreter and codegen
-  both implement a feature, diagnostics match on code, phase, category,
-  severity, primary span when source is available, and relevant details.
-  Minor wording drift in formatted text is secondary.
+   both implement a feature, diagnostics match on code, phase, category,
+   severity, primary span when source is available, and relevant details.
+   Minor wording drift in formatted text is secondary.
 
 ### DEC-014 — Native emission path: TypeScript source, not bytecode
+
 One delivery mode of the native backend emits **plain TypeScript source**
 (`.xsl.ts`) plus a `.d.ts`. Rejected alternatives:
 
@@ -353,10 +366,35 @@ One delivery mode of the native backend emits **plain TypeScript source**
 
 Generated code imports from `@arakendo/weaver-xslt/runtime` for shared helpers
 (writer, XPath primitives, template dispatcher, XDM operations). The
-runtime is a separate subpath export so projects can bundle *only* the
+runtime is a separate subpath export so projects can bundle _only_ the
 runtime without the compiler. Direct native execution and emitted TS/JS should
 share the same semantic plan and helper contracts; emission is a delivery
 choice, not a separate semantic engine.
+
+The concrete emission boundary now has three user-facing delivery shapes derived
+from the same compile pass:
+
+- `ts` keeps the generated `*.xsl.ts` module, `.d.ts`, `.digest`, and `.map`
+- `js` transpiles that generated TS module into `*.xsl.js` while keeping the
+  runtime as an external package import
+- `bundle` post-processes the transpiled JS into `*.xsl.bundle.js` with the
+  Weaver runtime inlined as a tooling-only bundling step
+
+Important boundary rule: `js` and `bundle` are post-codegen serialization
+steps. They reuse the already-generated TS module and do not recompile the IR.
+That keeps the native plan, direct execution path, emitted TS path, emitted JS
+path, and bundled JS path all anchored to the same semantic contract.
+
+The bundling step is intentionally outside the core engine. TypeScript
+transpilation lives in `src/processor/emitJs.ts`, and bundling lives in the
+tooling-only `src/processor/bundleJs.ts`. Core compiler logic under `src/xslt/**`
+does not import esbuild or other bundler-only APIs.
+
+Current delivery constraint: `bundle` is a self-contained Node ESM renderer,
+not yet a browser-neutral artifact. Some runtime paths such as `document()`
+still rely on explicit Node builtin imports, so the bundle boundary currently
+preserves host-owned Node authority instead of pretending those capabilities
+disappeared.
 
 Even before we adopt `ts.factory.*`, emission should not be raw string
 concatenation everywhere. A tiny output-node layer is worth it for name
@@ -369,6 +407,7 @@ compiles twice, the generated names should be stable unless the input IR
 meaningfully changed.
 
 ### DEC-015 — Extension functions: typed bindings
+
 Users register extension functions with TypeScript signatures:
 
 ```ts
@@ -383,21 +422,24 @@ match. A `<ts:eval>` escape hatch is planned (DIFFERENTIATORS D4) but
 deferred until the core codegen is stable.
 
 ### DEC-008 — Regex: **Schema regex translator**
+
 XPath regex is XML-Schema flavor (with XPath extensions). We will
 translate to ECMAScript regex at parse time. Module: `src/xpath/regex/`.
 Not a user-facing API.
 
 ### DEC-009 — Collations: Unicode codepoint only for M1
+
 Default collation is `http://www.w3.org/2005/xpath-functions/collation/codepoint`.
 `Intl.Collator`-backed locale collations are a later milestone.
 
 ### DEC-010 — Testing strategy (four tiers, two backends)
+
 1. **Unit tests** next to implementation (`foo.test.ts`)
 2. **Golden tests** — `test/golden/<name>/{input.xml, stylesheet.xsl, expected.xml}` with one generic runner; **runs each case under both backends** and asserts equal output
 3. **Parity tests** — targeted fixtures that run interpreter + codegen,
-  then deep-compare **structured diagnostics and behavior**, not just
-  final output. This is where evaluation order, laziness, and dynamic
-  error semantics get pinned.
+   then deep-compare **structured diagnostics and behavior**, not just
+   final output. This is where evaluation order, laziness, and dynamic
+   error semantics get pinned.
 4. **Conformance** — git submodules `w3c/xslt30-test` and `w3c/qt3tests`;
    reports pass/fail percentage for each suite under each backend.
    Initially all expected to fail; number should only ever go up.
@@ -420,6 +462,7 @@ crosses from baseline diagnostics into compiler-recognized `wx:*`
 observability or assertion surface.
 
 ### DEC-011 — Module layout
+
 ESM only. Everything under `src/`:
 
 ```
@@ -516,6 +559,7 @@ src/
 ```
 
 ### DEC-012 — Public API surface
+
 Keep tiny and stable. Two entry points:
 
 The host/application contract for URI resolution and external resource
@@ -533,8 +577,9 @@ const { output } = proc.transform(sourceXml, { parameters: { foo: 1 } });
 // Compile-to-TS usage (programmatic; CLI wraps this)
 import { compileStylesheetToTs } from '@arakendo/weaver-xslt/compile';
 
-const { code, declarations, sourceMap, diagnostics } =
-  compileStylesheetToTs(stylesheetXml, { path: 'invoice.xsl' });
+const { code, declarations, sourceMap, diagnostics } = compileStylesheetToTs(stylesheetXml, {
+  path: 'invoice.xsl',
+});
 
 // Runtime helpers imported by generated code (and by power users)
 import { defineXsltFunctions, Writer, Ctx } from '@arakendo/weaver-xslt/runtime';
@@ -564,20 +609,20 @@ first (fastest path to working code + reference semantics), then
 diagnostics polish, then the native backend with readable TS as its first
 delivery mode.
 
-| M | Goal | Exit criteria |
-|---|------|---------------|
-| **M0** | Scaffold (this commit) | Typecheck + smoke tests pass; W3C suites cataloged (14.6k + 31.8k cases discovered) |
-| **M1** | XPath vertical slice + diagnostic bones | Parse & evaluate `1 + 2`, `//foo`, `foo/bar[1]`; all AST nodes source-located; errors print file:line:col with source snippet + caret |
-| **M2** | XPath core on interpreter | All axes, predicates, value/general/node comparisons, `if/for/let/some/every`, ~40 fn:* functions. Target: 20% of QT3 passing. |
-| **M3** | XSLT MVP on interpreter | `xsl:template`, `xsl:apply-templates`, `xsl:value-of`, `xsl:for-each`, `xsl:choose`, `xsl:variable`, `xsl:param`, literal result elements. First golden test green. |
-| **M4** | **Native backend (v1 TypeScript emission)** | IR → readable TypeScript for M3 features; golden + parity fixtures compare output and structured diagnostics under both backends; M3 conformance slice passes under native emission; generated output committed to a fixtures folder for review |
-| **M5** | Typed params + typed extension functions | `.d.ts` emission; `defineXsltFunctions` with compile-time signature checking; CLI `weaver-xslt compile` |
-| **M6** | Watch mode + source maps + diagnostics v2 | `weaver-xslt watch`; Vite/esbuild plugin; `.xsl.map` output; static-analysis pass for unreachable templates, unused vars, priority conflicts, "did you mean" suggestions |
-| **M6.5** | Live workbench / playground | four-pane XML + XSLT + generated TS + output loop over in-memory sources; generated TS stays read-only; linked highlighting consumes source-map and diagnostic artifacts rather than screen-scraped text |
-| **M7** | XPath type system + maps/arrays + higher-order | `cast as`, `instance of`, SequenceTypes, maps, arrays, function items |
-| **M8** | XSLT 3.0 feature-complete (non-streaming) | `xsl:accumulator`, `xsl:iterate`, `xsl:merge`, packages, modes, keys |
-| **M9** | Conformance push | ≥70% of XSLT 3.0 required tests passing under **both** backends |
-| **M10+** | Practical streaming subset + gated `<ts:eval>` | forward-only opt-in streaming (DIFFERENTIATORS D2e); `<ts:eval>` escape hatch behind `features: { tsEval: true }` (D4 discipline) |
+| M        | Goal                                           | Exit criteria                                                                                                                                                                                                                                   |
+| -------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **M0**   | Scaffold (this commit)                         | Typecheck + smoke tests pass; W3C suites cataloged (14.6k + 31.8k cases discovered)                                                                                                                                                             |
+| **M1**   | XPath vertical slice + diagnostic bones        | Parse & evaluate `1 + 2`, `//foo`, `foo/bar[1]`; all AST nodes source-located; errors print file:line:col with source snippet + caret                                                                                                           |
+| **M2**   | XPath core on interpreter                      | All axes, predicates, value/general/node comparisons, `if/for/let/some/every`, ~40 fn:\* functions. Target: 20% of QT3 passing.                                                                                                                 |
+| **M3**   | XSLT MVP on interpreter                        | `xsl:template`, `xsl:apply-templates`, `xsl:value-of`, `xsl:for-each`, `xsl:choose`, `xsl:variable`, `xsl:param`, literal result elements. First golden test green.                                                                             |
+| **M4**   | **Native backend (v1 TypeScript emission)**    | IR → readable TypeScript for M3 features; golden + parity fixtures compare output and structured diagnostics under both backends; M3 conformance slice passes under native emission; generated output committed to a fixtures folder for review |
+| **M5**   | Typed params + typed extension functions       | `.d.ts` emission; `defineXsltFunctions` with compile-time signature checking; CLI `weaver-xslt compile`                                                                                                                                         |
+| **M6**   | Watch mode + source maps + diagnostics v2      | `weaver-xslt watch`; Vite/esbuild plugin; `.xsl.map` output; static-analysis pass for unreachable templates, unused vars, priority conflicts, "did you mean" suggestions                                                                        |
+| **M6.5** | Live workbench / playground                    | four-pane XML + XSLT + generated TS + output loop over in-memory sources; generated TS stays read-only; linked highlighting consumes source-map and diagnostic artifacts rather than screen-scraped text                                        |
+| **M7**   | XPath type system + maps/arrays + higher-order | `cast as`, `instance of`, SequenceTypes, maps, arrays, function items                                                                                                                                                                           |
+| **M8**   | XSLT 3.0 feature-complete (non-streaming)      | `xsl:accumulator`, `xsl:iterate`, `xsl:merge`, packages, modes, keys                                                                                                                                                                            |
+| **M9**   | Conformance push                               | ≥70% of XSLT 3.0 required tests passing under **both** backends                                                                                                                                                                                 |
+| **M10+** | Practical streaming subset + gated `<ts:eval>` | forward-only opt-in streaming (DIFFERENTIATORS D2e); `<ts:eval>` escape hatch behind `features: { tsEval: true }` (D4 discipline)                                                                                                               |
 
 Time estimates intentionally omitted.
 
