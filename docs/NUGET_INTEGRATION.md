@@ -1,8 +1,8 @@
 # NuGet Integration Plan — ASP.NET / .NET consumer packaging
 
-> Status: **proposed**, not yet implemented. This is a planning/design note for
-> shipping Weaver to .NET consumers (primarily an ASP.NET application) as a
-> NuGet package with first-class MSBuild build/publish integration.
+> Status: **in-progress** — initial .NET/MSBuild scaffold added in dotnet/Weaver.Build. This document is the implementation plan and reference for the NuGet packaging and MSBuild integration work.
+
+> Note: the scaffold is intentionally minimal and intended to be iterated on. The plan sections below describe the intended package shape, properties, and acceptance criteria.
 
 This document plans how a .NET application consumes Weaver **without** Weaver
 reimplementing XSLT/XPath semantics in C#. The TypeScript engine stays the

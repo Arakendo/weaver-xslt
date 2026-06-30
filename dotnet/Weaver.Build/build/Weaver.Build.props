@@ -1,0 +1,17 @@
+<Project>
+  <!-- Weaver.Build default properties (consumers can override in their project) -->
+  <PropertyGroup>
+    <!-- Default emit flavor: bundle is recommended for .NET consumers -->
+    <WeaverEmit>bundle</WeaverEmit>
+    <!-- Where emitted artifacts are staged during build -->
+    <WeaverOutputDir>$(IntermediateOutputPath)weaver\</WeaverOutputDir>
+    <!-- Whether emitted artifacts are copied into the project output/publish dir -->
+    <WeaverCopyToOutput>true</WeaverCopyToOutput>
+    <!-- Master switch to disable integration quickly -->
+    <WeaverEnabled>true</WeaverEnabled>
+    <!-- Node executable to use; default autodetect to PATH 'node' -->
+    <WeaverNode>node</WeaverNode>
+    <!-- Verbosity for the build integration -->
+    <WeaverLogVerbosity>normal</WeaverLogVerbosity>
+  </PropertyGroup>
+</Project>
