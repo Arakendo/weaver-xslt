@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <WeaverNode>node</WeaverNode>
+    <WeaverEmit>bundle</WeaverEmit>
+    <!-- Enable failing the build on diagnostics for this test -->
+    <WeaverFailOnDiagnostics>true</WeaverFailOnDiagnostics>
+    <WeaverCopyToOutput>false</WeaverCopyToOutput>
+    <WeaverOutputDir>$(MSBuildProjectDirectory)/weaver-out/</WeaverOutputDir>
+  </PropertyGroup>
+
+  <!-- Import the local Weaver.Build props/targets scaffold -->
+  <Import Project="..\Weaver.Build\build\Weaver.Build.props" />
+  <Import Project="..\Weaver.Build\build\Weaver.Build.targets" />
+
+  <ItemGroup>
+    <WeaverStylesheet Include="Stylesheets/semantic-error.xsl" />
+  </ItemGroup>
+</Project>

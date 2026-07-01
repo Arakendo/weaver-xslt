@@ -6,6 +6,7 @@ import {
   renameSync,
   rmSync,
   writeFileSync,
+  mkdirSync,
 } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -1103,4 +1104,82 @@ function testPath(value: string): string {
 
 function escapeRegexCharacter(character: string): string {
   return /[|\\{}()[\]^$+?.]/.test(character) ? `\\${character}` : character;
+}
+
+// If invoked as a CLI (node dist/cli.js ...), run the CLI and ensure any unexpected
+// errors are emitted as machine-readable diagnostics when --diagnostics-out was
+// requested. This guarantees MSBuild or other automation can always find a JSON
+// diagnostics payload even for thrown exceptions.
+if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  void runCli(process.argv.slice(2)).then((exitCode) => {
+    // If the CLI exited non-zero and the caller requested a diagnostics-out file,
+    // ensure a JSON payload exists so automation can consume it. Some error
+    // conditions produce textual output but don't emit the diagnostics file; in
+    // that case write a minimal fallback diagnostics JSON.
+    if (exitCode !== 0 && cliDiagnosticsOutPath !== undefined) {
+      try {
+        if (!existsSync(cliDiagnosticsOutPath)) {
+          const fallback = {
+            source: { path: process.cwd() },
+            diagnostics: [
+              {
+                severity: 'error',
+                code: `WEAVER_EXIT_${exitCode}`,
+                message: `Weaver CLI exited with code ${exitCode}. Check tool output for details.`,
+                primary: { uri: process.cwd(), lineStart: 1, columnStart: 1 },
+              },
+            ],
+          } as const;
+          try {
+            // Ensure parent directory exists
+            try {
+              mkdirSync(resolve(cliDiagnosticsOutPath, '..'), { recursive: true });
+            } catch {
+              /* ignore mkdir failure */
+            }
+            writeFileSync(cliDiagnosticsOutPath, JSON.stringify(fallback, null, 2), 'utf8');
+          }
+          catch {
+            // ignore write errors — there's nothing more we can do here
+          }
+        }
+      }
+      catch {
+        // ignore
+      }
+    }
+
+    void (async () => process.exit(exitCode))();
+  }).catch((err: unknown) => {
+    // If the caller requested JSON diagnostics, write a minimal diagnostics file
+    // describing the unexpected error so MSBuild consumers can parse it.
+    try {
+      const errMsg = err instanceof Error ? err.stack ?? err.message : String(err);
+      const diag = {
+        source: { path: process.cwd() },
+        diagnostics: [
+          {
+            severity: 'error',
+            code: 'WEAVER_UNHANDLED',
+            message: errMsg,
+            primary: { uri: process.cwd(), lineStart: 1, columnStart: 1 },
+          },
+        ],
+      } as const;
+
+      if (cliDiagnosticsOutPath !== undefined) {
+        try {
+          writeFileSync(cliDiagnosticsOutPath, JSON.stringify(diag, null, 2), 'utf8');
+        } catch (writeErr) {
+          // Fall back silently — we'll still render the error below.
+        }
+      }
+    } catch {
+      // swallow any further errors while trying to write diagnostics
+    }
+
+    // Render the error for console consumers and exit non-zero
+    defaultIo.stderr(renderDiagnosticError(err));
+    void (async () => process.exit(1))();
+  });
 }
