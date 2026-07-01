@@ -3,7 +3,7 @@
     <TargetFramework>net7.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <!-- Use bash to run the shim script in this test environment -->
-    <WeaverNode>bash</WeaverNode>
+    <WeaverNode>node</WeaverNode>
     <WeaverCopyToOutput>true</WeaverCopyToOutput>
     <!-- Ensure IntermediateOutputPath is set predictably for the test -->
     <IntermediateOutputPath>$(BaseIntermediateOutputPath)</IntermediateOutputPath>
@@ -19,10 +19,10 @@
     <WeaverStylesheet Include="Stylesheets/invoice.xsl" />
   </ItemGroup>
 
-  <!-- Test-time override so the scaffold runs the shim shell script in this environment -->
+  <!-- Test-time override so the scaffold runs the CLI in this environment -->
   <PropertyGroup>
-    <WeaverNode>bash</WeaverNode>
-    <!-- Ensure the outDir is POSIX for the shell script used in this test -->
+    <WeaverNode>node</WeaverNode>
+    <!-- Ensure the outDir is POSIX for the environment used in this test -->
     <WeaverOutputDir>$(MSBuildProjectDirectory)/weaver-out/</WeaverOutputDir>
   </PropertyGroup>
 

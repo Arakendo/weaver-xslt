@@ -10,7 +10,10 @@
   <PropertyGroup>
     <!-- Location where the carrier/tooling will be expected. Weaver.Tool would
          place the CLI entrypoint under tools/weaver/ in the package layout. -->
-    <WeaverToolCliPath>$(MSBuildThisFileDirectory)..\tools\weaver\weaver-xslt.js</WeaverToolCliPath>
+    <!-- Prefer the locally built JS CLI (dist/cli.js) when present in the repo. -->
+    <_LocalDistCli>$(MSBuildThisFileDirectory)..\..\..\dist\cli.js</_LocalDistCli>
+    <WeaverToolCliPath Condition="Exists('$(_LocalDistCli)')">$(_LocalDistCli)</WeaverToolCliPath>
+    <WeaverToolCliPath Condition="!Exists('$(_LocalDistCli)')">$(MSBuildThisFileDirectory)..\tools\weaver\weaver-xslt.js</WeaverToolCliPath>
   </PropertyGroup>
 
   <!-- Ensure the item exists even if consumer omitted it so targets don't fail. -->
@@ -38,16 +41,25 @@
 
     <Message Text="Weaver: compiling %(_WeaverToCompile.Identity) -> $(WeaverOutputDir)" Importance="High" />
 
-    <Exec Command="&quot;$(WeaverNode)&quot; &quot;$(WeaverToolCliPath)&quot; compile &quot;%(_WeaverToCompile.Identity)&quot; --emit $(WeaverEmit) --outDir &quot;$(WeaverOutputDir)&quot; --diagnostics json --diagnostics-out &quot;$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json&quot; $(WeaverCliFailFlag)" WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="true">
+    <Exec Command="&quot;$(WeaverNode)&quot; &quot;$(WeaverToolCliPath)&quot; compile &quot;%(_WeaverToCompile.Identity)&quot; --emit $(WeaverEmit) --diagnostics json --diagnostics-out &quot;$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json&quot; $(WeaverCliFailFlag)" WorkingDirectory="$(MSBuildProjectDirectory)" IgnoreExitCode="true">
       <Output TaskParameter="ExitCode" PropertyName="WeaverExitCode" />
     </Exec>
 
     <!-- Fail the build on non-zero exit; future work: map diagnostics by reading a JSON stream -->
     <Error Condition="'$(WeaverExitCode)' != '0'" Text="Weaver compilation failed for %(_WeaverToCompile.Identity) (exit code $(WeaverExitCode)). See tool output for details." />
 
-    <!-- Collect emitted artifacts for downstream copying/publishing -->
+    <!-- Collect emitted artifacts for downstream copying/publishing. The CLI emits artifacts next to
+         the source stylesheet; copy them into the configured WeaverOutputDir so MSBuild can
+         include them in publish/output. -->
     <ItemGroup>
-      <WeaverArtifact Include="$(WeaverOutputDir)**\*.*" />
+      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).bundle.js" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).bundle.js')" />
+      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).bundle.js.map" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).bundle.js.map')" />
+      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).js" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).js')" />
+      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).js.map" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).js.map')" />
+      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).ts" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).ts')" />
+      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).d.ts" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).d.ts')" />
+      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).digest" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).digest')" />
+      <WeaverArtifact Include="$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json" Condition="Exists('$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json')" />
     </ItemGroup>
 
     <!-- Optionally copy to publish/output dir when enabled -->

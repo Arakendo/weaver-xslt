@@ -16,7 +16,9 @@ export interface BundleJsResult {
 export function bundleJs(options: BundleJsOptions): BundleJsResult {
   const { buildSync } = require('esbuild') as typeof import('esbuild');
   const sourcePath = options.sourcePath ?? 'stylesheet';
-  const runtimeSourcePath = resolve(import.meta.dirname, '../runtime/index.ts');
+  // Prefer the built JS runtime when invoking from a packaging or single-repo layout.
+  // Using .js avoids esbuild alias resolution pointing at non-existent .ts files in dist.
+  const runtimeSourcePath = resolve(import.meta.dirname, '../runtime/index.js');
   const bundleOutputPath = `${sourcePath}.bundle.js`;
 
   const result = buildSync({
