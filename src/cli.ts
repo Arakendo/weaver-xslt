@@ -13,7 +13,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import chokidar from 'chokidar';
 
-import { formatDiagnostics, renderDiagnosticError, projectDiagnosticReports } from './diagnostics/index.js';
+import { formatDiagnostics, renderDiagnosticError, projectDiagnosticReports, diagnosticReportFromError } from './diagnostics/index.js';
 import {
   XsltProcessor,
   type TransformExecutionFallbackReason,
@@ -600,6 +600,31 @@ function emitCompiledArtifacts(
   } catch (error) {
     const stylesheet = tryReadSource(resolvedInputPath);
     io.stderr(`${renderDiagnosticError(error, stylesheet)}\n`);
+
+    // If the caller requested a diagnostics-out JSON path, attempt to write a
+    // structured diagnostic payload derived from the thrown error. This ensures
+    // MSBuild consumers can consume JSON even when the compiler throws instead
+    // of returning a diagnostics array.
+    if (cliDiagnosticsOutPath !== undefined) {
+      try {
+        const report = diagnosticReportFromError(error);
+        const jsonReports = projectDiagnosticReports([report as any]);
+        const output = { source: { path: resolvedInputPath }, diagnostics: jsonReports };
+        try {
+          mkdirSync(resolve(cliDiagnosticsOutPath, '..'), { recursive: true });
+        } catch {
+          // ignore mkdir failure
+        }
+        try {
+          writeFileSync(cliDiagnosticsOutPath, JSON.stringify(output, null, 2), 'utf8');
+        } catch {
+          // ignore write failure; we already rendered the error to stderr above
+        }
+      } catch {
+        // ignore any errors while attempting to synthesize diagnostics
+      }
+    }
+
     return false;
   }
 }
@@ -975,6 +1000,12 @@ function writeDiagnostics(
 
     if (cliDiagnosticsOutPath !== undefined) {
       try {
+        // Ensure parent directory exists before attempting to write diagnostics
+        try {
+          mkdirSync(resolve(cliDiagnosticsOutPath, '..'), { recursive: true });
+        } catch {
+          // ignore mkdir failure and let writeFileSync surface the error
+        }
         writeFileSync(cliDiagnosticsOutPath, JSON.stringify(output, null, 2), 'utf8');
       } catch (error) {
         // Fall back to writing JSON to stdout if we cannot write to file
