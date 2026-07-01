@@ -25,6 +25,10 @@
   </Target>
 
   <Target Name="CompileWeaverStylesheets" DependsOnTargets="ResolveWeaverInputs" BeforeTargets="BeforeBuild" Condition="'$(WeaverEnabled)' == 'true' and '@(WeaverStylesheet)' != ''">
+    <PropertyGroup>
+      <!-- Helper to pass fail-on-diagnostics flag to the CLI when requested -->
+      <WeaverCliFailFlag Condition="'$(WeaverFailOnDiagnostics)' == 'true'">--fail-on-diagnostics true</WeaverCliFailFlag>
+    </PropertyGroup>
     <!-- For each stylesheet invoke the CLI. This simple Exec-based approach is a scaffold.
          A production integration should call the carrier and parse a machine-readable
          diagnostics stream instead of relying on raw console output. -->
@@ -34,7 +38,7 @@
 
     <Message Text="Weaver: compiling %(_WeaverToCompile.Identity) -> $(WeaverOutputDir)" Importance="High" />
 
-    <Exec Command="&quot;$(WeaverNode)&quot; &quot;$(WeaverToolCliPath)&quot; compile &quot;%(_WeaverToCompile.Identity)&quot; --emit $(WeaverEmit) --outDir &quot;$(WeaverOutputDir)&quot;" WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="true">
+    <Exec Command="&quot;$(WeaverNode)&quot; &quot;$(WeaverToolCliPath)&quot; compile &quot;%(_WeaverToCompile.Identity)&quot; --emit $(WeaverEmit) --outDir &quot;$(WeaverOutputDir)&quot; --diagnostics json --diagnostics-out &quot;$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json&quot; $(WeaverCliFailFlag)" WorkingDirectory="$(MSBuildThisFileDirectory)" IgnoreExitCode="true">
       <Output TaskParameter="ExitCode" PropertyName="WeaverExitCode" />
     </Exec>
 

@@ -24,5 +24,7 @@
     <WeaverNode>node</WeaverNode>
     <!-- Verbosity for the build integration -->
     <WeaverLogVerbosity>normal</WeaverLogVerbosity>
+    <!-- Fail build on diagnostics: when true, warnings+errors emitted by the compiler will cause the CLI to exit non-zero -->
+    <WeaverFailOnDiagnostics>false</WeaverFailOnDiagnostics>
   </PropertyGroup>
 </Project>

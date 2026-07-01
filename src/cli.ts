@@ -12,7 +12,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import chokidar from 'chokidar';
 
-import { formatDiagnostics, renderDiagnosticError } from './diagnostics/index.js';
+import { formatDiagnostics, renderDiagnosticError, projectDiagnosticReports } from './diagnostics/index.js';
 import {
   XsltProcessor,
   type TransformExecutionFallbackReason,
@@ -38,25 +38,104 @@ export interface RunCliOptions {
   readonly onWatchReady?: () => void | Promise<void>;
 }
 
+let cliDiagnosticsFormat: 'text' | 'json' = 'text';
+let cliDiagnosticsOutPath: string | undefined = undefined;
+let cliFailOnDiagnostics = false;
+let cliEmittedErrorDiagnostics = false;
+
 export async function runCli(
   args: readonly string[],
   io: CliIo = defaultIo,
   options: RunCliOptions = {},
 ): Promise<number> {
-  if (args.length === 0 || args[0] === '--help' || args[0] === '-h' || args[0] === 'help') {
+  // Handle empty or explicit help flags first
+  if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
     io.stdout(renderUsage());
     return 0;
   }
 
-  const [command] = args;
+  // Extract global flags (diagnostics/format) and remove them from the dispatched args
+  const filteredArgs: string[] = [];
+  for (let i = 0; i < args.length; i += 1) {
+    const token = args[i];
+    if (token === undefined) {
+      continue;
+    }
+
+    // Look ahead token helper to satisfy strict null checks
+    const next = args[i + 1];
+
+    if ((token === '--diagnostics' || token === '--format') && next === 'json') {
+      cliDiagnosticsFormat = 'json';
+      i += 1; // skip the 'json' token
+      continue;
+    }
+
+    if (token === '--diagnostics-out' && next !== undefined) {
+      cliDiagnosticsOutPath = next;
+      i += 1;
+      continue;
+    }
+
+    if (token === '--fail-on-diagnostics' && next !== undefined) {
+      const v = next.toLowerCase();
+      cliFailOnDiagnostics = v === 'true' || v === '1' || v === 'yes';
+      i += 1;
+      continue;
+    }
+
+    filteredArgs.push(token);
+  }
+
+  const effectiveArgs = filteredArgs as readonly string[];
+  const [command] = effectiveArgs;
 
   switch (command) {
     case 'compile':
-      return runCompileCommand(args.slice(1), io);
+      return runCompileCommand(effectiveArgs.slice(1), io);
     case 'watch':
-      return runWatchCommand(args.slice(1), io, options);
+      return runWatchCommand(effectiveArgs.slice(1), io, options);
     case 'run':
-      return runTransformCommand(args.slice(1), io);
+      return runTransformCommand(effectiveArgs.slice(1), io);
+    case 'help': {
+      const helpCommand = effectiveArgs[1];
+      if (!helpCommand) {
+        io.stdout(renderUsage());
+        return 0;
+      }
+
+      switch (helpCommand) {
+        case 'compile':
+          io.stdout([
+            'weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|bundle|ts,js|ts,bundle|js,bundle] [--diagnostics json]',
+            '',
+            'Compile matched stylesheets into artifacts. Use --sample to provide a sample XML document for composition. --emit chooses emitted artifact flavors.',
+            '',
+            'Machine-readable diagnostics: add "--diagnostics json" or "--format json" to emit a JSON diagnostics payload suitable for MSBuild/MSBuild targets.',
+            '',
+          ].join('\n'));
+          return 0;
+        case 'watch':
+          io.stdout([
+            'weaver-xslt watch <glob> [--sample <xml>] [--emit ...] [--diagnostics json]',
+            '',
+            'Watch matching files and recompile on change. Diagnostics can be emitted in JSON mode as above.',
+            '',
+          ].join('\n'));
+          return 0;
+        case 'run':
+          io.stdout([
+            'weaver-xslt run <stylesheet> --input <xml> [--execution <interpreter|native|auto>] [--param <name=value> ...]',
+            '',
+            'Run a compiled or source stylesheet against an input XML and write the transform output to stdout. This command is primarily for quick validation and debugging.',
+            '',
+          ].join('\n'));
+          return 0;
+        default:
+          io.stderr(`Unknown help topic: ${helpCommand}\n`);
+          return 1;
+      }
+    }
     default:
       io.stderr(`${renderUsage()}\n`);
       return 1;
@@ -93,10 +172,18 @@ function runCompileCommand(args: readonly string[], io: CliIo): number {
     return 1;
   }
 
+  // Reset transient diagnostic state for this invocation
+  cliEmittedErrorDiagnostics = false;
+
   for (const resolvedInputPath of matchedPaths) {
     if (!emitCompiledArtifacts(resolvedInputPath, io, parsed.samplePath, parsed.emitTargets)) {
       return 1;
     }
+  }
+
+  // If requested, fail the CLI when diagnostics contained error/warning per policy
+  if (cliFailOnDiagnostics && cliEmittedErrorDiagnostics) {
+    return 2;
   }
 
   return 0;
@@ -868,6 +955,51 @@ function writeDiagnostics(
   stylesheet: string,
   io: CliIo,
 ): void {
+  if (diagnostics.length === 0) {
+    return;
+  }
+
+  // Track if any error-level diagnostics were emitted so callers can decide to
+  // fail the process when requested.
+  if (diagnostics.some((d) => d.severity === 'error')) {
+    cliEmittedErrorDiagnostics = true;
+  }
+
+  if (cliDiagnosticsFormat === 'json') {
+    // Emit a stable, machine-readable diagnostics payload suitable for MSBuild
+    // or other automation that consumes JSON. Use projectDiagnosticReports to
+    // preserve structured fields and spans.
+    const jsonReports = projectDiagnosticReports(diagnostics as any);
+    const output = { source: { path: stylesheet }, diagnostics: jsonReports };
+
+    if (cliDiagnosticsOutPath !== undefined) {
+      try {
+        writeFileSync(cliDiagnosticsOutPath, JSON.stringify(output, null, 2), 'utf8');
+      } catch (error) {
+        // Fall back to writing JSON to stdout if we cannot write to file
+        io.stderr(`weaver: failed to write diagnostics to ${cliDiagnosticsOutPath}: ${String(error)}\n`);
+        io.stdout(`${JSON.stringify(output, null, 2)}\n`);
+      }
+    } else {
+      io.stdout(`${JSON.stringify(output, null, 2)}\n`);
+    }
+
+    // Also emit MSBuild-friendly lines to stderr so MSBuild picks up file/line/col
+    for (const report of diagnostics) {
+      const sev = report.severity === 'error' ? 'error' : 'warning';
+      if (report.primary !== undefined) {
+        const file = report.primary.uri ?? '<unknown>';
+        const line = report.primary.lineStart ?? 1;
+        const col = report.primary.columnStart ?? 1;
+        io.stderr(`${file}(${line},${col}): ${sev} ${report.code}: ${report.message}\n`);
+      } else {
+        io.stderr(`${sev} ${report.code}: ${report.message}\n`);
+      }
+    }
+
+    return;
+  }
+
   const rendered = formatDiagnostics(diagnostics, stylesheet);
   if (rendered.length > 0) {
     io.stderr(rendered);
