@@ -4,9 +4,15 @@
     <!-- Default emit flavor: bundle is recommended for .NET consumers -->
     <WeaverEmit Condition="'$(WeaverEmit)' == ''">bundle</WeaverEmit>
     <!-- Where emitted artifacts are staged during build -->
-    <WeaverOutputDir Condition="'$(WeaverOutputDir)' == ''">$(IntermediateOutputPath)weaver\</WeaverOutputDir>
+    <WeaverOutputDir Condition="'$(WeaverOutputDir)' == ''">$(IntermediateOutputPath)weaver/</WeaverOutputDir>
     <!-- Whether emitted artifacts are copied into the project output/publish dir -->
     <WeaverCopyToOutput Condition="'$(WeaverCopyToOutput)' == ''">true</WeaverCopyToOutput>
+    <!-- Whether staged Weaver artifacts are copied into the app output/publish dir -->
+    <WeaverPublishWithProject Condition="'$(WeaverPublishWithProject)' == ''">true</WeaverPublishWithProject>
+    <!-- Relative subfolder under the app output/publish dir for Weaver artifacts -->
+    <WeaverPublishSubdir Condition="'$(WeaverPublishSubdir)' == ''">weaver/</WeaverPublishSubdir>
+    <!-- Whether source maps are copied into the app output/publish dir -->
+    <WeaverCopySourceMapsToOutput Condition="'$(WeaverCopySourceMapsToOutput)' == ''">false</WeaverCopySourceMapsToOutput>
     <!-- Master switch to disable integration quickly -->
     <WeaverEnabled Condition="'$(WeaverEnabled)' == ''">true</WeaverEnabled>
     <!-- Controls whether the integration runs during Visual Studio design-time builds
@@ -22,9 +28,19 @@
     <WeaverDisableFile></WeaverDisableFile>
     <!-- Node executable to use; default autodetect to PATH 'node' -->
     <WeaverNode Condition="'$(WeaverNode)' == ''">node</WeaverNode>
+    <!-- Scaffold placeholder for a future toolchain carrier version -->
+    <WeaverToolVersion Condition="'$(WeaverToolVersion)' == ''">scaffold</WeaverToolVersion>
+    <!-- Opt-in bundled Node is planned but not yet implemented in the scaffold -->
+    <WeaverUseBundledNode Condition="'$(WeaverUseBundledNode)' == ''">false</WeaverUseBundledNode>
+    <!-- Machine-readable diagnostics format requested from the CLI -->
+    <WeaverDiagnosticsFormat Condition="'$(WeaverDiagnosticsFormat)' == ''">json</WeaverDiagnosticsFormat>
     <!-- Verbosity for the build integration -->
-    <WeaverLogVerbosity>normal</WeaverLogVerbosity>
+    <WeaverLogVerbosity Condition="'$(WeaverLogVerbosity)' == ''">normal</WeaverLogVerbosity>
     <!-- Fail build on diagnostics: when true, warnings+errors emitted by the compiler will cause the CLI to exit non-zero -->
-    <WeaverFailOnDiagnostics>false</WeaverFailOnDiagnostics>
+    <WeaverFailOnDiagnostics Condition="'$(WeaverFailOnDiagnostics)' == ''">false</WeaverFailOnDiagnostics>
+    <WeaverMessageImportance Condition="'$(WeaverLogVerbosity)' == 'quiet'">Low</WeaverMessageImportance>
+    <WeaverMessageImportance Condition="'$(WeaverLogVerbosity)' == 'normal'">Normal</WeaverMessageImportance>
+    <WeaverMessageImportance Condition="'$(WeaverLogVerbosity)' == 'detailed'">High</WeaverMessageImportance>
+    <WeaverMessageImportance Condition="'$(WeaverMessageImportance)' == ''">Normal</WeaverMessageImportance>
   </PropertyGroup>
 </Project>

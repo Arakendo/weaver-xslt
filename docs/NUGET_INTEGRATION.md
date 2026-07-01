@@ -1,6 +1,10 @@
 # NuGet Integration Plan — ASP.NET / .NET consumer packaging
 
-> Status: **in-progress** — initial .NET/MSBuild scaffold added in dotnet/Weaver.Build. This document is the implementation plan and reference for the NuGet packaging and MSBuild integration work.
+> Status: **in-progress** — the repo now contains a packable `Weaver.Build`
+> project plus local `.NET` validation projects that consume it through
+> `PackageReference`. The carrier/tool payload is still scaffold-level, and the
+> local validation projects currently override `WeaverToolCliPath` to the repo's
+> built `dist/cli.js` so they exercise the real engine.
 
 > Note: the scaffold is intentionally minimal and intended to be iterated on. The plan sections below describe the intended package shape, properties, and acceptance criteria.
 
@@ -49,6 +53,31 @@ That recommendation is intentionally conservative.
 
 If a single sentence is needed: **NuGet should first be a build integration
 product, not a second runtime implementation.**
+
+## 0.1 Current implementation status
+
+What exists in-tree today:
+
+- `dotnet/Weaver.Build/Weaver.Build.csproj` packs a local `Weaver.Build`
+  NuGet package for validation.
+- `dotnet/Weaver.Build/build/Weaver.Build.props` and
+  `dotnet/Weaver.Build/build/Weaver.Build.targets` provide the current MSBuild
+  integration scaffold.
+- `dotnet/sample-app` and `dotnet/diagnostics-fail` validate the package through
+  `PackageReference`, not direct `Import` of the props/targets files.
+- The scaffold honors per-item metadata, stages artifacts into
+  `$(WeaverOutputDir)`, participates in build/publish, and maps diagnostics into
+  MSBuild-friendly output.
+
+What is still intentionally unfinished:
+
+- The packaged carrier under `tools/weaver/` is still a scaffold fallback, not
+  the finished self-contained production CLI payload.
+- Local package-consumer validation currently overrides `WeaverToolCliPath` to
+  the repo's built `dist/cli.js` so the validation path exercises the real
+  Weaver engine semantics.
+- The planned `Weaver.Tool` split is still a design target rather than a fully
+  implemented package boundary.
 
 ## 1. Problem statement
 

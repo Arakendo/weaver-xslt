@@ -12,8 +12,8 @@
          place the CLI entrypoint under tools/weaver/ in the package layout. -->
     <!-- Prefer the locally built JS CLI (dist/cli.js) when present in the repo. -->
     <_LocalDistCli>$(MSBuildThisFileDirectory)..\..\..\dist\cli.js</_LocalDistCli>
-    <WeaverToolCliPath Condition="Exists('$(_LocalDistCli)')">$(_LocalDistCli)</WeaverToolCliPath>
-    <WeaverToolCliPath Condition="!Exists('$(_LocalDistCli)')">$(MSBuildThisFileDirectory)..\tools\weaver\weaver-xslt.js</WeaverToolCliPath>
+    <WeaverToolCliPath Condition="'$(WeaverToolCliPath)' == '' and Exists('$(_LocalDistCli)')">$(_LocalDistCli)</WeaverToolCliPath>
+    <WeaverToolCliPath Condition="'$(WeaverToolCliPath)' == '' and !Exists('$(_LocalDistCli)')">$(MSBuildThisFileDirectory)..\tools\weaver\weaver-xslt.js</WeaverToolCliPath>
   </PropertyGroup>
 
   <!-- Ensure the item exists even if consumer omitted it so targets don't fail. -->
@@ -22,14 +22,38 @@
   </ItemGroup>
 
   <Target Name="ResolveWeaverInputs" BeforeTargets="BeforeBuild" Condition="'$(WeaverEnabled)' == 'true' and ( '$(DesignTimeBuild)' != 'true' or '$(WeaverDesignTimeEnabled)' == 'true' ) and ( '$(WeaverDisableFile)' == '' or !Exists('$(WeaverDisableFile)') )">
-    <!-- Debug: print the list of WeaverStylesheet items available to this target -->
-    <Message Text="Weaver: item @(WeaverStylesheet)" Importance="High" />
-    <Message Text="Weaver: resolving %(WeaverStylesheet.Identity) (WeaverEmit=$(WeaverEmit))" Importance="High" Condition="'@(WeaverStylesheet)' != ''" />
+    <Error Condition="'$(WeaverUseBundledNode)' == 'true'" Text="Weaver.Build scaffold does not yet implement bundled Node. Set WeaverUseBundledNode=false and provide WeaverNode instead." />
+    <Error Condition="'@(WeaverStylesheet)' != '' and !Exists('$(WeaverToolCliPath)')" Text="Weaver.Build could not find the Weaver CLI at $(WeaverToolCliPath). Build the repo dist CLI or package the carrier under dotnet/Weaver.Build/tools/weaver/." />
+
+    <ItemGroup>
+      <WeaverStylesheet Update="@(WeaverStylesheet)">
+        <EffectiveEmit Condition="'%(WeaverStylesheet.Emit)' == ''">$(WeaverEmit)</EffectiveEmit>
+        <EffectiveEmit Condition="'%(WeaverStylesheet.Emit)' != ''">%(WeaverStylesheet.Emit)</EffectiveEmit>
+        <EffectiveSample Condition="'%(WeaverStylesheet.Sample)' == ''"></EffectiveSample>
+        <EffectiveSample Condition="'%(WeaverStylesheet.Sample)' != ''">%(WeaverStylesheet.Sample)</EffectiveSample>
+        <EffectiveOutputSubdir Condition="'%(WeaverStylesheet.OutputSubdir)' == ''">%(WeaverStylesheet.RelativeDir)</EffectiveOutputSubdir>
+        <EffectiveOutputSubdir Condition="'%(WeaverStylesheet.OutputSubdir)' != ''">%(WeaverStylesheet.OutputSubdir)</EffectiveOutputSubdir>
+        <EffectiveCopyToOutput Condition="'%(WeaverStylesheet.CopyToOutput)' == ''">$(WeaverCopyToOutput)</EffectiveCopyToOutput>
+        <EffectiveCopyToOutput Condition="'%(WeaverStylesheet.CopyToOutput)' != ''">%(WeaverStylesheet.CopyToOutput)</EffectiveCopyToOutput>
+      </WeaverStylesheet>
+    </ItemGroup>
+
+    <ItemGroup>
+      <WeaverStylesheet Update="@(WeaverStylesheet)">
+        <SampleArgument Condition="'%(WeaverStylesheet.EffectiveSample)' != ''">--sample &quot;%(WeaverStylesheet.EffectiveSample)&quot;</SampleArgument>
+        <DiagnosticsOutPath>$(WeaverOutputDir)%(WeaverStylesheet.EffectiveOutputSubdir)%(WeaverStylesheet.Filename).diagnostics.json</DiagnosticsOutPath>
+        <ArtifactBaseName>%(WeaverStylesheet.Filename)%(WeaverStylesheet.Extension)</ArtifactBaseName>
+      </WeaverStylesheet>
+    </ItemGroup>
+
+    <Message Text="Weaver: item @(WeaverStylesheet)" Importance="$(WeaverMessageImportance)" Condition="'@(WeaverStylesheet)' != ''" />
+    <Message Text="Weaver: resolving %(WeaverStylesheet.Identity) (emit=%(WeaverStylesheet.EffectiveEmit), sample=%(WeaverStylesheet.EffectiveSample), stage=$(WeaverOutputDir)%(WeaverStylesheet.EffectiveOutputSubdir))" Importance="$(WeaverMessageImportance)" Condition="'@(WeaverStylesheet)' != ''" />
 
     <!-- Build an item list of inputs (stylesheet plus any .deps files' contents) so the compile target can be incremental -->
     <ItemGroup>
       <!-- Add the stylesheet file itself as an input -->
       <WeaverInputs Include="@(WeaverStylesheet->'$(MSBuildProjectDirectory)/%(Identity)')" />
+      <WeaverInputs Include="@(WeaverStylesheet->'$(MSBuildProjectDirectory)/%(EffectiveSample)')" Condition="'%(WeaverStylesheet.EffectiveSample)' != '' and Exists('$(MSBuildProjectDirectory)/%(WeaverStylesheet.EffectiveSample)')" />
       <!-- Collect any existing .deps sidecars for reading dependency lines -->
       <_WeaverDepsFiles Include="$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).deps" Condition="Exists('$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).deps')" />
     </ItemGroup>
@@ -41,7 +65,7 @@
 
     <!-- Precompute the outputs (possible primary artifacts) to enable Inputs/Outputs evaluation. -->
     <ItemGroup>
-      <WeaverOutputs Include="$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).bundle.js;$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).js;$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).ts" />
+      <WeaverOutputs Include="$(WeaverOutputDir)%(WeaverStylesheet.EffectiveOutputSubdir)%(WeaverStylesheet.ArtifactBaseName).bundle.js;$(WeaverOutputDir)%(WeaverStylesheet.EffectiveOutputSubdir)%(WeaverStylesheet.ArtifactBaseName).js;$(WeaverOutputDir)%(WeaverStylesheet.EffectiveOutputSubdir)%(WeaverStylesheet.ArtifactBaseName).ts" />
     </ItemGroup>
   </Target>
 
@@ -57,15 +81,18 @@
       <_WeaverToCompile Include="@(WeaverStylesheet)" />
     </ItemGroup>
 
-    <Message Text="Weaver: compiling %(_WeaverToCompile.Identity) -> $(WeaverOutputDir)" Importance="High" />
+    <MakeDir Directories="$(WeaverOutputDir);@(_WeaverToCompile->'$(WeaverOutputDir)%(EffectiveOutputSubdir)')" />
+    <Delete Files="%(_WeaverToCompile.DiagnosticsOutPath)" Condition="Exists('%(_WeaverToCompile.DiagnosticsOutPath)')" />
 
-    <Exec Command="&quot;$(WeaverNode)&quot; &quot;$(WeaverToolCliPath)&quot; compile &quot;%(_WeaverToCompile.Identity)&quot; --emit $(WeaverEmit) --diagnostics json --diagnostics-out &quot;$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json&quot; $(WeaverCliFailFlag)" WorkingDirectory="$(MSBuildProjectDirectory)" IgnoreExitCode="true">
+    <Message Text="Weaver: compiling %(_WeaverToCompile.Identity) -> $(WeaverOutputDir)%(_WeaverToCompile.EffectiveOutputSubdir)" Importance="$(WeaverMessageImportance)" />
+
+    <Exec Command="&quot;$(WeaverNode)&quot; &quot;$(WeaverToolCliPath)&quot; compile &quot;%(_WeaverToCompile.Identity)&quot; --emit %(_WeaverToCompile.EffectiveEmit) --diagnostics $(WeaverDiagnosticsFormat) --diagnostics-out &quot;%(_WeaverToCompile.DiagnosticsOutPath)&quot; %(_WeaverToCompile.SampleArgument) $(WeaverCliFailFlag)" WorkingDirectory="$(MSBuildProjectDirectory)" IgnoreExitCode="true">
       <Output TaskParameter="ExitCode" PropertyName="WeaverExitCode" />
     </Exec>
 
     <!-- Emit structured diagnostics into MSBuild from any JSON diagnostics files produced by the CLI. -->
     <ItemGroup>
-      <_WeaverJsonDiagnostics Include="$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json" Condition="Exists('$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json')" />
+      <_WeaverJsonDiagnostics Include="%(_WeaverToCompile.DiagnosticsOutPath)" Condition="Exists('%(_WeaverToCompile.DiagnosticsOutPath)')" />
     </ItemGroup>
 
     <!-- If diagnostics JSON files exist, run a small Node script to render MSBuild-formatted messages so IDEs can parse them. -->
@@ -73,36 +100,102 @@
       <_WeaverJsonDiagnosticsFull Include="@(_WeaverJsonDiagnostics->'%(FullPath)')" />
     </ItemGroup>
     <Exec Condition="@(_WeaverJsonDiagnosticsFull) != ''"
-          Command="&quot;$(WeaverNode)&quot; &quot;$(MSBuildThisFileDirectory)..\tools\weaver\diagnostics-to-msbuild.cjs&quot; @(_WeaverJsonDiagnosticsFull->'&quot;%(FullPath)&quot;',' ')">
+          Command="&quot;$(WeaverNode)&quot; &quot;$(MSBuildThisFileDirectory)..\tools\weaver\diagnostics-to-msbuild.cjs&quot; @(_WeaverJsonDiagnosticsFull->'&quot;%(FullPath)&quot;',' ')"
+          IgnoreExitCode="true">
     </Exec>
 
-    <!-- Fail the build on non-zero exit; future work: map diagnostics by reading a JSON stream -->
-    <Error Condition="'$(WeaverExitCode)' != '0'" Text="Weaver compilation failed for %(_WeaverToCompile.Identity) (exit code $(WeaverExitCode)). See tool output for details." />
+        <!-- Fail the build on non-zero exit only when no structured diagnostics payload was produced.
+          If diagnostics exist, the helper already emitted the primary MSBuild-formatted errors/warnings. -->
+        <Error Condition="'$(WeaverExitCode)' != '0' and '@(_WeaverJsonDiagnostics)' == ''" Text="Weaver compilation failed for %(_WeaverToCompile.Identity) (exit code $(WeaverExitCode)). See tool output for details." />
 
-    <!-- Collect emitted artifacts for downstream copying/publishing. The CLI emits artifacts next to
-         the source stylesheet; copy them into the configured WeaverOutputDir so MSBuild can
+    <!-- Collect emitted artifacts for downstream staging/copying. The CLI emits artifacts next to
+         the source stylesheet; the scaffold stages them under WeaverOutputDir so MSBuild can
          include them in publish/output. -->
     <ItemGroup>
-      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).bundle.js" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).bundle.js')" />
-      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).bundle.js.map" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).bundle.js.map')" />
-      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).js" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).js')" />
-      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).js.map" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).js.map')" />
-      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).ts" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).ts')" />
-      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).d.ts" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).d.ts')" />
-      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).digest" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).digest')" />
-      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).deps" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).deps')" />
-      <WeaverArtifact Include="$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json" Condition="Exists('$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json')" />
+      <_WeaverSourceArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).bundle.js" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).bundle.js')">
+        <RelativeStagePath>%(_WeaverToCompile.EffectiveOutputSubdir)%(_WeaverToCompile.ArtifactBaseName).bundle.js</RelativeStagePath>
+        <ShouldCopyToOutput>%(_WeaverToCompile.EffectiveCopyToOutput)</ShouldCopyToOutput>
+      </_WeaverSourceArtifact>
+      <_WeaverSourceArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).bundle.js.map" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).bundle.js.map')">
+        <RelativeStagePath>%(_WeaverToCompile.EffectiveOutputSubdir)%(_WeaverToCompile.ArtifactBaseName).bundle.js.map</RelativeStagePath>
+        <ShouldCopyToOutput>%(_WeaverToCompile.EffectiveCopyToOutput)</ShouldCopyToOutput>
+      </_WeaverSourceArtifact>
+      <_WeaverSourceArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).js" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).js')">
+        <RelativeStagePath>%(_WeaverToCompile.EffectiveOutputSubdir)%(_WeaverToCompile.ArtifactBaseName).js</RelativeStagePath>
+        <ShouldCopyToOutput>%(_WeaverToCompile.EffectiveCopyToOutput)</ShouldCopyToOutput>
+      </_WeaverSourceArtifact>
+      <_WeaverSourceArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).js.map" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).js.map')">
+        <RelativeStagePath>%(_WeaverToCompile.EffectiveOutputSubdir)%(_WeaverToCompile.ArtifactBaseName).js.map</RelativeStagePath>
+        <ShouldCopyToOutput>%(_WeaverToCompile.EffectiveCopyToOutput)</ShouldCopyToOutput>
+      </_WeaverSourceArtifact>
+      <_WeaverSourceArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).ts" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).ts')">
+        <RelativeStagePath>%(_WeaverToCompile.EffectiveOutputSubdir)%(_WeaverToCompile.ArtifactBaseName).ts</RelativeStagePath>
+        <ShouldCopyToOutput>%(_WeaverToCompile.EffectiveCopyToOutput)</ShouldCopyToOutput>
+      </_WeaverSourceArtifact>
+      <_WeaverSourceArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).d.ts" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).d.ts')">
+        <RelativeStagePath>%(_WeaverToCompile.EffectiveOutputSubdir)%(_WeaverToCompile.ArtifactBaseName).d.ts</RelativeStagePath>
+        <ShouldCopyToOutput>%(_WeaverToCompile.EffectiveCopyToOutput)</ShouldCopyToOutput>
+      </_WeaverSourceArtifact>
+      <_WeaverSourceArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).digest" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).digest')">
+        <RelativeStagePath>%(_WeaverToCompile.EffectiveOutputSubdir)%(_WeaverToCompile.ArtifactBaseName).digest</RelativeStagePath>
+        <ShouldCopyToOutput>%(_WeaverToCompile.EffectiveCopyToOutput)</ShouldCopyToOutput>
+      </_WeaverSourceArtifact>
+      <_WeaverSourceArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).deps" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).deps')">
+        <RelativeStagePath>%(_WeaverToCompile.EffectiveOutputSubdir)%(_WeaverToCompile.ArtifactBaseName).deps</RelativeStagePath>
+        <ShouldCopyToOutput>%(_WeaverToCompile.EffectiveCopyToOutput)</ShouldCopyToOutput>
+      </_WeaverSourceArtifact>
     </ItemGroup>
 
-    <!-- Optionally copy to publish/output dir when enabled -->
-    <Copy Condition="'$(WeaverCopyToOutput)' == 'true'" SourceFiles="@(WeaverArtifact)" DestinationFiles="@(WeaverArtifact->'$(OutputPath)weaver\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_WeaverSourceArtifact)" DestinationFiles="@(_WeaverSourceArtifact->'$(WeaverOutputDir)%(RelativeStagePath)')" SkipUnchangedFiles="true" Condition="'@(_WeaverSourceArtifact)' != ''" />
 
-    <Message Text="Weaver: compiled %(_WeaverToCompile.Identity). Artifacts: @(WeaverArtifact)" Importance="Normal" />
+    <!-- The scaffold stages generated files into WeaverOutputDir and then removes the
+         source-adjacent copies so the project tree does not stay dirty after each build. -->
+    <Delete Files="@(_WeaverSourceArtifact)" Condition="'@(_WeaverSourceArtifact)' != ''" />
+
+    <ItemGroup>
+      <WeaverArtifact Include="@(_WeaverSourceArtifact->'$(WeaverOutputDir)%(RelativeStagePath)')">
+        <RelativeStagePath>%(_WeaverSourceArtifact.RelativeStagePath)</RelativeStagePath>
+        <ShouldCopyToOutput>%(_WeaverSourceArtifact.ShouldCopyToOutput)</ShouldCopyToOutput>
+      </WeaverArtifact>
+      <_WeaverPublishArtifact Include="@(_WeaverSourceArtifact)" Condition="'%(_WeaverSourceArtifact.ShouldCopyToOutput)' == 'true' and '$(WeaverPublishWithProject)' == 'true' and ( '$(WeaverCopySourceMapsToOutput)' == 'true' or '%(_WeaverSourceArtifact.Extension)' != '.map' )" />
+      <FileWrites Include="@(WeaverArtifact)" />
+      <FileWrites Include="@(_WeaverJsonDiagnostics)" />
+    </ItemGroup>
+
+    <Copy Condition="'@(_WeaverPublishArtifact)' != ''" SourceFiles="@(_WeaverPublishArtifact->'$(WeaverOutputDir)%(RelativeStagePath)')" DestinationFiles="@(_WeaverPublishArtifact->'$(OutputPath)$(WeaverPublishSubdir)%(RelativeStagePath)')" SkipUnchangedFiles="true" />
+
+    <Message Text="Weaver: compiled %(_WeaverToCompile.Identity). Staged artifacts: @(WeaverArtifact)" Importance="$(WeaverMessageImportance)" />
   </Target>
 
   <!-- Hook into Publish to ensure artifacts are included when publishing the app -->
-  <Target Name="WeaverCollectForPublish" AfterTargets="Publish" Condition="'$(WeaverEnabled)' == 'true' and '$(WeaverCopyToOutput)' == 'true'">
-    <Message Text="Weaver: publish-time artifacts should now be under $(OutputPath)weaver\" Importance="Normal" />
+  <Target Name="WeaverCollectForPublish" AfterTargets="Publish" Condition="'$(WeaverEnabled)' == 'true' and '$(WeaverPublishWithProject)' == 'true'">
+    <Message Text="Weaver: publish-time artifacts should now be under $(OutputPath)$(WeaverPublishSubdir)" Importance="$(WeaverMessageImportance)" />
+  </Target>
+
+  <Target Name="WeaverPrepareFilesToPublish" BeforeTargets="ComputeFilesToPublish" DependsOnTargets="CompileWeaverStylesheets" Condition="'$(WeaverEnabled)' == 'true' and '$(WeaverPublishWithProject)' == 'true' and Exists('$(WeaverOutputDir)')">
+    <ItemGroup>
+      <_WeaverPublishStagedArtifact Include="$(WeaverOutputDir)**/*" Exclude="$(WeaverOutputDir)**/*.diagnostics.json;$(WeaverOutputDir)**/*.deps" />
+      <ResolvedFileToPublish Include="@(_WeaverPublishStagedArtifact)" Condition="'$(WeaverCopySourceMapsToOutput)' == 'true' or '%(_WeaverPublishStagedArtifact.Extension)' != '.map'">
+        <RelativePath>$(WeaverPublishSubdir)%(_WeaverPublishStagedArtifact.RecursiveDir)%(_WeaverPublishStagedArtifact.Filename)%(_WeaverPublishStagedArtifact.Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="WeaverCleanGeneratedArtifacts" BeforeTargets="CoreClean" Condition="'$(WeaverEnabled)' == 'true' and '@(WeaverStylesheet)' != ''">
+    <ItemGroup>
+      <_WeaverGeneratedSourceArtifact Include="$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).bundle.js" Condition="Exists('$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).bundle.js')" />
+      <_WeaverGeneratedSourceArtifact Include="$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).bundle.js.map" Condition="Exists('$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).bundle.js.map')" />
+      <_WeaverGeneratedSourceArtifact Include="$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).js" Condition="Exists('$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).js')" />
+      <_WeaverGeneratedSourceArtifact Include="$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).js.map" Condition="Exists('$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).js.map')" />
+      <_WeaverGeneratedSourceArtifact Include="$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).ts" Condition="Exists('$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).ts')" />
+      <_WeaverGeneratedSourceArtifact Include="$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).d.ts" Condition="Exists('$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).d.ts')" />
+      <_WeaverGeneratedSourceArtifact Include="$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).deps" Condition="Exists('$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).deps')" />
+      <_WeaverGeneratedSourceArtifact Include="$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).digest" Condition="Exists('$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).digest')" />
+    </ItemGroup>
+
+    <Delete Files="@(_WeaverGeneratedSourceArtifact)" Condition="'@(_WeaverGeneratedSourceArtifact)' != ''" />
+    <RemoveDir Directories="$(WeaverOutputDir)" Condition="Exists('$(WeaverOutputDir)')" />
   </Target>
 
 </Project>

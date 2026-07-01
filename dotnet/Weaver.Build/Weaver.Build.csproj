@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>true</IsPackable>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <Version>0.0.1</Version>
+
+    <PackageId>Weaver.Build</PackageId>
+    <Title>Weaver.Build</Title>
+    <Description>MSBuild integration for compiling Weaver XSLT stylesheets during .NET build and publish.</Description>
+    <Authors>Arakendo</Authors>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/Arakendo/weaver-xslt</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Arakendo/weaver-xslt</PackageProjectUrl>
+    <PackageTags>xslt;xpath;msbuild;dotnet;build</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="build/Weaver.Build.props" Pack="true" PackagePath="build/Weaver.Build.props" />
+    <None Include="build/Weaver.Build.targets" Pack="true" PackagePath="build/Weaver.Build.targets" />
+    <None Include="tools/weaver/**" Pack="true" PackagePath="tools/weaver/" />
+  </ItemGroup>
+</Project>

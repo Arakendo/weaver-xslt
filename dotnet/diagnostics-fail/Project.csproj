@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
+    <RestoreSources>$(RestoreSources);$(MSBuildThisFileDirectory)..\Weaver.Build\artifacts</RestoreSources>
     <WeaverNode>node</WeaverNode>
+    <WeaverToolCliPath>$(MSBuildThisFileDirectory)..\..\dist\cli.js</WeaverToolCliPath>
     <WeaverEmit>bundle</WeaverEmit>
     <!-- Enable failing the build on diagnostics for this test -->
     <WeaverFailOnDiagnostics>true</WeaverFailOnDiagnostics>
@@ -9,11 +11,8 @@
     <WeaverOutputDir>$(MSBuildProjectDirectory)/weaver-out/</WeaverOutputDir>
   </PropertyGroup>
 
-  <!-- Import the local Weaver.Build props/targets scaffold -->
-  <Import Project="..\Weaver.Build\build\Weaver.Build.props" />
-  <Import Project="..\Weaver.Build\build\Weaver.Build.targets" />
-
   <ItemGroup>
+    <PackageReference Include="Weaver.Build" Version="0.0.1" />
     <WeaverStylesheet Include="Stylesheets/semantic-error.xsl" />
   </ItemGroup>
 </Project>
