@@ -73,9 +73,6 @@
       TaskName="WeaverEmitDiagnostics"
       TaskFactory="CodeTaskFactory"
       AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
-      <ParameterGroup>
-        <DiagnosticsFiles ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
-      </ParameterGroup>
       <Task>
         <Reference Include="System.Text.Json" />
         <Code Type="Class" Language="cs">
