@@ -3,9 +3,7 @@
     <TargetFramework>net7.0</TargetFramework>
     <OutputType>Exe</OutputType>
     <RestoreSources>$(RestoreSources);$(MSBuildThisFileDirectory)..\Weaver.Build\artifacts</RestoreSources>
-    <!-- Use bash to run the shim script in this test environment -->
     <WeaverNode>node</WeaverNode>
-    <WeaverToolCliPath>$(MSBuildThisFileDirectory)..\..\dist\cli.js</WeaverToolCliPath>
     <WeaverCopyToOutput>true</WeaverCopyToOutput>
     <!-- Ensure IntermediateOutputPath is set predictably for the test -->
     <IntermediateOutputPath>$(BaseIntermediateOutputPath)</IntermediateOutputPath>
@@ -21,7 +19,6 @@
   <!-- Test-time override so the scaffold runs the CLI in this environment -->
   <PropertyGroup>
     <WeaverNode>node</WeaverNode>
-    <WeaverToolCliPath>$(MSBuildThisFileDirectory)..\..\dist\cli.js</WeaverToolCliPath>
     <!-- Ensure the outDir is POSIX for the environment used in this test -->
     <WeaverOutputDir>$(MSBuildProjectDirectory)/weaver-out/</WeaverOutputDir>
   </PropertyGroup>

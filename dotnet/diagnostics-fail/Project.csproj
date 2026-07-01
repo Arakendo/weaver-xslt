@@ -3,7 +3,6 @@
     <TargetFramework>net7.0</TargetFramework>
     <RestoreSources>$(RestoreSources);$(MSBuildThisFileDirectory)..\Weaver.Build\artifacts</RestoreSources>
     <WeaverNode>node</WeaverNode>
-    <WeaverToolCliPath>$(MSBuildThisFileDirectory)..\..\dist\cli.js</WeaverToolCliPath>
     <WeaverEmit>bundle</WeaverEmit>
     <!-- Enable failing the build on diagnostics for this test -->
     <WeaverFailOnDiagnostics>true</WeaverFailOnDiagnostics>

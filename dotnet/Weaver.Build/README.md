@@ -41,6 +41,9 @@ Implemented scaffold behavior
   `WeaverCopySourceMapsToOutput=true`.
 - The scaffold can be packed as a local `Weaver.Build` NuGet package and consumed
   through `PackageReference` in the repo's validation projects.
+- The packed package now carries the built `dist/` CLI plus the minimal runtime
+  npm dependency set needed for local PackageReference validation without a
+  repo-local `WeaverToolCliPath` override.
 
 Key properties
 
@@ -112,9 +115,8 @@ Notes & next steps
 - The README here contains recommended toggles but a packaged Weaver.Build NuGet should document the same controls in its package README and docs/NUGET_INTEGRATION.md.
 - The scaffold still relies on the current CLI emitting primary artifacts next to
   the source stylesheet before the targets stage them into `$(WeaverOutputDir)`.
-- The local validation projects currently override `WeaverToolCliPath` to the repo's
-  built `dist/cli.js` so package-consumer validation exercises the real engine.
-  The packaged carrier script remains a scaffold fallback, not the finished
-  production tool payload.
+- The packaged carrier still reflects the repo's current local runtime dependency
+  graph. It is suitable for local validation, but it is not yet the final,
+  reduced production carrier shape.
 
 Refer to docs/NUGET_INTEGRATION.md for the full plan and acceptance criteria.

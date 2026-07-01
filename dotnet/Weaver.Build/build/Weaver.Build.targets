@@ -12,8 +12,10 @@
          place the CLI entrypoint under tools/weaver/ in the package layout. -->
     <!-- Prefer the locally built JS CLI (dist/cli.js) when present in the repo. -->
     <_LocalDistCli>$(MSBuildThisFileDirectory)..\..\..\dist\cli.js</_LocalDistCli>
+    <_PackagedDistCli>$(MSBuildThisFileDirectory)..\tools\weaver\dist\cli.js</_PackagedDistCli>
     <WeaverToolCliPath Condition="'$(WeaverToolCliPath)' == '' and Exists('$(_LocalDistCli)')">$(_LocalDistCli)</WeaverToolCliPath>
-    <WeaverToolCliPath Condition="'$(WeaverToolCliPath)' == '' and !Exists('$(_LocalDistCli)')">$(MSBuildThisFileDirectory)..\tools\weaver\weaver-xslt.js</WeaverToolCliPath>
+    <WeaverToolCliPath Condition="'$(WeaverToolCliPath)' == '' and !Exists('$(_LocalDistCli)') and Exists('$(_PackagedDistCli)')">$(_PackagedDistCli)</WeaverToolCliPath>
+    <WeaverToolCliPath Condition="'$(WeaverToolCliPath)' == '' and !Exists('$(_LocalDistCli)') and !Exists('$(_PackagedDistCli)')">$(MSBuildThisFileDirectory)..\tools\weaver\weaver-xslt.js</WeaverToolCliPath>
   </PropertyGroup>
 
   <!-- Ensure the item exists even if consumer omitted it so targets don't fail. -->

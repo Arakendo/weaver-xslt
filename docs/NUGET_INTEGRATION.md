@@ -2,9 +2,9 @@
 
 > Status: **in-progress** — the repo now contains a packable `Weaver.Build`
 > project plus local `.NET` validation projects that consume it through
-> `PackageReference`. The carrier/tool payload is still scaffold-level, and the
-> local validation projects currently override `WeaverToolCliPath` to the repo's
-> built `dist/cli.js` so they exercise the real engine.
+> `PackageReference`. The packed package now carries the built `dist/` CLI and
+> a minimal runtime npm dependency set for local validation, but the carrier
+> shape is still scaffold-level rather than a reduced production payload.
 
 > Note: the scaffold is intentionally minimal and intended to be iterated on. The plan sections below describe the intended package shape, properties, and acceptance criteria.
 
@@ -68,14 +68,16 @@ What exists in-tree today:
 - The scaffold honors per-item metadata, stages artifacts into
   `$(WeaverOutputDir)`, participates in build/publish, and maps diagnostics into
   MSBuild-friendly output.
+- The packed `Weaver.Build` package carries the repo-built `dist/` CLI plus the
+  minimal npm runtime dependency set needed for local package-consumer
+  validation.
 
 What is still intentionally unfinished:
 
 - The packaged carrier under `tools/weaver/` is still a scaffold fallback, not
-  the finished self-contained production CLI payload.
-- Local package-consumer validation currently overrides `WeaverToolCliPath` to
-  the repo's built `dist/cli.js` so the validation path exercises the real
-  Weaver engine semantics.
+- The packaged carrier shape still reflects the repo's current runtime
+  dependency graph and has not yet been reduced into a cleaner production
+  carrier boundary.
 - The planned `Weaver.Tool` split is still a design target rather than a fully
   implemented package boundary.
 
