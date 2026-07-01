@@ -293,6 +293,28 @@ function composeStylesheetSourceDetailsFromFile(stylesheetPath: string): {
     );
     const prunedEntries = pruneLowerPrecedenceDuplicates(entries);
     const children = prunedEntries.map((entry) => entry.xml).join('');
+
+    // Also detect simple literal document('...') references in the composed source so
+    // runtime document() dependencies that are static file URIs are included in deps.
+    try {
+      const docRegex = /document\(\s*(['"])([^'"\)]+)\1\s*\)/g;
+      const baseDirForDoc = dirname(stylesheetPath);
+      let m;
+      while ((m = docRegex.exec(children)) !== null) {
+        try {
+          const href = m[2];
+          if (href && href.length > 0) {
+            const resolved = resolve(baseDirForDoc, href);
+            dependencyPaths.add(resolved);
+          }
+        } catch {
+          // ignore resolution errors
+        }
+      }
+    } catch {
+      // swallow any errors while scanning for document() patterns
+    }
+
     return {
       source: `<${root.nodeName}${serializeAttributes(root)}>${children}</${root.nodeName}>`,
       summary: createComposedStylesheetSummary(resolvedStylesheetPath, entries, prunedEntries),
