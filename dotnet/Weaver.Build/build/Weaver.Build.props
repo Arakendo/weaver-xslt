@@ -2,18 +2,18 @@
   <!-- Weaver.Build default properties (consumers can override in their project) -->
   <PropertyGroup>
     <!-- Default emit flavor: bundle is recommended for .NET consumers -->
-    <WeaverEmit>bundle</WeaverEmit>
+    <WeaverEmit Condition="'$(WeaverEmit)' == ''">bundle</WeaverEmit>
     <!-- Where emitted artifacts are staged during build -->
-    <WeaverOutputDir>$(IntermediateOutputPath)weaver\</WeaverOutputDir>
+    <WeaverOutputDir Condition="'$(WeaverOutputDir)' == ''">$(IntermediateOutputPath)weaver\</WeaverOutputDir>
     <!-- Whether emitted artifacts are copied into the project output/publish dir -->
-    <WeaverCopyToOutput>true</WeaverCopyToOutput>
+    <WeaverCopyToOutput Condition="'$(WeaverCopyToOutput)' == ''">true</WeaverCopyToOutput>
     <!-- Master switch to disable integration quickly -->
-    <WeaverEnabled>true</WeaverEnabled>
+    <WeaverEnabled Condition="'$(WeaverEnabled)' == ''">true</WeaverEnabled>
     <!-- Controls whether the integration runs during Visual Studio design-time builds
          (IntelliSense / background project evaluation). By default integration is
          skipped during design-time evaluation to avoid IDE churn. Set to 'true' to
          enable compilation during design-time (not recommended by default). -->
-    <WeaverDesignTimeEnabled>false</WeaverDesignTimeEnabled>
+    <WeaverDesignTimeEnabled Condition="'$(WeaverDesignTimeEnabled)' == ''">false</WeaverDesignTimeEnabled>
     <!-- Optional path to a "disable" marker file. If set and the file exists,
          Weaver.Build targets will skip compilation. This allows repo-level or
          CI-driven toggles without changing project files. Example: create a
@@ -21,7 +21,7 @@
          set WeaverDisableFile to that path in a local override. -->
     <WeaverDisableFile></WeaverDisableFile>
     <!-- Node executable to use; default autodetect to PATH 'node' -->
-    <WeaverNode>node</WeaverNode>
+    <WeaverNode Condition="'$(WeaverNode)' == ''">node</WeaverNode>
     <!-- Verbosity for the build integration -->
     <WeaverLogVerbosity>normal</WeaverLogVerbosity>
     <!-- Fail build on diagnostics: when true, warnings+errors emitted by the compiler will cause the CLI to exit non-zero -->
