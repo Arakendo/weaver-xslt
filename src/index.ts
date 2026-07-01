@@ -7,32 +7,34 @@
 
 export { XsltProcessor } from './processor/XsltProcessor.js';
 export {
-	createCompiledDocument,
-	createXmlNodeHandle,
-	resolveXmlNodeHandle,
-	resolveXmlNodeHandleAtOffset,
-	resolveXmlNodeHandleInRange,
+  createCompiledDocument,
+  createXmlNodeHandle,
+  resolveXmlNodeHandle,
+  resolveXmlNodeHandleAtOffset,
+  resolveXmlNodeHandleInRange,
 } from './runtime/index.js';
 export type {
-	XmlNodeHandle,
-	XmlTraceBreakpoint,
-	XmlTraceEvent,
-	XmlTraceEventKind,
-	XmlTracePause,
-	TransformExecutionFallbackReason,
-	TransformExecutionFallbackReasonCode,
-	TransformExecutionInfo,
-	TransformExecutionMode,
-	TransformTraceOptions,
-	TransformOptions,
-	TransformResult,
+  XmlNodeHandle,
+  XmlTraceBreakpoint,
+  XmlTraceEvent,
+  XmlTraceEventKind,
+  XmlTracePause,
+  TransformExecutionFallbackReason,
+  TransformExecutionFallbackReasonCode,
+  TransformCoverageOptions,
+  TransformCoverageWarning,
+  TransformExecutionInfo,
+  TransformExecutionMode,
+  TransformTraceOptions,
+  TransformOptions,
+  TransformResult,
 } from './processor/types.js';
 export { XdmError, XPathError, XsltError, type SourceLocation } from './errors/index.js';
 export { defineXsltFunctions } from './functions.js';
 export {
-	compileStylesheetArtifacts,
-	compileStylesheetArtifactsFromFile,
-	compileStylesheetToDts,
-	compileStylesheetToTs,
+  compileStylesheetArtifacts,
+  compileStylesheetArtifactsFromFile,
+  compileStylesheetToDts,
+  compileStylesheetToTs,
 } from './compile.js';
 export { VERSION } from './version.js';

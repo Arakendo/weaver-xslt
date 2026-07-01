@@ -5,7 +5,9 @@ import type { ErrorFrame, ErrorSuggestion, SourceLocation } from '../errors/inde
  */
 export type TransformExecutionMode = 'interpreter' | 'native' | 'auto';
 
-export type TransformExecutionFallbackReasonCode = 'unsupported_stylesheet' | 'native_runtime_unavailable';
+export type TransformExecutionFallbackReasonCode =
+  | 'unsupported_stylesheet'
+  | 'native_runtime_unavailable';
 
 export interface XmlNodeHandle {
   documentUri: string;
@@ -13,7 +15,11 @@ export interface XmlNodeHandle {
   path: string;
 }
 
-export type XmlTraceEventKind = 'focus-enter' | 'template-enter' | 'instruction-select' | 'value-read';
+export type XmlTraceEventKind =
+  | 'focus-enter'
+  | 'template-enter'
+  | 'instruction-select'
+  | 'value-read';
 
 export interface XmlTraceTemplateInfo {
   match?: string;
@@ -72,6 +78,23 @@ export interface TransformExecutionInfo {
   fallbackReason?: TransformExecutionFallbackReason;
 }
 
+export interface TransformCoverageOptions {
+  /** When true, collect runtime XML coverage warnings for the current transform. */
+  report?: boolean;
+  /** Minimum confidence level to include in the result. Defaults to high. */
+  minConfidence?: 'high' | 'medium';
+}
+
+export interface TransformCoverageWarning {
+  code: 'possible_unhandled_xml_tag';
+  nodeKind: 'element' | 'attribute';
+  namespaceUri: string;
+  localName: string;
+  count: number;
+  confidence: 'high' | 'medium';
+  message: string;
+}
+
 export interface TransformOptions {
   /** Initial template name (xsl:call-template equivalent). */
   initialTemplate?: string;
@@ -83,6 +106,8 @@ export interface TransformOptions {
   parameters?: Readonly<Record<string, unknown>>;
   /** Base URI used to resolve document() / doc() calls. */
   baseUri?: string;
+  /** Optional runtime XML coverage reporting for likely unhandled source names. */
+  coverage?: TransformCoverageOptions;
   /** Optional runtime XML node trace configuration for hosts/debug tooling. */
   trace?: TransformTraceOptions;
 }
@@ -95,6 +120,8 @@ export interface TransformResult {
   output: string;
   /** Secondary result documents keyed by their href (xsl:result-document). */
   secondaryOutputs?: Readonly<Record<string, string>>;
+  /** Runtime source-XML names that appeared uncovered by the stylesheet. */
+  coverageWarnings?: readonly TransformCoverageWarning[];
   /** First matched XML-node trace pause for the current transform, when any breakpoint fired. */
   pause?: XmlTracePause;
   /** Execution strategy information when an explicit strategy was requested. */

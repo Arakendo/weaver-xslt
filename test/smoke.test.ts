@@ -1844,6 +1844,170 @@ describe('Weaver scaffold', () => {
     });
   });
 
+  it('reports high-confidence uncovered source element names when coverage reporting is enabled', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/root">
+          <out><xsl:apply-templates select="item"/></out>
+        </xsl:template>
+        <xsl:template match="item"><xsl:value-of select="."/></xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(
+      proc.transform('<root><item>apple</item><other>pear</other></root>', {
+        coverage: { report: true },
+      }),
+    ).toEqual({
+      output: '<out>apple</out>',
+      coverageWarnings: [
+        {
+          code: 'possible_unhandled_xml_tag',
+          nodeKind: 'element',
+          namespaceUri: '',
+          localName: 'other',
+          count: 1,
+          confidence: 'high',
+          message: 'Input element "other" appeared 1 time without explicit stylesheet coverage.',
+        },
+      ],
+    });
+  });
+
+  it('leaves the transform result unchanged when coverage reporting is disabled', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/root">
+          <out><xsl:apply-templates select="item"/></out>
+        </xsl:template>
+        <xsl:template match="item"><xsl:value-of select="."/></xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<root><item>apple</item><other>pear</other></root>')).toEqual({
+      output: '<out>apple</out>',
+    });
+  });
+
+  it('reports uncovered source attributes when attribute coverage reporting is enabled', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/root">
+          <out><xsl:apply-templates select="item"/></out>
+        </xsl:template>
+        <xsl:template match="item">
+          <item><xsl:value-of select="@id"/></item>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(
+      proc.transform('<root><item id="a" class="b">apple</item></root>', {
+        coverage: { report: true },
+      }),
+    ).toEqual({
+      output: '<out><item>a</item></out>',
+      coverageWarnings: [
+        {
+          code: 'possible_unhandled_xml_tag',
+          nodeKind: 'attribute',
+          namespaceUri: '',
+          localName: 'class',
+          count: 1,
+          confidence: 'high',
+          message: 'Input attribute "class" appeared 1 time without explicit stylesheet coverage.',
+        },
+      ],
+    });
+  });
+
+  it('omits warnings when the stylesheet explicitly covers all observed source names', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/root">
+          <out><xsl:apply-templates select="item"/></out>
+        </xsl:template>
+        <xsl:template match="item">
+          <item><xsl:value-of select="@id"/></item>
+        </xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(
+      proc.transform('<root><item id="a">apple</item></root>', {
+        coverage: { report: true },
+      }),
+    ).toEqual({
+      output: '<out><item>a</item></out>',
+    });
+  });
+
+  it('matches covered source element names using namespace-aware QName normalization', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:ns="urn:test">
+        <xsl:template match="ns:root">
+          <out><xsl:apply-templates select="ns:item"/></out>
+        </xsl:template>
+        <xsl:template match="ns:item"><xsl:value-of select="."/></xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(
+      proc.transform(
+        '<ns:root xmlns:ns="urn:test"><ns:item>apple</ns:item><ns:other>pear</ns:other></ns:root>',
+        {
+          coverage: { report: true },
+        },
+      ),
+    ).toEqual({
+      output: '<out xmlns:ns="urn:test">apple</out>',
+      coverageWarnings: [
+        {
+          code: 'possible_unhandled_xml_tag',
+          nodeKind: 'element',
+          namespaceUri: 'urn:test',
+          localName: 'other',
+          count: 1,
+          confidence: 'high',
+          message:
+            'Input element "other" in namespace "urn:test" appeared 1 time without explicit stylesheet coverage.',
+        },
+      ],
+    });
+  });
+
+  it('downgrades uncovered source element names to medium when only wildcard handling exists', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/root">
+          <out><xsl:apply-templates/></out>
+        </xsl:template>
+        <xsl:template match="item"><xsl:value-of select="."/></xsl:template>
+        <xsl:template match="*"><skip/></xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(
+      proc.transform('<root><item>apple</item><other>pear</other></root>', {
+        coverage: { report: true, minConfidence: 'medium' },
+      }),
+    ).toEqual({
+      output: '<out>apple<skip></skip></out>',
+      coverageWarnings: [
+        {
+          code: 'possible_unhandled_xml_tag',
+          nodeKind: 'element',
+          namespaceUri: '',
+          localName: 'other',
+          count: 1,
+          confidence: 'medium',
+          message:
+            'Input element "other" appeared 1 time without explicit stylesheet coverage. Only generic stylesheet handling was detected for this name.',
+        },
+      ],
+    });
+  });
+
   it('passes xsl:with-param values through xsl:apply-templates into matched template params', () => {
     const proc = new XsltProcessor(`
       <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">

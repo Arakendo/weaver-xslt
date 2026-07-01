@@ -86,11 +86,13 @@ nav:
       - Workbench Record: Evidence/Workbench Implementation Record.md
       - Workbench Evidence: Evidence/Workbench Evidence Checklist.md
       - Chrome DevTools Verification: Evidence/Chrome DevTools Verification.md
+        - XML Coverage Diagnostics: XML_COVERAGE_DIAGNOSTICS.md
   - Corpus:
       - Overview: Corpus/README.md
       - Comparison Harness: Corpus/Comparison Harness.md
       - QT3 Gate: Corpus/QT3 Gate.md
       - Test Sources: Corpus/Test Sources.md
+        - .NET XML Suite: DOTNET_XML_SUITE.md
   - Notes:
       - Overview: Notes/README.md
       - Project Brief: Notes/Weaver Project Brief.md

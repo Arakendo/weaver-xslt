@@ -7,6 +7,7 @@ import { compileStylesheetToTs } from '../../src/compile.js';
 import { XsltProcessor } from '../../src/index.js';
 import type { TransformOptions } from '../../src/processor/types.js';
 import {
+  appendCoverageWarnings,
   applyBuiltInTemplatesByPath,
   createCompiledDocument,
   createTemporaryTreeNode,
@@ -42,6 +43,7 @@ import {
 const GENERATED_RUNTIME_MODULE_SPECIFIER = '@runtime-test';
 export const NATIVE_DIRECT_PARITY_TAG = '[native-direct]';
 const GENERATED_RUNTIME_MODULE = {
+  appendCoverageWarnings,
   applyBuiltInTemplatesByPath,
   createCompiledDocument,
   createTemporaryTreeNode,

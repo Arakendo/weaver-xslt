@@ -9,6 +9,7 @@ import type {
   XmlTracePause,
   XmlTraceTemplateInfo,
 } from '../processor/types.js';
+import { appendCoverageWarnings } from '../processor/coverage.js';
 import { XTDE0040, XTDE0050, XTDE0640, XTDE0700, XTSE0010 } from '../errors/codes.js';
 import {
   XdmError,
@@ -35,6 +36,7 @@ import { computeLevenshteinDistance } from '../xslt/diagnostics.js';
 import { normalizeTemplateName } from '../xslt/eval/templateDispatch.js';
 import { runTransform } from '../xslt/eval/transform.js';
 import type { StylesheetIR } from '../xslt/compile/ir.js';
+export { appendCoverageWarnings } from '../processor/coverage.js';
 
 export type TransformContext = TransformOptions;
 
@@ -744,7 +746,7 @@ export function transformCompiledStylesheet(
   sourceXml: string,
   context: TransformContext = {},
 ): TransformResult {
-  return runTransform(ir, sourceXml, context);
+  return appendCoverageWarnings(ir, sourceXml, context, runTransform(ir, sourceXml, context));
 }
 
 export function normalizeNativeTemplateName(

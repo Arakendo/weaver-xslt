@@ -1,18 +1,39 @@
 import type { SourceLocation } from '../../errors/index.js';
-import { assertValidDiagnostic, type DiagnosticFrame, type DiagnosticReport, type SourceSpan as DiagnosticSourceSpan } from '../../diagnostics/index.js';
+import {
+  assertValidDiagnostic,
+  type DiagnosticFrame,
+  type DiagnosticReport,
+  type SourceSpan as DiagnosticSourceSpan,
+} from '../../diagnostics/index.js';
 import type { Element } from '@xmldom/xmldom';
-import type { FlowBinding, LetBinding, PathExpression, StepExpression, XPathAst } from '../../xpath/parse/ast.js';
+import type {
+  FlowBinding,
+  LetBinding,
+  PathExpression,
+  StepExpression,
+  XPathAst,
+} from '../../xpath/parse/ast.js';
 import type { SourceSpan as XPathSourceSpan } from '../../xpath/lex/lexer.js';
 import { parseXml } from '../../xml/parse.js';
 import { computeLevenshteinDistance } from '../diagnostics.js';
 
-import type { GlobalBinding, Instruction, StylesheetIR, TemplateParam, TemplateRule, WithParam } from './ir.js';
+import type {
+  GlobalBinding,
+  Instruction,
+  StylesheetIR,
+  TemplateParam,
+  TemplateRule,
+  WithParam,
+} from './ir.js';
 
 export interface AnalyzeStylesheetOptions {
   readonly sampleDocument?: string;
 }
 
-export function analyzeStylesheet(ir: StylesheetIR, options: AnalyzeStylesheetOptions = {}): readonly DiagnosticReport[] {
+export function analyzeStylesheet(
+  ir: StylesheetIR,
+  options: AnalyzeStylesheetOptions = {},
+): readonly DiagnosticReport[] {
   const reachableNamedTemplateNames = collectReachableNamedTemplateNames(ir);
   const reachableGlobalBindingNames = collectReachableGlobalBindingNames(ir);
   const templatePriorityConflictReports = collectTemplatePriorityConflictDiagnostics(ir);
@@ -31,7 +52,11 @@ export function analyzeStylesheet(ir: StylesheetIR, options: AnalyzeStylesheetOp
   const templateReports = ir.templates.flatMap((template) => {
     const reports: DiagnosticReport[] = [];
 
-    if (template.name !== undefined && template.match === undefined && !reachableNamedTemplateNames.has(template.name)) {
+    if (
+      template.name !== undefined &&
+      template.match === undefined &&
+      !reachableNamedTemplateNames.has(template.name)
+    ) {
       reports.push(createUnusedNamedTemplateDiagnostic(template));
     }
 
@@ -49,7 +74,12 @@ export function analyzeStylesheet(ir: StylesheetIR, options: AnalyzeStylesheetOp
     return reports;
   });
 
-  return [...globalBindingReports, ...templatePriorityConflictReports, ...sampleDocumentReports, ...templateReports];
+  return [
+    ...globalBindingReports,
+    ...templatePriorityConflictReports,
+    ...sampleDocumentReports,
+    ...templateReports,
+  ];
 }
 
 type ScopeBinding =
@@ -64,7 +94,10 @@ interface TemplateBindingUsage {
 
 interface MutableTemplateBindingUsage {
   readonly usedTemplateParamNames: Set<string>;
-  readonly localVariables: Array<{ readonly id: number; readonly instruction: Extract<Instruction, { readonly kind: 'variable' }> }>;
+  readonly localVariables: Array<{
+    readonly id: number;
+    readonly instruction: Extract<Instruction, { readonly kind: 'variable' }>;
+  }>;
   readonly usedLocalVariableIds: Set<number>;
   nextLocalVariableId: number;
 }
@@ -111,7 +144,9 @@ interface XPathExpressionContext {
 
 function collectReachableNamedTemplateNames(ir: StylesheetIR): ReadonlySet<string> {
   const namedTemplates = new Map(
-    ir.templates.flatMap((template) => template.name === undefined ? [] : [[template.name, template] as const]),
+    ir.templates.flatMap((template) =>
+      template.name === undefined ? [] : [[template.name, template] as const],
+    ),
   );
   const reachableNamedTemplateNames = new Set<string>();
 
@@ -205,9 +240,13 @@ function collectReachableNamedTemplateNames(ir: StylesheetIR): ReadonlySet<strin
 }
 
 function collectReachableGlobalBindingNames(ir: StylesheetIR): ReadonlySet<string> {
-  const globalBindings = new Map(ir.globalBindings.map((binding) => [binding.name, binding] as const));
+  const globalBindings = new Map(
+    ir.globalBindings.map((binding) => [binding.name, binding] as const),
+  );
   const namedTemplates = new Map(
-    ir.templates.flatMap((template) => template.name === undefined ? [] : [[template.name, template] as const]),
+    ir.templates.flatMap((template) =>
+      template.name === undefined ? [] : [[template.name, template] as const],
+    ),
   );
   const reachableGlobalBindingNames = new Set<string>();
   const visitedTemplates = new Set<TemplateRule>();
@@ -285,14 +324,24 @@ function collectTemplatePriorityConflictDiagnostics(ir: StylesheetIR): readonly 
     }
 
     const priority = getTemplateEffectivePriority(template);
-    const shadowingTemplate = findLastShadowingTemplateWithMinimumPriority(priorTemplates, pattern, priority);
+    const shadowingTemplate = findLastShadowingTemplateWithMinimumPriority(
+      priorTemplates,
+      pattern,
+      priority,
+    );
     if (shadowingTemplate !== undefined) {
       reports.push(createUnreachableTemplateMatchDiagnostic(template, shadowingTemplate, priority));
     }
 
-    const conflictingTemplate = findLastOverlappingTemplateWithPriority(priorTemplates, pattern, priority);
+    const conflictingTemplate = findLastOverlappingTemplateWithPriority(
+      priorTemplates,
+      pattern,
+      priority,
+    );
     if (conflictingTemplate !== undefined) {
-      reports.push(createTemplatePriorityConflictDiagnostic(template, conflictingTemplate, priority));
+      reports.push(
+        createTemplatePriorityConflictDiagnostic(template, conflictingTemplate, priority),
+      );
     }
 
     priorTemplates.push({ template, priority, pattern });
@@ -311,7 +360,10 @@ function findLastOverlappingTemplateWithPriority(
   priority: number,
 ): TemplateRule | undefined {
   for (let index = templates.length - 1; index >= 0; index -= 1) {
-    if (templates[index]?.priority === priority && templateMatchPatternsOverlap(templates[index]!.pattern, pattern)) {
+    if (
+      templates[index]?.priority === priority &&
+      templateMatchPatternsOverlap(templates[index]!.pattern, pattern)
+    ) {
       return templates[index]?.template;
     }
   }
@@ -330,8 +382,8 @@ function findLastShadowingTemplateWithMinimumPriority(
 ): TemplateRule | undefined {
   for (let index = templates.length - 1; index >= 0; index -= 1) {
     if (
-      (templates[index]?.priority ?? Number.NEGATIVE_INFINITY) > minimumPriorityExclusive
-      && templateMatchPatternSubsumes(templates[index]!.pattern, pattern)
+      (templates[index]?.priority ?? Number.NEGATIVE_INFINITY) > minimumPriorityExclusive &&
+      templateMatchPatternSubsumes(templates[index]!.pattern, pattern)
     ) {
       return templates[index]?.template;
     }
@@ -340,7 +392,10 @@ function findLastShadowingTemplateWithMinimumPriority(
   return undefined;
 }
 
-function getComparableTemplateMatchPattern(template: TemplateRule, ir: StylesheetIR): ComparableTemplateMatchPattern | undefined {
+export function getComparableTemplateMatchPattern(
+  template: TemplateRule,
+  ir: StylesheetIR,
+): ComparableTemplateMatchPattern | undefined {
   if (template.match === undefined || template.match.kind !== 'path') {
     return undefined;
   }
@@ -397,7 +452,10 @@ function templateMatchPatternsOverlap(
   right: ComparableTemplateMatchPattern,
 ): boolean {
   if (left.absolute && right.absolute) {
-    return left.steps.length === right.steps.length && comparableStepSequencesOverlap(left.steps, right.steps);
+    return (
+      left.steps.length === right.steps.length &&
+      comparableStepSequencesOverlap(left.steps, right.steps)
+    );
   }
 
   if (left.absolute) {
@@ -416,9 +474,11 @@ function templateMatchPatternSubsumes(
   later: ComparableTemplateMatchPattern,
 ): boolean {
   if (earlier.absolute) {
-    return later.absolute
-      && earlier.steps.length === later.steps.length
-      && comparableStepSequenceSubsumes(earlier.steps, later.steps);
+    return (
+      later.absolute &&
+      earlier.steps.length === later.steps.length &&
+      comparableStepSequenceSubsumes(earlier.steps, later.steps)
+    );
   }
 
   if (earlier.steps.length > later.steps.length) {
@@ -487,7 +547,10 @@ function comparableStepSequenceSubsumes(
   return true;
 }
 
-function comparableStepsOverlap(left: ComparableTemplateMatchStep, right: ComparableTemplateMatchStep): boolean {
+function comparableStepsOverlap(
+  left: ComparableTemplateMatchStep,
+  right: ComparableTemplateMatchStep,
+): boolean {
   if (left.kind === 'node' || right.kind === 'node') {
     return true;
   }
@@ -503,7 +566,10 @@ function comparableStepsOverlap(left: ComparableTemplateMatchStep, right: Compar
   return left.name === right.name;
 }
 
-function comparableStepSubsumes(earlier: ComparableTemplateMatchStep, later: ComparableTemplateMatchStep): boolean {
+function comparableStepSubsumes(
+  earlier: ComparableTemplateMatchStep,
+  later: ComparableTemplateMatchStep,
+): boolean {
   if (earlier.kind === 'node') {
     return true;
   }
@@ -527,7 +593,9 @@ function normalizeTemplateMatchName(name: string, ir: StylesheetIR): string {
 
   const separator = name.indexOf(':');
   if (separator < 0) {
-    return ir.defaultElementNamespace.length === 0 ? name : `{${ir.defaultElementNamespace}}${name}`;
+    return ir.defaultElementNamespace.length === 0
+      ? name
+      : `{${ir.defaultElementNamespace}}${name}`;
   }
 
   const prefix = name.slice(0, separator);
@@ -556,10 +624,12 @@ function tryNormalizeEqName(name: string): string | undefined {
 }
 
 function isRootTemplateRule(template: TemplateRule): boolean {
-  return template.match?.kind === 'path'
-    && template.match.absolute
-    && template.match.base === undefined
-    && template.match.steps.length === 0;
+  return (
+    template.match?.kind === 'path' &&
+    template.match.absolute &&
+    template.match.base === undefined &&
+    template.match.steps.length === 0
+  );
 }
 
 function getTemplateEffectivePriority(template: TemplateRule): number {
@@ -597,14 +667,20 @@ function getTemplateEffectivePriority(template: TemplateRule): number {
     return -0.5;
   }
 
-  if (step.nodeTest.kind === 'kindTest' && (step.nodeTest.name === 'node' || step.nodeTest.name === 'text')) {
+  if (
+    step.nodeTest.kind === 'kindTest' &&
+    (step.nodeTest.name === 'node' || step.nodeTest.name === 'text')
+  ) {
     return -0.5;
   }
 
   return Number.NEGATIVE_INFINITY;
 }
 
-function collectTemplateBindingUsage(template: TemplateRule, callbacks: BindingUsageCallbacks = {}): TemplateBindingUsage {
+function collectTemplateBindingUsage(
+  template: TemplateRule,
+  callbacks: BindingUsageCallbacks = {},
+): TemplateBindingUsage {
   const usage = createMutableTemplateBindingUsage();
   let scope: ReadonlyMap<string, ScopeBinding> = new Map<string, ScopeBinding>();
 
@@ -846,15 +922,21 @@ function createUnusedNamedTemplateDiagnostic(template: TemplateRule): Diagnostic
     primary,
     frames: frame === undefined ? [] : [frame],
     details: template.name === undefined ? [] : [{ key: 'templateName', value: template.name }],
-    suggestions: [{
-      kind: 'hint',
-      label: 'remove the template or add an xsl:call-template that reaches it from a matched template',
-      confidence: 1,
-    }],
+    suggestions: [
+      {
+        kind: 'hint',
+        label:
+          'remove the template or add an xsl:call-template that reaches it from a matched template',
+        confidence: 1,
+      },
+    ],
   });
 }
 
-function createUnusedTemplateParamDiagnostic(template: TemplateRule, param: TemplateParam): DiagnosticReport {
+function createUnusedTemplateParamDiagnostic(
+  template: TemplateRule,
+  param: TemplateParam,
+): DiagnosticReport {
   const primary = toSourceSpan(param.location);
   const frame = createTemplateFrame(template, primary);
 
@@ -864,11 +946,13 @@ function createUnusedTemplateParamDiagnostic(template: TemplateRule, param: Temp
     primary,
     frames: frame === undefined ? [] : [frame],
     details: [{ key: 'paramName', value: param.name }],
-    suggestions: [{
-      kind: 'hint',
-      label: `remove the parameter or reference $${param.name} from the template body or parameter defaults`,
-      confidence: 1,
-    }],
+    suggestions: [
+      {
+        kind: 'hint',
+        label: `remove the parameter or reference $${param.name} from the template body or parameter defaults`,
+        confidence: 1,
+      },
+    ],
   });
 }
 
@@ -885,15 +969,19 @@ function createUnusedLocalVariableDiagnostic(
     primary,
     frames: frame === undefined ? [] : [frame],
     details: [{ key: 'variableName', value: variable.name }],
-    suggestions: [{
-      kind: 'hint',
-      label: `remove the variable or reference $${variable.name} later in the same scope`,
-      confidence: 1,
-    }],
+    suggestions: [
+      {
+        kind: 'hint',
+        label: `remove the variable or reference $${variable.name} later in the same scope`,
+        confidence: 1,
+      },
+    ],
   });
 }
 
-function createUnusedGlobalParamDiagnostic(binding: Extract<GlobalBinding, { readonly kind: 'param' }>): DiagnosticReport {
+function createUnusedGlobalParamDiagnostic(
+  binding: Extract<GlobalBinding, { readonly kind: 'param' }>,
+): DiagnosticReport {
   const primary = toSourceSpan(binding.location);
   const frame = createGlobalBindingFrame(binding, primary);
 
@@ -903,15 +991,19 @@ function createUnusedGlobalParamDiagnostic(binding: Extract<GlobalBinding, { rea
     primary,
     frames: frame === undefined ? [] : [frame],
     details: [{ key: 'paramName', value: binding.name }],
-    suggestions: [{
-      kind: 'hint',
-      label: `remove the stylesheet parameter or reference $${binding.name} from a reachable template or global binding`,
-      confidence: 1,
-    }],
+    suggestions: [
+      {
+        kind: 'hint',
+        label: `remove the stylesheet parameter or reference $${binding.name} from a reachable template or global binding`,
+        confidence: 1,
+      },
+    ],
   });
 }
 
-function createUnusedGlobalVariableDiagnostic(binding: Extract<GlobalBinding, { readonly kind: 'variable' }>): DiagnosticReport {
+function createUnusedGlobalVariableDiagnostic(
+  binding: Extract<GlobalBinding, { readonly kind: 'variable' }>,
+): DiagnosticReport {
   const primary = toSourceSpan(binding.location);
   const frame = createGlobalBindingFrame(binding, primary);
 
@@ -921,11 +1013,13 @@ function createUnusedGlobalVariableDiagnostic(binding: Extract<GlobalBinding, { 
     primary,
     frames: frame === undefined ? [] : [frame],
     details: [{ key: 'variableName', value: binding.name }],
-    suggestions: [{
-      kind: 'hint',
-      label: `remove the stylesheet variable or reference $${binding.name} from a reachable template or global binding`,
-      confidence: 1,
-    }],
+    suggestions: [
+      {
+        kind: 'hint',
+        label: `remove the stylesheet variable or reference $${binding.name} from a reachable template or global binding`,
+        confidence: 1,
+      },
+    ],
   });
 }
 
@@ -938,27 +1032,34 @@ function createTemplatePriorityConflictDiagnostic(
   const frame = createTemplateFrame(template, primary);
   const earlierSpan = toSourceSpan(earlierTemplate.location);
   const earlierPriority = getTemplateEffectivePriority(earlierTemplate);
-  const earlierRelatedLabel = createEarlierTemplateRelatedLabel('earlier overlapping template', earlierTemplate);
+  const earlierRelatedLabel = createEarlierTemplateRelatedLabel(
+    'earlier overlapping template',
+    earlierTemplate,
+  );
 
   return createAnalysisWarning({
     code: 'WEAVER_ANALYZE_PRIORITY_CONFLICT',
     message: `Template match ${JSON.stringify(template.matchText ?? '<unknown>')} has the same effective priority ${priority} as an earlier overlapping template; declaration order decides which one wins.`,
-    related: earlierSpan === undefined
-      ? []
-      : [{ label: earlierRelatedLabel, span: earlierSpan }],
+    related: earlierSpan === undefined ? [] : [{ label: earlierRelatedLabel, span: earlierSpan }],
     primary,
     frames: frame === undefined ? [] : [frame],
     details: [
-      ...(template.matchText === undefined ? [] : [{ key: 'matchPattern', value: template.matchText }]),
+      ...(template.matchText === undefined
+        ? []
+        : [{ key: 'matchPattern', value: template.matchText }]),
       { key: 'priority', value: priority },
-      ...(earlierTemplate.matchText === undefined ? [] : [{ key: 'earlierMatchPattern', value: earlierTemplate.matchText }]),
+      ...(earlierTemplate.matchText === undefined
+        ? []
+        : [{ key: 'earlierMatchPattern', value: earlierTemplate.matchText }]),
       { key: 'earlierPriority', value: earlierPriority },
     ],
-    suggestions: [{
-      kind: 'hint',
-      label: 'set an explicit priority or narrow one of the overlapping match patterns',
-      confidence: 1,
-    }],
+    suggestions: [
+      {
+        kind: 'hint',
+        label: 'set an explicit priority or narrow one of the overlapping match patterns',
+        confidence: 1,
+      },
+    ],
   });
 }
 
@@ -971,33 +1072,39 @@ function createUnreachableTemplateMatchDiagnostic(
   const frame = createTemplateFrame(template, primary);
   const shadowingSpan = toSourceSpan(shadowingTemplate.location);
   const shadowingPriority = getTemplateEffectivePriority(shadowingTemplate);
-  const shadowingRelatedLabel = createEarlierTemplateRelatedLabel('shadowing template', shadowingTemplate);
+  const shadowingRelatedLabel = createEarlierTemplateRelatedLabel(
+    'shadowing template',
+    shadowingTemplate,
+  );
 
   return createAnalysisWarning({
     code: 'WEAVER_ANALYZE_UNREACHABLE_TEMPLATE_MATCH',
     message: `Template match ${JSON.stringify(template.matchText ?? '<unknown>')} is unreachable because an earlier overlapping template has higher effective priority ${shadowingPriority}.`,
-    related: shadowingSpan === undefined
-      ? []
-      : [{ label: shadowingRelatedLabel, span: shadowingSpan }],
+    related:
+      shadowingSpan === undefined ? [] : [{ label: shadowingRelatedLabel, span: shadowingSpan }],
     primary,
     frames: frame === undefined ? [] : [frame],
     details: [
-      ...(template.matchText === undefined ? [] : [{ key: 'matchPattern', value: template.matchText }]),
+      ...(template.matchText === undefined
+        ? []
+        : [{ key: 'matchPattern', value: template.matchText }]),
       { key: 'priority', value: priority },
-      ...(shadowingTemplate.matchText === undefined ? [] : [{ key: 'shadowingMatchPattern', value: shadowingTemplate.matchText }]),
+      ...(shadowingTemplate.matchText === undefined
+        ? []
+        : [{ key: 'shadowingMatchPattern', value: shadowingTemplate.matchText }]),
       { key: 'shadowingPriority', value: shadowingPriority },
     ],
-    suggestions: [{
-      kind: 'hint',
-      label: 'raise the template priority or narrow the earlier overlapping match pattern',
-      confidence: 1,
-    }],
+    suggestions: [
+      {
+        kind: 'hint',
+        label: 'raise the template priority or narrow the earlier overlapping match pattern',
+        confidence: 1,
+      },
+    ],
   });
 }
 
-function createAnalysisWarning(
-  report: AnalysisWarningInit,
-): DiagnosticReport {
+function createAnalysisWarning(report: AnalysisWarningInit): DiagnosticReport {
   const normalizedReport: DiagnosticReport = {
     code: report.code,
     phase: 'compile',
@@ -1043,7 +1150,10 @@ function collectSampleDocumentNameDiagnostics(
 }
 
 function collectSampleDocumentNames(sampleDocument: string): SampleDocumentNameModel {
-  const document = parseXml(sampleDocument, { role: 'source-document', sourceName: '<sample-document>' });
+  const document = parseXml(sampleDocument, {
+    role: 'source-document',
+    sourceName: '<sample-document>',
+  });
   const elementNames = new Map<string, Set<string>>();
   const attributeNames = new Map<string, Set<string>>();
 
@@ -1056,7 +1166,12 @@ function collectSampleDocumentNames(sampleDocument: string): SampleDocumentNameM
     for (let index = 0; index < element.attributes.length; index += 1) {
       const attribute = element.attributes.item(index);
       const attributeName = attribute?.localName ?? attribute?.nodeName;
-      if (attributeName !== undefined && attributeName.length > 0 && attributeName !== 'xmlns' && attribute?.prefix !== 'xmlns') {
+      if (
+        attributeName !== undefined &&
+        attributeName.length > 0 &&
+        attributeName !== 'xmlns' &&
+        attribute?.prefix !== 'xmlns'
+      ) {
         addSampleDocumentName(attributeNames, attribute?.namespaceURI ?? '', attributeName);
       }
     }
@@ -1080,7 +1195,11 @@ function collectSampleDocumentNames(sampleDocument: string): SampleDocumentNameM
   };
 }
 
-function addSampleDocumentName(namesByNamespace: Map<string, Set<string>>, namespaceUri: string, localName: string): void {
+function addSampleDocumentName(
+  namesByNamespace: Map<string, Set<string>>,
+  namespaceUri: string,
+  localName: string,
+): void {
   const names = namesByNamespace.get(namespaceUri);
   if (names !== undefined) {
     names.add(localName);
@@ -1123,7 +1242,13 @@ function collectXPathExpressionContexts(ir: StylesheetIR): readonly XPathExpress
           visitInstructions(instruction.body);
           break;
         case 'if':
-          pushContext(instruction.test, instruction.testText, instruction.location, 'xsl:if', 'test');
+          pushContext(
+            instruction.test,
+            instruction.testText,
+            instruction.location,
+            'xsl:if',
+            'test',
+          );
           visitInstructions(instruction.body);
           break;
         case 'choose':
@@ -1136,11 +1261,23 @@ function collectXPathExpressionContexts(ir: StylesheetIR): readonly XPathExpress
           }
           break;
         case 'forEach':
-          pushContext(instruction.select, instruction.selectText, instruction.location, 'xsl:for-each', 'select');
+          pushContext(
+            instruction.select,
+            instruction.selectText,
+            instruction.location,
+            'xsl:for-each',
+            'select',
+          );
           visitInstructions(instruction.body);
           break;
         case 'variable':
-          pushContext(instruction.select, instruction.selectText, instruction.location, 'xsl:variable', 'select');
+          pushContext(
+            instruction.select,
+            instruction.selectText,
+            instruction.location,
+            'xsl:variable',
+            'select',
+          );
           if (instruction.body !== undefined) {
             visitInstructions(instruction.body);
           }
@@ -1149,11 +1286,23 @@ function collectXPathExpressionContexts(ir: StylesheetIR): readonly XPathExpress
           visitWithParams(instruction.withParams);
           break;
         case 'applyTemplates':
-          pushContext(instruction.select, instruction.selectText, instruction.location, 'xsl:apply-templates', 'select');
+          pushContext(
+            instruction.select,
+            instruction.selectText,
+            instruction.location,
+            'xsl:apply-templates',
+            'select',
+          );
           visitWithParams(instruction.withParams);
           break;
         case 'valueOf':
-          pushContext(instruction.select, instruction.selectText, instruction.location, 'xsl:value-of', 'select');
+          pushContext(
+            instruction.select,
+            instruction.selectText,
+            instruction.location,
+            'xsl:value-of',
+            'select',
+          );
           break;
         default:
           break;
@@ -1163,7 +1312,13 @@ function collectXPathExpressionContexts(ir: StylesheetIR): readonly XPathExpress
 
   const visitWithParams = (withParams: readonly WithParam[]): void => {
     for (const withParam of withParams) {
-      pushContext(withParam.select, withParam.selectText, withParam.location, 'xsl:with-param', 'select');
+      pushContext(
+        withParam.select,
+        withParam.selectText,
+        withParam.location,
+        'xsl:with-param',
+        'select',
+      );
       if (withParam.body !== undefined) {
         visitInstructions(withParam.body);
       }
@@ -1171,14 +1326,27 @@ function collectXPathExpressionContexts(ir: StylesheetIR): readonly XPathExpress
   };
 
   for (const binding of ir.globalBindings) {
-    pushContext(binding.select, binding.selectText, binding.location, `xsl:${binding.kind}`, 'select');
+    pushContext(
+      binding.select,
+      binding.selectText,
+      binding.location,
+      `xsl:${binding.kind}`,
+      'select',
+    );
     if (binding.body !== undefined) {
       visitInstructions(binding.body);
     }
   }
 
   for (const template of ir.templates) {
-    pushContext(template.match, template.matchText, template.location, 'xsl:template', 'match', 'template');
+    pushContext(
+      template.match,
+      template.matchText,
+      template.location,
+      'xsl:template',
+      'match',
+      'template',
+    );
     for (const param of template.params) {
       pushContext(param.select, param.selectText, param.location, 'xsl:param', 'select');
       if (param.body !== undefined) {
@@ -1277,7 +1445,11 @@ function createSampleDocumentNameDiagnostic(
     return undefined;
   }
 
-  const candidateNames = getSampleDocumentCandidateNames(step.axis, nameInfo.namespaceUri, sampleDocument);
+  const candidateNames = getSampleDocumentCandidateNames(
+    step.axis,
+    nameInfo.namespaceUri,
+    sampleDocument,
+  );
   if (candidateNames === undefined) {
     return undefined;
   }
@@ -1303,9 +1475,10 @@ function createSampleDocumentNameDiagnostic(
   const kindLabel = step.axis === 'attribute' ? 'attribute' : 'element';
 
   return createAnalysisWarning({
-    code: step.axis === 'attribute'
-      ? 'WEAVER_ANALYZE_UNKNOWN_SAMPLE_ATTRIBUTE_NAME'
-      : 'WEAVER_ANALYZE_UNKNOWN_SAMPLE_ELEMENT_NAME',
+    code:
+      step.axis === 'attribute'
+        ? 'WEAVER_ANALYZE_UNKNOWN_SAMPLE_ATTRIBUTE_NAME'
+        : 'WEAVER_ANALYZE_UNKNOWN_SAMPLE_ELEMENT_NAME',
     message: `XPath ${kindLabel} name test ${JSON.stringify(step.nodeTest.name)} does not appear in the supplied sample document.`,
     primary,
     frames: frame === undefined ? [] : [frame],
@@ -1313,12 +1486,14 @@ function createSampleDocumentNameDiagnostic(
       { key: 'nameTest', value: step.nodeTest.name },
       { key: 'suggestedName', value: suggestedName },
     ],
-    suggestions: [{
-      kind: 'fix',
-      label: `did you mean ${JSON.stringify(suggestedName)}?`,
-      replacement: suggestedName,
-      confidence: nearest.distance === 0 ? 1 : 1 - (nearest.distance / suggestedName.length),
-    }],
+    suggestions: [
+      {
+        kind: 'fix',
+        label: `did you mean ${JSON.stringify(suggestedName)}?`,
+        replacement: suggestedName,
+        confidence: nearest.distance === 0 ? 1 : 1 - nearest.distance / suggestedName.length,
+      },
+    ],
   });
 }
 
@@ -1327,9 +1502,8 @@ function getSampleDocumentCandidateNames(
   namespaceUri: string,
   sampleDocument: SampleDocumentNameModel,
 ): ReadonlySet<string> | undefined {
-  const namesByNamespace = axis === 'attribute'
-    ? sampleDocument.attributeNames
-    : sampleDocument.elementNames;
+  const namesByNamespace =
+    axis === 'attribute' ? sampleDocument.attributeNames : sampleDocument.elementNames;
   return namesByNamespace.get(namespaceUri);
 }
 
@@ -1337,7 +1511,9 @@ function resolveNameTestForSample(
   name: string,
   axis: StepExpression['axis'],
   ir: StylesheetIR,
-): { readonly prefix: string; readonly localName: string; readonly namespaceUri: string } | undefined {
+):
+  | { readonly prefix: string; readonly localName: string; readonly namespaceUri: string }
+  | undefined {
   if (name.startsWith('Q{')) {
     const endBrace = name.indexOf('}');
     if (endBrace >= 0) {
@@ -1383,7 +1559,11 @@ function mapXPathSpanToSourceSpan(
   location: SourceLocation | undefined,
   span: XPathSourceSpan,
 ): DiagnosticSourceSpan | undefined {
-  if (location?.line === undefined || location.column === undefined || location.offset === undefined) {
+  if (
+    location?.line === undefined ||
+    location.column === undefined ||
+    location.offset === undefined
+  ) {
     return undefined;
   }
 
@@ -1402,16 +1582,20 @@ function createXPathExpressionFrame(
   context: XPathExpressionContext,
   primary: DiagnosticSourceSpan | undefined,
 ): DiagnosticFrame | undefined {
-  const label = context.frameKind === 'template'
-    ? `${context.attributeName}=${JSON.stringify(context.expressionText)}`
-    : `${context.ownerName} ${context.attributeName}=${JSON.stringify(context.expressionText)}`;
+  const label =
+    context.frameKind === 'template'
+      ? `${context.attributeName}=${JSON.stringify(context.expressionText)}`
+      : `${context.ownerName} ${context.attributeName}=${JSON.stringify(context.expressionText)}`;
 
   return primary === undefined
     ? { kind: context.frameKind ?? 'instruction', label }
     : { kind: context.frameKind ?? 'instruction', label, span: primary };
 }
 
-function createTemplateFrame(template: TemplateRule, primary: DiagnosticSourceSpan | undefined): DiagnosticFrame | undefined {
+function createTemplateFrame(
+  template: TemplateRule,
+  primary: DiagnosticSourceSpan | undefined,
+): DiagnosticFrame | undefined {
   const label = template.name ?? template.matchText;
   if (label === undefined) {
     return undefined;
@@ -1422,7 +1606,10 @@ function createTemplateFrame(template: TemplateRule, primary: DiagnosticSourceSp
     : { kind: 'template', label, span: primary };
 }
 
-function createGlobalBindingFrame(binding: GlobalBinding, primary: DiagnosticSourceSpan | undefined): DiagnosticFrame | undefined {
+function createGlobalBindingFrame(
+  binding: GlobalBinding,
+  primary: DiagnosticSourceSpan | undefined,
+): DiagnosticFrame | undefined {
   const label = `xsl:${binding.kind} name="${binding.name}"`;
 
   return primary === undefined
@@ -1437,7 +1624,11 @@ function createEarlierTemplateRelatedLabel(prefix: string, template: TemplateRul
 }
 
 function toSourceSpan(location: SourceLocation | undefined): DiagnosticSourceSpan | undefined {
-  if (location?.line === undefined || location.column === undefined || location.offset === undefined) {
+  if (
+    location?.line === undefined ||
+    location.column === undefined ||
+    location.offset === undefined
+  ) {
     return undefined;
   }
 

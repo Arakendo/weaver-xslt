@@ -89,6 +89,38 @@ describe('XSLT codegen MVP4 slice', () => {
     }
   });
 
+  it('surfaces coverage warnings identically through generated modules', () => {
+    const stylesheet = `
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="/root">
+          <out><xsl:apply-templates select="item"/></out>
+        </xsl:template>
+        <xsl:template match="item"><xsl:value-of select="."/></xsl:template>
+      </xsl:stylesheet>
+    `;
+
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'coverage-warnings-runtime.xsl',
+    );
+
+    expect(diagnostics).toEqual([]);
+
+    const generatedModule = exports as {
+      readonly transform: (
+        source: string,
+        options?: Parameters<XsltProcessor['transform']>[1],
+      ) => ReturnType<XsltProcessor['transform']>;
+    };
+    const sourceXml = '<root><item>apple</item><other>pear</other></root>';
+    const options = {
+      coverage: { report: true },
+    };
+    const interpreterResult = new XsltProcessor(stylesheet).transform(sourceXml, options);
+
+    expect(generatedModule.transform(sourceXml, options)).toEqual(interpreterResult);
+  });
+
   it('emits native code for a single-focus position() test', () => {
     const stylesheet = `
       <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">

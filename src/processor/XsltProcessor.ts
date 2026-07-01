@@ -4,6 +4,7 @@ import type {
   TransformOptions,
   TransformResult,
 } from './types.js';
+import { appendCoverageWarnings } from './coverage.js';
 import { WEAVER_XSLT_NATIVE_UNSUPPORTED, XTSE0010 } from '../errors/codes.js';
 import { XsltError } from '../errors/index.js';
 import { compileStylesheet } from '../xslt/compile/compiler.js';
@@ -116,10 +117,17 @@ export class XsltProcessor {
         ? executeNativeTransformPlan(compiledStylesheet.nativePlan, _sourceXml, options)
         : runTransform(compiledStylesheet.ir, _sourceXml, options);
 
+    const resultWithCoverage = appendCoverageWarnings(
+      compiledStylesheet.ir,
+      _sourceXml,
+      options,
+      result,
+    );
+
     return executionInfo === undefined
-      ? result
+      ? resultWithCoverage
       : {
-          ...result,
+          ...resultWithCoverage,
           execution: executionInfo,
         };
   }

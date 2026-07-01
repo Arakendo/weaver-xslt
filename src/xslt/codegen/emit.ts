@@ -96,17 +96,17 @@ export function emitStylesheetModule(
         ? [`  const currentNode = ${renderTsExpression(nativePlan.currentNodeExpression)};`]
         : []),
       ...(nativePlan.currentNodeMayBeNull
-        ? ['  if (currentNode === null) {', '    return { output: "" };', '  }']
+        ? ['  if (currentNode === null) {', '    return finish({ output: "" });', '  }']
         : []),
       ...(defaultIsInitialTemplateExecution
         ? []
         : [`  traceFocusEnter(${defaultTraceNodeIdentifier}, ctx);`]),
       `  traceTemplateEnter(${defaultTraceNodeIdentifier}, ctx, ${defaultTemplateInfo});`,
-      '  return {',
+      '  return finish({',
       '    output:',
       `      ${renderTsExpression(nativePlan.outputExpression)},`,
       '    ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),',
-      '  };',
+      '  });',
     ];
     const wrappedDefaultBodyStatements =
       nativePlan.initialTemplateEntryTemplate !== undefined
@@ -143,14 +143,18 @@ export function emitStylesheetModule(
                 ]
               : []),
             ...((nativePlan.initialTemplateCurrentNodeMayBeNull ?? false)
-              ? ['      if (currentNode === null) {', '        return { output: "" };', '      }']
+              ? [
+                  '      if (currentNode === null) {',
+                  '        return finish({ output: "" });',
+                  '      }',
+                ]
               : []),
             `      traceTemplateEnter(${initialTraceNodeIdentifier}, ctx, ${initialTemplateInfo!});`,
-            '      return {',
+            '      return finish({',
             '        output:',
             `          ${renderTsExpression(nativePlan.initialTemplateOutputExpression!)},`,
             '        ...(getRecordedTracePause(ctx.trace) === undefined ? {} : { pause: getRecordedTracePause(ctx.trace) }),',
-            '      };',
+            '      });',
             '    } catch (error) {',
             `      throw prependNativeInitialTemplateError(error, ${JSON.stringify(nativePlan.initialTemplateName)}, ${JSON.stringify(nativePlan.initialTemplateEntryTemplate.location)});`,
             '    }',
@@ -158,9 +162,11 @@ export function emitStylesheetModule(
           ];
     return renderTsModule({
       statements: [
-        `import { ${[...new Set(['throwMissingNativeInitialTemplate', 'throwUnsupportedNativeInitialMode', 'getRecordedTracePause', 'resetRecordedTracePause', 'traceFocusEnter', 'traceTemplateEnter', ...nativePlan.runtimeHelpers])].join(', ')} } from ${JSON.stringify(plan.moduleSpecifier)};`,
-        `import type { TransformContext, TransformResult } from ${JSON.stringify(plan.moduleSpecifier)};`,
+        `import { ${[...new Set(['appendCoverageWarnings', 'throwMissingNativeInitialTemplate', 'throwUnsupportedNativeInitialMode', 'getRecordedTracePause', 'resetRecordedTracePause', 'traceFocusEnter', 'traceTemplateEnter', ...nativePlan.runtimeHelpers])].join(', ')} } from ${JSON.stringify(plan.moduleSpecifier)};`,
+        `import type { StylesheetIR, TransformContext, TransformResult } from ${JSON.stringify(plan.moduleSpecifier)};`,
         ...typeBlock.importStatements,
+        '',
+        `const stylesheet = ${plan.serializedIr} satisfies StylesheetIR;`,
         '',
         ...typeBlock.typeStatements,
         ...(typeBlock.typeStatements.length > 0 ? [''] : []),
@@ -169,6 +175,7 @@ export function emitStylesheetModule(
         renderTemplateProvenanceComment(nativePlan.entryTemplate, plan.sourcePath),
         `export function transform(sourceXml: string, ctx: ${typeBlock.transformContextTypeName} = {}): TransformResult {`,
         '  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;',
+        '  const finish = (result: TransformResult): TransformResult => appendCoverageWarnings(stylesheet, sourceXml, ctx, result);',
         '  resetRecordedTracePause(ctx.trace);',
         ...initialModeGuardStatements,
         ...missingInitialTemplateGuardStatements,
