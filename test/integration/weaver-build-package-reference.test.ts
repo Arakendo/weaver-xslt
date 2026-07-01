@@ -43,7 +43,11 @@ describePackageReference('integration Weaver.Build PackageReference consumers', 
       const stdout = String(execError.stdout ?? '');
       const stderr = String(execError.stderr ?? '');
       buildError = new Error(
-        [execError.message, stdout.length > 0 ? `stdout:\n${stdout}` : undefined, stderr.length > 0 ? `stderr:\n${stderr}` : undefined]
+        [
+          execError.message,
+          stdout.length > 0 ? `stdout:\n${stdout}` : undefined,
+          stderr.length > 0 ? `stderr:\n${stderr}` : undefined,
+        ]
           .filter((part): part is string => part !== undefined)
           .join('\n\n'),
       );
