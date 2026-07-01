@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <!-- Use bash to run the shim script in this test environment -->
+    <WeaverNode>bash</WeaverNode>
+    <WeaverCopyToOutput>true</WeaverCopyToOutput>
+    <!-- Ensure IntermediateOutputPath is set predictably for the test -->
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)</IntermediateOutputPath>
+    <!-- Force a POSIX-style explicit output dir for the test to avoid escaping issues -->
+    <WeaverOutputDir>$(MSBuildProjectDirectory)/weaver-out/</WeaverOutputDir>
+  </PropertyGroup>
+
+  <!-- Import the local Weaver.Build props/targets for testing the scaffold -->
+  <Import Project="..\Weaver.Build\build\Weaver.Build.props" />
+  <Import Project="..\Weaver.Build\build\Weaver.Build.targets" />
+
+  <ItemGroup>
+    <WeaverStylesheet Include="Stylesheets/invoice.xsl" />
+  </ItemGroup>
+
+  <!-- Test-time override so the scaffold runs the shim shell script in this environment -->
+  <PropertyGroup>
+    <WeaverNode>bash</WeaverNode>
+    <!-- Ensure the outDir is POSIX for the shell script used in this test -->
+    <WeaverOutputDir>$(MSBuildProjectDirectory)/weaver-out/</WeaverOutputDir>
+  </PropertyGroup>
+
+</Project>
