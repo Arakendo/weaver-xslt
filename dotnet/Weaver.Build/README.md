@@ -10,6 +10,7 @@ Purpose
 Current scaffolded files
 
 - `Weaver.Build.csproj` — packable local NuGet project for the scaffold
+- `../Weaver.Tool` — thin managed wrapper host for invoking the packaged JS CLI
 - build/Weaver.Build.props — default properties for the integration
 - build/Weaver.Build.targets — simple targets to invoke the Weaver CLI for each stylesheet
 - tools/weaver/\* — scaffold carrier shims used for local validation
@@ -41,9 +42,10 @@ Implemented scaffold behavior
   `WeaverCopySourceMapsToOutput=true`.
 - The scaffold can be packed as a local `Weaver.Build` NuGet package and consumed
   through `PackageReference` in the repo's validation projects.
-- The packed package now carries the built `dist/` CLI plus the minimal runtime
-  npm dependency set needed for local PackageReference validation without a
-  repo-local `WeaverToolCliPath` override.
+- The packed package now carries the built `dist/` CLI, a thin managed
+  `Weaver.Tool.dll` wrapper host, and the minimal runtime npm dependency set
+  needed for local PackageReference validation without a repo-local
+  `WeaverToolCliPath` override.
 
 Key properties
 
@@ -54,6 +56,7 @@ Key properties
 - `WeaverPublishSubdir` — relative folder under `$(OutputPath)` for copied artifacts
 - `WeaverCopySourceMapsToOutput` — opt in to copying `.map` files into app output
 - `WeaverNode` — Node executable path
+- `WeaverToolHostPath` — optional override for the managed wrapper host path
 - `WeaverDiagnosticsFormat` — diagnostics format requested from the CLI
 - `WeaverFailOnDiagnostics` — fail build on warnings/errors emitted by the compiler
 - `WeaverDesignTimeEnabled` — opt in to running during IDE design-time evaluation
@@ -111,7 +114,7 @@ Repository helper scripts (provided):
 
 Notes & next steps
 
-- Production packaging should allow opt-in bundled Node and a stable carrier. The current scaffold is for local validation only.
+- Production packaging should allow opt-in bundled Node and a polished `weaver.exe` apphost. The current scaffold validates the `Weaver.Tool.dll` host path first.
 - The README here contains recommended toggles but a packaged Weaver.Build NuGet should document the same controls in its package README and docs/NUGET_INTEGRATION.md.
 - The scaffold still relies on the current CLI emitting primary artifacts next to
   the source stylesheet before the targets stage them into `$(WeaverOutputDir)`.

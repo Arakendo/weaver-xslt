@@ -11,11 +11,15 @@
     <!-- Location where the carrier/tooling will be expected. Weaver.Tool would
          place the CLI entrypoint under tools/weaver/ in the package layout. -->
     <!-- Prefer the locally built JS CLI (dist/cli.js) when present in the repo. -->
+    <_PackagedToolDll>$(MSBuildThisFileDirectory)..\tools\weaver\Weaver.Tool.dll</_PackagedToolDll>
     <_LocalDistCli>$(MSBuildThisFileDirectory)..\..\..\dist\cli.js</_LocalDistCli>
     <_PackagedDistCli>$(MSBuildThisFileDirectory)..\tools\weaver\dist\cli.js</_PackagedDistCli>
+    <WeaverToolHostPath Condition="'$(WeaverToolHostPath)' == '' and Exists('$(_PackagedToolDll)')">$(_PackagedToolDll)</WeaverToolHostPath>
     <WeaverToolCliPath Condition="'$(WeaverToolCliPath)' == '' and Exists('$(_LocalDistCli)')">$(_LocalDistCli)</WeaverToolCliPath>
     <WeaverToolCliPath Condition="'$(WeaverToolCliPath)' == '' and !Exists('$(_LocalDistCli)') and Exists('$(_PackagedDistCli)')">$(_PackagedDistCli)</WeaverToolCliPath>
     <WeaverToolCliPath Condition="'$(WeaverToolCliPath)' == '' and !Exists('$(_LocalDistCli)') and !Exists('$(_PackagedDistCli)')">$(MSBuildThisFileDirectory)..\tools\weaver\weaver-xslt.js</WeaverToolCliPath>
+    <WeaverToolCommand Condition="'$(WeaverToolHostPath)' != ''">&quot;dotnet&quot; &quot;$(WeaverToolHostPath)&quot; --node-path &quot;$(WeaverNode)&quot;</WeaverToolCommand>
+    <WeaverToolCommand Condition="'$(WeaverToolCommand)' == ''">&quot;$(WeaverNode)&quot; &quot;$(WeaverToolCliPath)&quot;</WeaverToolCommand>
   </PropertyGroup>
 
   <!-- Ensure the item exists even if consumer omitted it so targets don't fail. -->
@@ -88,7 +92,7 @@
 
     <Message Text="Weaver: compiling %(_WeaverToCompile.Identity) -> $(WeaverOutputDir)%(_WeaverToCompile.EffectiveOutputSubdir)" Importance="$(WeaverMessageImportance)" />
 
-    <Exec Command="&quot;$(WeaverNode)&quot; &quot;$(WeaverToolCliPath)&quot; compile &quot;%(_WeaverToCompile.Identity)&quot; --emit %(_WeaverToCompile.EffectiveEmit) --diagnostics $(WeaverDiagnosticsFormat) --diagnostics-out &quot;%(_WeaverToCompile.DiagnosticsOutPath)&quot; %(_WeaverToCompile.SampleArgument) $(WeaverCliFailFlag)" WorkingDirectory="$(MSBuildProjectDirectory)" IgnoreExitCode="true">
+    <Exec Command="$(WeaverToolCommand) compile &quot;%(_WeaverToCompile.Identity)&quot; --emit %(_WeaverToCompile.EffectiveEmit) --diagnostics $(WeaverDiagnosticsFormat) --diagnostics-out &quot;%(_WeaverToCompile.DiagnosticsOutPath)&quot; %(_WeaverToCompile.SampleArgument) $(WeaverCliFailFlag)" WorkingDirectory="$(MSBuildProjectDirectory)" IgnoreExitCode="true">
       <Output TaskParameter="ExitCode" PropertyName="WeaverExitCode" />
     </Exec>
 

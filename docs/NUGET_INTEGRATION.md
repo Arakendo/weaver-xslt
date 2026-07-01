@@ -4,7 +4,10 @@
 > project plus local `.NET` validation projects that consume it through
 > `PackageReference`. The packed package now carries the built `dist/` CLI and
 > a minimal runtime npm dependency set for local validation, but the carrier
-> shape is still scaffold-level rather than a reduced production payload.
+> shape is still scaffold-level rather than a reduced production payload. The
+> repo now also contains a thin managed wrapper host in `dotnet/Weaver.Tool`,
+> and the packed carrier includes `Weaver.Tool.dll`; a polished
+> `weaver.exe`/RID-specific apphost story is still pending.
 
 > Note: the scaffold is intentionally minimal and intended to be iterated on. The plan sections below describe the intended package shape, properties, and acceptance criteria.
 
@@ -68,18 +71,25 @@ What exists in-tree today:
 - The scaffold honors per-item metadata, stages artifacts into
   `$(WeaverOutputDir)`, participates in build/publish, and maps diagnostics into
   MSBuild-friendly output.
+- `dotnet/Weaver.Tool` now provides a thin host that resolves the packaged CLI,
+  forwards arguments to Node, and preserves CLI exit behavior.
 - The packed `Weaver.Build` package carries the repo-built `dist/` CLI plus the
-  minimal npm runtime dependency set needed for local package-consumer
-  validation.
+  minimal npm runtime dependency set plus the managed `Weaver.Tool.dll` host
+  needed for local package-consumer validation.
 
 What is still intentionally unfinished:
 
 - The packaged carrier under `tools/weaver/` is still a scaffold fallback, not
+  yet a polished wrapper-host layout centered on `weaver.exe` and
+  `Weaver.Tool.dll`.
 - The packaged carrier shape still reflects the repo's current runtime
   dependency graph and has not yet been reduced into a cleaner production
   carrier boundary.
-- The planned `Weaver.Tool` split is still a design target rather than a fully
-  implemented package boundary.
+- The `Weaver.Tool` split now exists as an in-tree scaffold, but it is not yet
+  separated into its own shipped package boundary.
+- The package currently exposes `Weaver.Tool.dll` as the stable wrapper host,
+  while `weaver.exe` remains a planned packaging/publish artifact rather than
+  a validated in-repo deliverable.
 
 ## 1. Problem statement
 
@@ -171,7 +181,8 @@ and the optional .NET-facing runtime façade.
 
 - Ships the Weaver CLI assets needed to run `compile`/`watch` during a build.
 - Owns version pinning of the Weaver toolchain it carries.
-- Contains **no** transform logic and **no** public API beyond build props.
+- Contains **no** transform logic; it is a thin hosting layer around the JS
+  CLI plus the packaged runtime assets.
 - Two candidate carrying strategies (decided in §6):
   1. **Bring-your-own-Node**: package carries the Weaver npm tarball/JS and
      shells to a host-provided `node`.
@@ -180,17 +191,37 @@ and the optional .NET-facing runtime façade.
 
 Expected package contents:
 
+- `tools/weaver/Weaver.Tool.dll` as the stable managed host entrypoint
+- `tools/weaver/weaver.exe` as the future apphost executable produced for
+  platforms that support one and used as the friendly process entrypoint when
+  available
 - `tools/weaver/` or equivalent carrier directory containing the Weaver CLI
   entrypoint and runtime files
-- a small bootstrap script or host shim the MSBuild target can invoke
+- a small host bootstrap layer that forwards arguments to the packaged JS CLI,
+  resolves Node, and returns CLI exit codes unchanged
 - version metadata that lets the target log the exact Weaver toolchain version
 - optionally, RID-scoped Node payloads if bundled-Node is later enabled
+
+Wrapper behavior expectations:
+
+- `Weaver.Tool.dll` is the canonical host artifact that MSBuild can invoke via
+  `dotnet Weaver.Tool.dll` on any supported SDK machine.
+- `weaver.exe` is a convenience apphost, primarily for Windows and other
+  publish flows where an executable entrypoint improves integration or
+  diagnostics; it is still a planned follow-up rather than the current
+  validated carrier entrypoint.
+- both entrypoints forward the same argument contract as the JS CLI and must
+  not reinterpret Weaver diagnostics or semantics.
+- the wrapper owns only process setup: locating the packaged CLI assets,
+  deciding whether to use host `node` or a bundled Node runtime, and preserving
+  stdout/stderr/exit code behavior.
 
 ### 4.2 `Weaver.Build` — MSBuild integration (props/targets)
 
 - Ships `build/Weaver.Build.props` and `build/Weaver.Build.targets`.
-- Discovers stylesheets, invokes the carrier, maps diagnostics to MSBuild, and
-  wires emitted artifacts into the consuming project's output.
+- Discovers stylesheets, invokes the carrier through `Weaver.Tool.dll` or
+  `weaver.exe`, maps diagnostics to MSBuild, and wires emitted artifacts into
+  the consuming project's output.
 - This is the package application developers actually reference for mode A.
 
 Expected package contents:
@@ -228,6 +259,9 @@ For the first supported release, the recommended package contract is:
 - application projects reference `Weaver.Build`
 - application projects do **not** directly reference `Weaver.Tool`
 - `Weaver.AspNet` is separate and optional
+- `Weaver.Build` targets should prefer invoking `weaver.exe` when present and
+  otherwise fall back to `dotnet Weaver.Tool.dll` as the stable cross-platform
+  host path
 
 That keeps the normal consuming story small while preserving a place for the
 toolchain payload and version pinning.
@@ -618,21 +652,22 @@ Recommended v1 cutoff:
 
 ## 15. Repository/change map (planned)
 
-| Area                              | Change                                                                  |
-| --------------------------------- | ----------------------------------------------------------------------- |
-| CLI (`src/cli.ts`)                | add machine-readable diagnostics output mode for MSBuild consumption    |
-| CLI/compile                       | optionally emit a dependency sidecar for include/import incrementality  |
-| New `Weaver.Tool` (.NET)          | toolchain/asset carrier, version pinning, optional bundled Node         |
-| New `Weaver.Build` (.NET)         | MSBuild props/targets, item group, diagnostics mapping, artifact wiring |
-| New `Weaver.AspNet` (.NET, later) | runtime worker bridge for mode B                                        |
-| Docs                              | this plan; later a dedicated `dotnet` CLI consumer doc                  |
+| Area                              | Change                                                                                   |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| CLI (`src/cli.ts`)                | add machine-readable diagnostics output mode for MSBuild consumption                     |
+| CLI/compile                       | optionally emit a dependency sidecar for include/import incrementality                   |
+| New `Weaver.Tool` (.NET)          | wrapper host (`Weaver.Tool.dll`, `weaver.exe`), toolchain carrier, optional bundled Node |
+| New `Weaver.Build` (.NET)         | MSBuild props/targets, item group, diagnostics mapping, artifact wiring                  |
+| New `Weaver.AspNet` (.NET, later) | runtime worker bridge for mode B                                                         |
+| Docs                              | this plan; later a dedicated `dotnet` CLI consumer doc                                   |
 
 ## 16. Recommended first implementation slice
 
 If work started tomorrow, the smallest defensible slice would be:
 
 1. add machine-readable diagnostics to the CLI
-2. create `Weaver.Tool` with bring-your-own-Node only
+2. create `Weaver.Tool` with bring-your-own-Node only, exposing
+   `Weaver.Tool.dll` and a `weaver.exe` apphost where supported
 3. create `Weaver.Build` with `@(WeaverStylesheet)`, `WeaverEmit=bundle`, and
    incremental build/publish wiring
 4. prove it in one ASP.NET sample app checked into the repo or a companion
