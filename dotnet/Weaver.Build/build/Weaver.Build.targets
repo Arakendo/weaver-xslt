@@ -63,6 +63,144 @@
       <Output TaskParameter="ExitCode" PropertyName="WeaverExitCode" />
     </Exec>
 
+    <!-- Emit structured diagnostics into MSBuild from any JSON diagnostics files produced by the CLI. -->
+    <ItemGroup>
+      <_WeaverJsonDiagnostics Include="$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json" Condition="Exists('$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json')" />
+    </ItemGroup>
+
+    <!-- Inline MSBuild task to parse diagnostics JSON and emit MSBuild warnings/errors so IDEs can pick them up. -->
+    <UsingTask
+      TaskName="WeaverEmitDiagnostics"
+      TaskFactory="CodeTaskFactory"
+      AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+      <ParameterGroup>
+        <DiagnosticsFiles ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      </ParameterGroup>
+      <Task>
+        <Reference Include="System.Text.Json" />
+        <Code Type="Class" Language="cs">
+<![CDATA[
+using System;
+using System.IO;
+using System.Text.Json;
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
+
+public class WeaverEmitDiagnostics : Task
+{
+    [Required]
+    public ITaskItem[] DiagnosticsFiles { get; set; }
+
+    public override bool Execute()
+    {
+        if (DiagnosticsFiles == null || DiagnosticsFiles.Length == 0)
+        {
+            return true;
+        }
+
+        foreach (var item in DiagnosticsFiles)
+        {
+            var path = item.ItemSpec;
+            try
+            {
+                var text = File.ReadAllText(path);
+                using var doc = JsonDocument.Parse(text);
+                var root = doc.RootElement;
+
+                // Try to get the provided source base path
+                string sourceBase = null;
+                if (root.TryGetProperty("source", out var sourceElem) && sourceElem.ValueKind == JsonValueKind.Object && sourceElem.TryGetProperty("path", out var sp))
+                {
+                    sourceBase = sp.GetString();
+                }
+
+                if (!root.TryGetProperty("diagnostics", out var diagnostics) || diagnostics.ValueKind != JsonValueKind.Array)
+                {
+                    continue;
+                }
+
+                foreach (var diag in diagnostics.EnumerateArray())
+                {
+                    var severity = diag.GetProperty("severity").GetString();
+                    var code = diag.GetProperty("code").GetString();
+                    var message = diag.GetProperty("message").GetString();
+
+                    string file = null;
+                    int line = 0;
+                    int column = 0;
+
+                    if (diag.TryGetProperty("primary", out var primary) && primary.ValueKind == JsonValueKind.Object)
+                    {
+                        if (primary.TryGetProperty("uri", out var uriValue) && uriValue.ValueKind == JsonValueKind.String)
+                        {
+                            file = uriValue.GetString();
+                        }
+                        if (primary.TryGetProperty("lineStart", out var lineV) && lineV.ValueKind == JsonValueKind.Number)
+                        {
+                            line = lineV.GetInt32();
+                        }
+                        if (primary.TryGetProperty("columnStart", out var colV) && colV.ValueKind == JsonValueKind.Number)
+                        {
+                            column = colV.GetInt32();
+                        }
+                    }
+
+                    // If file is relative, try to resolve against sourceBase
+                    if (!string.IsNullOrEmpty(file) && !Path.IsPathRooted(file) && !string.IsNullOrEmpty(sourceBase))
+                    {
+                        try
+                        {
+                            file = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(sourceBase), file));
+                        }
+                        catch
+                        {
+                            // ignore resolution errors
+                        }
+                    }
+
+                    // Default message format includes the diagnostic code to help mapping
+                    var text = $"{message} ({code})";
+
+                    if (string.Equals(severity, "error", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!string.IsNullOrEmpty(file) && line > 0)
+                        {
+                            Log.LogError(null, code, null, file, line, column, 0, 0, text);
+                        }
+                        else
+                        {
+                            Log.LogError(text);
+                        }
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrEmpty(file) && line > 0)
+                        {
+                            Log.LogWarning(null, code, null, file, line, column, 0, 0, text);
+                        }
+                        else
+                        {
+                            Log.LogWarning(text);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning($"Weaver: failed to parse diagnostics file {path}: {ex.Message}");
+            }
+        }
+
+        return true;
+    }
+}
+]]>
+        </Code>
+      </Task>
+    </UsingTask>
+
+    <WeaverEmitDiagnostics DiagnosticsFiles="@(_WeaverJsonDiagnostics)" Condition="@(_WeaverJsonDiagnostics) != ''" />
+
     <!-- Fail the build on non-zero exit; future work: map diagnostics by reading a JSON stream -->
     <Error Condition="'$(WeaverExitCode)' != '0'" Text="Weaver compilation failed for %(_WeaverToCompile.Identity) (exit code $(WeaverExitCode)). See tool output for details." />
 
