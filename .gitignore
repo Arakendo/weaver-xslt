@@ -21,3 +21,17 @@ coverage/
 
 # Local Weaver enable/disable override
 Directory.Build.Weaver.props
+
+# Generated dotnet fixture outputs
+dotnet/**/bin/
+dotnet/**/obj/
+dotnet/**/weaver-out/
+dotnet/**/*.diagnostics.json
+dotnet/**/Stylesheets/*.xsl.bundle.js
+dotnet/**/Stylesheets/*.xsl.bundle.js.map
+dotnet/**/Stylesheets/*.xsl.js
+dotnet/**/Stylesheets/*.xsl.js.map
+dotnet/**/Stylesheets/*.xsl.ts
+dotnet/**/Stylesheets/*.xsl.d.ts
+dotnet/**/Stylesheets/*.xsl.deps
+dotnet/**/Stylesheets/*.xsl.digest
