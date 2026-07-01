@@ -22,12 +22,25 @@
     <None Include="build/Weaver.Build.props" Pack="true" PackagePath="build/Weaver.Build.props" />
     <None Include="build/Weaver.Build.targets" Pack="true" PackagePath="build/Weaver.Build.targets" />
     <None Include="tools/weaver/**" Pack="true" PackagePath="tools/weaver/" />
-    <None Include="..\..\dist\**" Pack="true" PackagePath="tools/weaver/dist/" />
-    <None Include="..\..\node_modules\@xmldom\xmldom\**" Pack="true" PackagePath="tools/weaver/node_modules/@xmldom/xmldom/" />
-    <None Include="..\..\node_modules\chokidar\**" Pack="true" PackagePath="tools/weaver/node_modules/chokidar/" />
-    <None Include="..\..\node_modules\readdirp\**" Pack="true" PackagePath="tools/weaver/node_modules/readdirp/" />
-    <None Include="..\..\node_modules\esbuild\**" Pack="true" PackagePath="tools/weaver/node_modules/esbuild/" />
-    <None Include="..\..\node_modules\@esbuild\**" Pack="true" PackagePath="tools/weaver/node_modules/@esbuild/" />
-    <None Include="..\..\node_modules\typescript\**" Pack="true" PackagePath="tools/weaver/node_modules/typescript/" />
+    <None Include="..\..\dist\**\*.js;..\..\dist\**\*.json" Pack="true" PackagePath="tools/weaver/dist/" />
+
+    <None Include="..\..\node_modules\@xmldom\xmldom\package.json" Pack="true" PackagePath="tools/weaver/node_modules/@xmldom/xmldom/" />
+    <None Include="..\..\node_modules\@xmldom\xmldom\lib\**" Pack="true" PackagePath="tools/weaver/node_modules/@xmldom/xmldom/lib/" />
+
+    <None Include="..\..\node_modules\chokidar\package.json;..\..\node_modules\chokidar\index.js;..\..\node_modules\chokidar\handler.js" Pack="true" PackagePath="tools/weaver/node_modules/chokidar/" />
+    <None Include="..\..\node_modules\chokidar\esm\**\*.js" Pack="true" PackagePath="tools/weaver/node_modules/chokidar/esm/" />
+
+    <None Include="..\..\node_modules\readdirp\package.json;..\..\node_modules\readdirp\index.js" Pack="true" PackagePath="tools/weaver/node_modules/readdirp/" />
+    <None Include="..\..\node_modules\readdirp\esm\**\*.js" Pack="true" PackagePath="tools/weaver/node_modules/readdirp/esm/" />
+
+    <None Include="..\..\node_modules\esbuild\package.json;..\..\node_modules\esbuild\install.js" Pack="true" PackagePath="tools/weaver/node_modules/esbuild/" />
+    <None Include="..\..\node_modules\esbuild\lib\**" Pack="true" PackagePath="tools/weaver/node_modules/esbuild/lib/" />
+    <None Include="..\..\node_modules\esbuild\bin\**" Pack="true" PackagePath="tools/weaver/node_modules/esbuild/bin/" />
+
+    <None Include="..\..\node_modules\@esbuild\darwin-arm64\package.json" Pack="true" PackagePath="tools/weaver/node_modules/@esbuild/darwin-arm64/" />
+    <None Include="..\..\node_modules\@esbuild\darwin-arm64\bin\**" Pack="true" PackagePath="tools/weaver/node_modules/@esbuild/darwin-arm64/bin/" />
+
+    <None Include="..\..\node_modules\typescript\package.json" Pack="true" PackagePath="tools/weaver/node_modules/typescript/" />
+    <None Include="..\..\node_modules\typescript\lib\**\*.js;..\..\node_modules\typescript\lib\**\*.json" Pack="true" PackagePath="tools/weaver/node_modules/typescript/lib/" />
   </ItemGroup>
 </Project>
