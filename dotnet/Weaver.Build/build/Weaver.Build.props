@@ -9,6 +9,17 @@
     <WeaverCopyToOutput>true</WeaverCopyToOutput>
     <!-- Master switch to disable integration quickly -->
     <WeaverEnabled>true</WeaverEnabled>
+    <!-- Controls whether the integration runs during Visual Studio design-time builds
+         (IntelliSense / background project evaluation). By default integration is
+         skipped during design-time evaluation to avoid IDE churn. Set to 'true' to
+         enable compilation during design-time (not recommended by default). -->
+    <WeaverDesignTimeEnabled>false</WeaverDesignTimeEnabled>
+    <!-- Optional path to a "disable" marker file. If set and the file exists,
+         Weaver.Build targets will skip compilation. This allows repo-level or
+         CI-driven toggles without changing project files. Example: create a
+         top-level Directory.Build.Weaver.props or a file at the repo root and
+         set WeaverDisableFile to that path in a local override. -->
+    <WeaverDisableFile></WeaverDisableFile>
     <!-- Node executable to use; default autodetect to PATH 'node' -->
     <WeaverNode>node</WeaverNode>
     <!-- Verbosity for the build integration -->

@@ -18,7 +18,9 @@
     <WeaverStylesheet Include="@(WeaverStylesheet)" Condition="'@(WeaverStylesheet)' != ''" />
   </ItemGroup>
 
-  <Target Name="ResolveWeaverInputs" BeforeTargets="BeforeBuild" Condition="'$(WeaverEnabled)' == 'true'">
+  <Target Name="ResolveWeaverInputs" BeforeTargets="BeforeBuild" Condition="'$(WeaverEnabled)' == 'true' and ( '$(DesignTimeBuild)' != 'true' or '$(WeaverDesignTimeEnabled)' == 'true' ) and ( '$(WeaverDisableFile)' == '' or !Exists('$(WeaverDisableFile)') )">
+    <!-- Debug: print the list of WeaverStylesheet items available to this target -->
+    <Message Text="Weaver: item @(WeaverStylesheet)" Importance="High" />
     <Message Text="Weaver: resolving %(WeaverStylesheet.Identity) (WeaverEmit=$(WeaverEmit))" Importance="High" Condition="'@(WeaverStylesheet)' != ''" />
   </Target>
 

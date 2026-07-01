@@ -24,12 +24,44 @@ How to use (sample)
    `$(IntermediateOutputPath)weaver/` and copy them into the app output if
    `WeaverCopyToOutput` is enabled.
 
+Enable / Disable control
+
+The integration provides multiple ways to enable or disable at different scopes:
+
+- Per-project: set in your project file
+
+```xml
+<PropertyGroup>
+  <WeaverEnabled>false</WeaverEnabled> <!-- disable for this project -->
+</PropertyGroup>
+```
+
+- Design-time builds (IDE evaluation): the targets are skipped during design-time by default.
+  To enable compilation during design-time (not recommended), set:
+
+```xml
+<PropertyGroup>
+  <WeaverDesignTimeEnabled>true</WeaverDesignTimeEnabled>
+</PropertyGroup>
+```
+
+- Repo-level toggle (CI or quick local override): create a top-level Directory.Build.Weaver.props
+  at the repository root with the following contents to disable across the repo:
+
+```xml
+<Project>
+  <PropertyGroup>
+    <WeaverEnabled>false</WeaverEnabled>
+  </PropertyGroup>
+</Project>
+```
+
+Repository helper scripts (provided):
+- `scripts/disable-weaver.sh` — create Directory.Build.Weaver.props to disable the Weaver targets for local development/CI.
+- `scripts/enable-weaver.sh` — remove the auto-generated Directory.Build.Weaver.props to re-enable default behavior.
+
 Notes & next steps
-- This is intentionally minimal:
-  - it uses an Exec to invoke a Node-backed CLI; a real carrier package (`Weaver.Tool`)
-    should place the CLI under `tools/weaver/` and provide a stable path for the targets.
-  - diagnostics are not yet parsed as machine-readable payloads—adding a JSON
-    diagnostics output and mapping to MSBuild errors/warnings is a near-term follow-up.
-  - incrementality based on include/import dependency sidecars is also planned.
+- Production packaging should allow opt-in bundled Node and a stable carrier. The current scaffold is for local validation only.
+- The README here contains recommended toggles but a packaged Weaver.Build NuGet should document the same controls in its package README and docs/NUGET_INTEGRATION.md.
 
 Refer to docs/NUGET_INTEGRATION.md for the full plan and acceptance criteria.

@@ -18,3 +18,6 @@ coverage/
 # Local workbench material
 /.workbench/
 /devtools-fixture/public/
+
+# Local Weaver enable/disable override
+Directory.Build.Weaver.props
