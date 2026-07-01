@@ -25,9 +25,27 @@
     <!-- Debug: print the list of WeaverStylesheet items available to this target -->
     <Message Text="Weaver: item @(WeaverStylesheet)" Importance="High" />
     <Message Text="Weaver: resolving %(WeaverStylesheet.Identity) (WeaverEmit=$(WeaverEmit))" Importance="High" Condition="'@(WeaverStylesheet)' != ''" />
+
+    <!-- Build an item list of inputs (stylesheet plus any .deps files' contents) so the compile target can be incremental -->
+    <ItemGroup>
+      <!-- Add the stylesheet file itself as an input -->
+      <WeaverInputs Include="@(WeaverStylesheet->'$(MSBuildProjectDirectory)/%(Identity)')" />
+      <!-- Collect any existing .deps sidecars for reading dependency lines -->
+      <_WeaverDepsFiles Include="$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).deps" Condition="Exists('$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).deps')" />
+    </ItemGroup>
+
+    <!-- Read all dependency files (if any) and append their lines to WeaverInputs -->
+    <ReadLinesFromFile File="@(_WeaverDepsFiles)" Condition="@(_WeaverDepsFiles) != ''">
+      <Output TaskParameter="Lines" ItemName="WeaverInputs" />
+    </ReadLinesFromFile>
+
+    <!-- Precompute the outputs (possible primary artifacts) to enable Inputs/Outputs evaluation. -->
+    <ItemGroup>
+      <WeaverOutputs Include="$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).bundle.js;$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).js;$(MSBuildProjectDirectory)/%(WeaverStylesheet.Identity).ts" />
+    </ItemGroup>
   </Target>
 
-  <Target Name="CompileWeaverStylesheets" DependsOnTargets="ResolveWeaverInputs" BeforeTargets="BeforeBuild" Condition="'$(WeaverEnabled)' == 'true' and '@(WeaverStylesheet)' != ''">
+  <Target Name="CompileWeaverStylesheets" DependsOnTargets="ResolveWeaverInputs" BeforeTargets="BeforeBuild" Inputs="@(WeaverInputs)" Outputs="@(WeaverOutputs)" Condition="'$(WeaverEnabled)' == 'true' and '@(WeaverStylesheet)' != ''">
     <PropertyGroup>
       <!-- Helper to pass fail-on-diagnostics flag to the CLI when requested -->
       <WeaverCliFailFlag Condition="'$(WeaverFailOnDiagnostics)' == 'true'">--fail-on-diagnostics true</WeaverCliFailFlag>
