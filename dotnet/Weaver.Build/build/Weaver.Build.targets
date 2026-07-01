@@ -59,6 +59,7 @@
       <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).ts" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).ts')" />
       <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).d.ts" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).d.ts')" />
       <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).digest" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).digest')" />
+      <WeaverArtifact Include="$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).deps" Condition="Exists('$(MSBuildProjectDirectory)/%(_WeaverToCompile.Identity).deps')" />
       <WeaverArtifact Include="$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json" Condition="Exists('$(WeaverOutputDir)%(_WeaverToCompile.Filename).diagnostics.json')" />
     </ItemGroup>
 

@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
 import { XMLSerializer, type Element, type Node } from '@xmldom/xmldom';
@@ -137,7 +137,9 @@ export function compileStylesheetArtifactsFromFile(
   const composeMemoryBefore = options.captureProfile ? sampleMemoryUsage() : undefined;
   const resolvedStylesheetPath = resolve(stylesheetPath);
   options.onProgress?.(`Composing stylesheet source from ${resolvedStylesheetPath}`);
-  const stylesheetSource = composeStylesheetSourceFromFile(resolvedStylesheetPath);
+  const composed = composeStylesheetSourceDetailsFromFile(resolvedStylesheetPath);
+  const stylesheetSource = composed.source;
+  const composedDependencies = composed.dependencies;
   const composeElapsedMs =
     composeStartTime === undefined ? undefined : performance.now() - composeStartTime;
   const composeMemoryAfter = options.captureProfile ? sampleMemoryUsage() : undefined;
@@ -158,6 +160,35 @@ export function compileStylesheetArtifactsFromFile(
     ...(options.captureIrStats === undefined ? {} : { captureIrStats: options.captureIrStats }),
     ...(options.emitTargets === undefined ? {} : { emitTargets: options.emitTargets }),
   });
+
+  // Emit a simple newline-separated .deps sidecar listing composed stylesheet
+  // dependencies (xsl:include / xsl:import targets). This is useful for MSBuild
+  // to read file dependencies for incremental builds.
+  try {
+    const depsPath = `${resolvedStylesheetPath}.deps`;
+    if (composedDependencies !== undefined && composedDependencies.length > 0) {
+      try {
+        // Ensure parent directory exists
+        try {
+          mkdirSync(resolve(depsPath, '..'), { recursive: true });
+        } catch {
+          // ignore
+        }
+        writeFileSync(depsPath, composedDependencies.join('\n') + '\n', 'utf8');
+      } catch {
+        // best-effort; don't fail compilation when writing deps fails
+      }
+    } else {
+      // Ensure stale deps file is removed if no dependencies
+      try {
+        writeFileSync(`${resolvedStylesheetPath}.deps`, '', 'utf8');
+      } catch {
+        // ignore
+      }
+    }
+  } catch {
+    // ignore any errors while attempting deps emission
+  }
 
   if (
     options.captureProfile !== true ||
@@ -228,6 +259,7 @@ export function summarizeComposedStylesheetFromFile(
 function composeStylesheetSourceDetailsFromFile(stylesheetPath: string): {
   readonly source: string;
   readonly summary: ComposedStylesheetSummary;
+  readonly dependencies: readonly string[];
 } {
   const { root, sourceName, source } = loadStylesheetRoot(stylesheetPath);
   const resolvedStylesheetPath = resolve(stylesheetPath);
@@ -241,12 +273,14 @@ function composeStylesheetSourceDetailsFromFile(stylesheetPath: string): {
         droppedDuplicateEntries: 0,
         duplicateSummaries: [],
       },
+      dependencies: [],
     };
   }
 
   const serializer = new XMLSerializer();
   const activePaths = new Set<string>();
   activePaths.add(stylesheetPath);
+  const dependencyPaths = new Set<string>();
   try {
     const entries = composeStylesheetChildren(
       root,
@@ -255,12 +289,14 @@ function composeStylesheetSourceDetailsFromFile(stylesheetPath: string): {
       serializer,
       activePaths,
       [],
+      dependencyPaths,
     );
     const prunedEntries = pruneLowerPrecedenceDuplicates(entries);
     const children = prunedEntries.map((entry) => entry.xml).join('');
     return {
       source: `<${root.nodeName}${serializeAttributes(root)}>${children}</${root.nodeName}>`,
       summary: createComposedStylesheetSummary(resolvedStylesheetPath, entries, prunedEntries),
+      dependencies: [...dependencyPaths].sort(),
     };
   } catch (error) {
     if (error instanceof Error && error.message === '__WEAVER_COMPOSE_RECURSION__') {
@@ -281,6 +317,7 @@ function composeStylesheetChildren(
   serializer: XMLSerializer,
   activePaths: Set<string>,
   precedence: ImportPrecedence,
+  dependencyPaths: Set<string>,
 ): readonly ComposedTopLevelEntry[] {
   const entries: ComposedTopLevelEntry[] = [];
   let importOrdinal = 0;
@@ -310,10 +347,18 @@ function composeStylesheetChildren(
         importOrdinal += 1;
       }
 
+      // Record the dependency and recurse into the referenced stylesheet
+      dependencyPaths.add(referencedPath);
       activePaths.add(referencedPath);
       try {
         entries.push(
-          ...composeImportedChildren(referencedPath, serializer, activePaths, referencedPrecedence),
+          ...composeImportedChildren(
+            referencedPath,
+            serializer,
+            activePaths,
+            referencedPrecedence,
+            dependencyPaths,
+          ),
         );
       } catch (error) {
         throw error;
@@ -334,6 +379,7 @@ function composeImportedChildren(
   serializer: XMLSerializer,
   activePaths: Set<string>,
   precedence: ImportPrecedence,
+  dependencyPaths: Set<string>,
 ): readonly ComposedTopLevelEntry[] {
   const { root, source } = loadStylesheetRoot(stylesheetPath);
   if (!isStylesheetRoot(root)) {
@@ -347,6 +393,7 @@ function composeImportedChildren(
     serializer,
     activePaths,
     precedence,
+    dependencyPaths,
   );
 }
 
