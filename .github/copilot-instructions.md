@@ -4,9 +4,13 @@
 
 - This repository builds `@arakendo/weaver-xslt` as a **TypeScript-native XSLT compiler**. The interpreter is the reference backend; the **codegen backend is the product**.
 - Start with the pinned docs before making architectural changes:
-  - [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) for non-negotiable design decisions
-  - [docs/DIFFERENTIATORS.md](../docs/DIFFERENTIATORS.md) for the product thesis and diagnostic goals
-  - [docs/ROADMAP.md](../docs/ROADMAP.md) for increment boundaries and exit criteria
+  - [docs/Specifications/Weaver Software Design Document.md](../docs/Specifications/Weaver%20Software%20Design%20Document.md) for non-negotiable design decisions
+  - [docs/Specifications/Weaver Product Thesis.md](../docs/Specifications/Weaver%20Product%20Thesis.md) for the product thesis and diagnostic goals
+  - [docs/Plans/Weaver Roadmap.md](../docs/Plans/Weaver%20Roadmap.md) for increment boundaries and exit criteria
+- Read relevant records in `docs/ADR/` before changing an accepted boundary.
+- Read relevant records in `docs/Architectural Reviews/` when a question is
+  still open, deferred, or under corpus pressure. Plans and reviews do not
+  override accepted ADRs.
 - Keep the core engine owned in-tree. Do **not** add external XPath or XSLT engine dependencies.
 - Treat the IR as the contract between compiler, interpreter, codegen, and future tooling. If a backend change feels awkward, prefer fixing the IR rather than adding backend-specific hacks.
 - Use the XML boundary in `src/xml/parse.ts` instead of constructing ad hoc parser usage.
@@ -16,7 +20,7 @@
 - **Diagnostics-first**: parser, AST, IR, and evaluator work should preserve source locations and make errors clearer, not defer that work.
 - Prefer compile-time diagnostics over runtime surprises whenever the design allows it.
 - Treat diagnostics as first-class product artifacts: analyzers and runtimes discover them, while canonical ordering and shared presentation policy should live in the shared diagnostics boundary rather than inside individual analysis passes or one-off surfaces.
-- Use [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) DEC-013 as the primary diagnostics north star, and use [docs/DIAGNOSTIC_INTRINSICS.md](../docs/DIAGNOSTIC_INTRINSICS.md) when work crosses into compiler-recognized `wx:*` observability/assertion surface.
+- Use [docs/Specifications/Weaver Software Design Document.md](../docs/Specifications/Weaver%20Software%20Design%20Document.md) DEC-013 as the primary diagnostics north star, and use [docs/Specifications/Weaver Diagnostic Intrinsics Specification.md](../docs/Specifications/Weaver%20Diagnostic%20Intrinsics%20Specification.md) when work crosses into compiler-recognized `wx:*` observability/assertion surface.
 - Generated TypeScript should stay readable and inspectable. Do not optimize by making codegen output opaque.
 - Keep Node-specific APIs out of core engine logic unless the code is clearly CLI-only or tooling-only.
 - Scope work to the current roadmap increment. Do not silently pull features forward from later milestones.
@@ -59,6 +63,6 @@
 - Add focused tests near the slice being implemented, especially for parser/evaluator behavior and diagnostics formatting.
 - Do not mark a feature done if it only passes happy-path tests and still has poor diagnostics.
 - When design or organization decisions change, update the nearest durable document rather than leaving rationale only in code or chat.
-- Keep [docs/LESSONS_LEARNED.md](../docs/LESSONS_LEARNED.md) current as runtime, corpus, and host behavior changes; add a short note there when a fix reveals a reusable debugging lesson.
+- Keep [docs/Notes/Lessons Learned.md](../docs/Notes/Lessons%20Learned.md) current as runtime, corpus, and host behavior changes; add a short note there when a fix reveals a reusable debugging lesson.
 - Prefer linking existing docs over duplicating them in instructions.
 - Treat `vendor/` as a large conformance corpus, not a normal exploration surface: avoid attaching, listing, or reading broad swaths of `vendor/**` when a targeted file or subtree will do. Prefer specific catalog files, specific test-set files, or narrowly scoped searches inside `vendor/qt3tests` and `vendor/xslt30-test` to avoid request-size/tooling failures.

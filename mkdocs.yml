@@ -34,27 +34,68 @@ theme:
 nav:
   - Home: index.md
   - Workbench: WORKBENCH.md
-  - Differentiators: DIFFERENTIATORS.md
-  - Architecture: ARCHITECTURE.md
-  - Roadmap: ROADMAP.md
-  - Lessons Learned: LESSONS_LEARNED.md
-  - Progress Artifacts: PROGRESS_ARTIFACTS.md
-  - Fallback File Size Findings: CODEGEN_FALLBACK_SIZE.md
-  - Compile Performance Plan: CODEGEN_COMPILE_PERFORMANCE.md
-  - Errors: ERRORS.md
-  - XPath: XPATH.md
-  - Semantic Boundaries: SEMANTIC_BOUNDARIES.md
-  - Security Boundaries: SECURITY_BOUNDARIES.md
-  - URI Resolution: URI_RESOLUTION.md
-  - Native Execution Boundary: NATIVE_EXECUTION_BOUNDARY.md
-  - Native Plan Boundary: NATIVE_PLAN_BOUNDARY.md
-  - Native Execution Checklist: NATIVE_EXECUTION_CHECKLIST.md
-  - NuGet Integration: NUGET_INTEGRATION.md
-  - Workbench API: WORKBENCH_API.md
-  - Workbench Embed: WORKBENCH_EMBED.md
-  - Workbench Checklist: WORKBENCH_CHECKLIST.md
-  - Workbench Evidence: WORKBENCH_EVIDENCE.md
-  - XML Node Debugging: XML_NODE_DEBUGGING.md
+  - Documentation:
+      - Governance: project-governance.md
+      - Document Status: document-status.md
+  - Specifications:
+      - Overview: Specifications/README.md
+      - Software Design: Specifications/Weaver Software Design Document.md
+      - Product Thesis: Specifications/Weaver Product Thesis.md
+      - Error Design: Specifications/Weaver Error Design Document.md
+      - XPath Design: Specifications/Weaver XPath Design Document.md
+      - Semantic Boundaries: Specifications/Weaver Semantic Boundary Specification.md
+      - Security Boundaries: Specifications/Weaver Security Boundary Specification.md
+      - URI Resolution: Specifications/Weaver URI Resolution Specification.md
+      - Entity Resolution: Specifications/Weaver Entity Resolution Specification.md
+      - Diagnostic Intrinsics: Specifications/Weaver Diagnostic Intrinsics Specification.md
+      - Native Execution Boundary: Specifications/Weaver Native Execution Boundary Specification.md
+      - Native Plan Boundary: Specifications/Weaver Native Plan Boundary Specification.md
+      - Workbench API: Specifications/Weaver Workbench API Specification.md
+      - Template Priority: Specifications/Weaver Template Priority Specification.md
+      - WeaverPDF Architecture: Specifications/WeaverPDF Architecture Specification.md
+      - WeaverPDF Syntax Profile: Specifications/WeaverPDF Syntax Profile.md
+      - WeaverPDF v1: Specifications/WeaverPDF v1 Specification.md
+  - Architecture Governance:
+      - Decisions:
+          - Overview: ADR/README.md
+          - Engine Representation And Semantic Ownership: ADR/ADR-0001-engine-representation-and-semantic-ownership.md
+          - Diagnostics And Public Boundaries: ADR/ADR-0002-diagnostics-and-public-boundaries.md
+          - Dual Execution And Conformance Parity: ADR/ADR-0003-dual-execution-and-conformance-parity.md
+      - Reviews:
+          - Overview: Architectural Reviews/README.md
+          - Streaming And Incremental Execution: Architectural Reviews/AR-0001-streaming-and-incremental-execution-boundary.md
+          - Schema Validation Boundary: Architectural Reviews/AR-0002-schema-validation-boundary.md
+          - WeaverPDF Document And Layout Boundary: Architectural Reviews/AR-0003-weaverpdf-document-and-layout-boundary.md
+  - Plans:
+      - Overview: Plans/README.md
+      - Roadmap: Plans/Weaver Roadmap.md
+      - Compile Performance: Plans/Compile Performance.md
+      - Fallback File Size: Plans/Fallback File Size.md
+      - JS Renderer Artifacts: Plans/JS Renderer Artifacts.md
+      - NuGet Integration: Plans/NuGet Integration.md
+      - Practical Streaming: Plans/Practical Streaming.md
+      - XSD Validation: Plans/XSD Validation.md
+      - Workbench Embed: Plans/Workbench Embed.md
+      - XML Node Debugging: Plans/XML Node Debugging.md
+      - WeaverPDF: Plans/WeaverPDF.md
+      - Documentation Lifecycle: Plans/documentation-lifecycle-and-governance.md
+  - Evidence:
+      - Overview: Evidence/README.md
+      - Progress Artifacts: Evidence/Progress Artifacts.md
+      - Native Execution Record: Evidence/Native Execution Implementation Record.md
+      - Workbench Record: Evidence/Workbench Implementation Record.md
+      - Workbench Evidence: Evidence/Workbench Evidence Checklist.md
+      - Chrome DevTools Verification: Evidence/Chrome DevTools Verification.md
+  - Corpus:
+      - Overview: Corpus/README.md
+      - Comparison Harness: Corpus/Comparison Harness.md
+      - QT3 Gate: Corpus/QT3 Gate.md
+      - Test Sources: Corpus/Test Sources.md
+  - Notes:
+      - Overview: Notes/README.md
+      - Project Brief: Notes/Weaver Project Brief.md
+      - Lessons Learned: Notes/Lessons Learned.md
+      - Documentation Audit: Notes/documentation-governance-audit.md
 
 markdown_extensions:
   - admonition

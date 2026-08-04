@@ -14,7 +14,7 @@ The intent is simple:
 ## Current public shape
 
 The first public workbench is the MVP+6.5 embed described in
-[WORKBENCH_EMBED.md](./WORKBENCH_EMBED.md).
+[Workbench Embed](Plans/Workbench%20Embed.md).
 
 The live page currently provides:
 
@@ -53,7 +53,7 @@ beneath it changes.
 
 Use these pages as the current source of truth:
 
-- [WORKBENCH_EMBED.md](./WORKBENCH_EMBED.md) for the public host behavior
-- [WORKBENCH_CHECKLIST.md](./WORKBENCH_CHECKLIST.md) for the completed M6.5 work record
-- [WORKBENCH_EVIDENCE.md](./WORKBENCH_EVIDENCE.md) for the live-page and supporting-media capture procedure
-- [WORKBENCH_API.md](./WORKBENCH_API.md) for the engine boundary
+- [Workbench Embed](Plans/Workbench%20Embed.md) for the public host behavior
+- [Workbench Implementation Record](Evidence/Workbench%20Implementation%20Record.md) for the completed M6.5 work record
+- [Workbench Evidence Checklist](Evidence/Workbench%20Evidence%20Checklist.md) for the live-page and supporting-media capture procedure
+- [Weaver Workbench API Specification](Specifications/Weaver%20Workbench%20API%20Specification.md) for the engine boundary

@@ -70,9 +70,9 @@ Some S1000D documents may contain DTD declarations or external references.
 Hosts should continue to apply the same explicit entity and resource-loading
 policies described in the repo docs:
 
-- `docs/ENTITY_RESOLUTION.md`
-- `docs/URI_RESOLUTION.md`
-- `docs/SECURITY_BOUNDARIES.md`
+- `docs/Specifications/Weaver Entity Resolution Specification.md`
+- `docs/Specifications/Weaver URI Resolution Specification.md`
+- `docs/Specifications/Weaver Security Boundary Specification.md`
 
 The presence of a vendored corpus does not change Weaver's default trust model.
 

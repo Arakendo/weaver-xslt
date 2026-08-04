@@ -20,9 +20,9 @@ tree-shakeable, source-mapped TypeScript module you can import, debug in
 DevTools, type-check your params against, run through the interpreter, or
 bundle with Vite or esbuild.
 
-See [docs/DIFFERENTIATORS.md](./docs/DIFFERENTIATORS.md) for the four
+See [Weaver Product Thesis](docs/Specifications/Weaver%20Product%20Thesis.md) for the four
 things this project aims to be clearly best at. See
-[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for how it is built.
+[Weaver Software Design Document](docs/Specifications/Weaver%20Software%20Design%20Document.md) for how it is built.
 
 ## Requirements
 
@@ -142,12 +142,12 @@ compiled handle as often as they want.
 The public `weaverxslt.org` workbench now ships with a small preset selector
 that hydrates both editable panes with starter XML + XSLT pairs. The initial
 preset set is documented in
-[docs/WORKBENCH_API.md](./docs/WORKBENCH_API.md) and currently targets three
+[docs/Specifications/Weaver Workbench API Specification.md](docs/Specifications/Weaver%20Workbench%20API%20Specification.md) and currently targets three
 simple flows: hello world, parameters with defaults, and `xsl:apply-templates`
 with matching rules.
 For the public host-facing shape of that embed, including default preset,
 page behavior, and the live route, see
-[docs/WORKBENCH_EMBED.md](./docs/WORKBENCH_EMBED.md) and
+[docs/Plans/Workbench Embed.md](docs/Plans/Workbench%20Embed.md) and
 [docs/WORKBENCH.md](./docs/WORKBENCH.md).
 
 ## CLI
@@ -249,7 +249,7 @@ the CLI, so generated TypeScript, source maps, and compile-time diagnostics
 stay aligned across entry points.
 
 For the manual Chrome DevTools source-map verification pass, use the fixture in
-[docs/DEVTOOLS_CHECKLIST.md](./docs/DEVTOOLS_CHECKLIST.md).
+[docs/Evidence/Chrome DevTools Verification.md](docs/Evidence/Chrome%20DevTools%20Verification.md).
 
 ## Scripts
 
@@ -296,7 +296,13 @@ test/
   conformance/              W3C XSLT 3.0 suite runner (skipped by default)
 
 docs/
-  ARCHITECTURE.md           Pinned design decisions
+  Specifications/          Current contracts and design boundaries
+  ADR/                     Accepted architectural decisions
+  Architectural Reviews/  Open and deferred architecture evidence
+  Plans/                   Implementation plans and roadmap
+  Evidence/                Verification and implementation records
+  Corpus/                  Conformance inputs and harness guidance
+  Notes/                   Non-normative project memory
 ```
 
 ## Scope
@@ -310,12 +316,12 @@ packages, extension instructions.
 
 **Never**: XSLT 1.0 bug-compat mode, XQuery.
 
-See [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) for the full design
+See the [Weaver Software Design Document](docs/Specifications/Weaver%20Software%20Design%20Document.md) for the full design
 and the pinned decisions behind each layer.
 
 ## Roadmap
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the full MVP / MVP+N execution
+See the [Weaver Roadmap](docs/Plans/Weaver%20Roadmap.md) for the full MVP / MVP+N execution
 plan with scope and exit criteria per increment. High-level milestones:
 
 - [x] M0 — Project scaffold + W3C test suites cataloged (14.6k XSLT, 31.8k QT3)

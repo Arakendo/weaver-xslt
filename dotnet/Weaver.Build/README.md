@@ -115,11 +115,11 @@ Repository helper scripts (provided):
 Notes & next steps
 
 - Production packaging should allow opt-in bundled Node and a polished `weaver.exe` apphost. The current scaffold validates the `Weaver.Tool.dll` host path first.
-- The README here contains recommended toggles but a packaged Weaver.Build NuGet should document the same controls in its package README and docs/NUGET_INTEGRATION.md.
+- The README here contains recommended toggles but a packaged Weaver.Build NuGet should document the same controls in its package README and docs/Plans/NuGet Integration.md.
 - The scaffold still relies on the current CLI emitting primary artifacts next to
   the source stylesheet before the targets stage them into `$(WeaverOutputDir)`.
 - The packaged carrier still reflects the repo's current local runtime dependency
   graph. It is suitable for local validation, but it is not yet the final,
   reduced production carrier shape.
 
-Refer to docs/NUGET_INTEGRATION.md for the full plan and acceptance criteria.
+Refer to docs/Plans/NuGet Integration.md for the full plan and acceptance criteria.
