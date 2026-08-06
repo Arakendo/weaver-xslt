@@ -36,3 +36,7 @@ dotnet/**/Stylesheets/*.xsl.d.ts
 dotnet/**/Stylesheets/*.xsl.deps
 dotnet/**/Stylesheets/*.xsl.digest
 dotnet/**/artifacts/
+
+
+# Exploritory Conversations
+/docs/Conversations/
