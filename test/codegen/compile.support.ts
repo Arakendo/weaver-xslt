@@ -1,130 +1,14 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 
-import ts from 'typescript';
 import { expect } from 'vitest';
 
 import { compileStylesheetToTs } from '../../src/compile.js';
 import { XsltProcessor } from '../../src/index.js';
 import type { TransformOptions } from '../../src/processor/types.js';
-import {
-  appendCoverageWarnings,
-  appendTraceSummary,
-  applyBuiltInTemplatesByPath,
-  createCompiledDocument,
-  createTemporaryTreeNode,
-  escapeText,
-  localNameOfNode,
-  matchesTemplatePath,
-  nameOfNode,
-  normalizeNativeTemplateName,
-  selectDescendantElementsByName,
-  selectSimplePathExists,
-  selectSimplePathNode,
-  selectSimplePathNodesByStepPlan,
-  selectSimplePathNodes,
-  selectSimplePathText,
-  stringValueOfNativeValue,
-  stringValueOfNode,
-  getRecordedTracePause,
-  getRecordedTraceSummary,
-  resetRecordedTracePause,
-  resetRecordedTraceSummary,
-  selectDocumentDataValueNode,
-  traceFocusEnter,
-  traceSelectedNodes,
-  traceStringValueOfNode,
-  traceTemplateEnter,
-  prependNativeGlobalBindingError,
-  prependNativeInitialTemplateError,
-  throwCircularNativeGlobalBinding,
-  throwMissingNativeInitialTemplate,
-  throwMissingNativeStylesheetParameter,
-  throwMissingNativeTemplateParameter,
-  throwUnsupportedNativeInitialMode,
-  transformCompiledStylesheet,
-} from '../../src/runtime/index.js';
+import { compileAndLoadGeneratedModule } from './generated-module.support.js';
 
-const GENERATED_RUNTIME_MODULE_SPECIFIER = '@runtime-test';
+export { compileAndLoadGeneratedModule } from './generated-module.support.js';
 export const NATIVE_DIRECT_PARITY_TAG = '[native-direct]';
-const GENERATED_RUNTIME_MODULE = {
-  appendCoverageWarnings,
-  appendTraceSummary,
-  applyBuiltInTemplatesByPath,
-  createCompiledDocument,
-  createTemporaryTreeNode,
-  escapeText,
-  localNameOfNode,
-  matchesTemplatePath,
-  nameOfNode,
-  normalizeNativeTemplateName,
-  selectDescendantElementsByName,
-  selectSimplePathExists,
-  selectSimplePathNode,
-  selectSimplePathNodesByStepPlan,
-  selectSimplePathNodes,
-  selectSimplePathText,
-  stringValueOfNativeValue,
-  stringValueOfNode,
-  getRecordedTracePause,
-  getRecordedTraceSummary,
-  resetRecordedTracePause,
-  resetRecordedTraceSummary,
-  selectDocumentDataValueNode,
-  traceFocusEnter,
-  traceSelectedNodes,
-  traceStringValueOfNode,
-  traceTemplateEnter,
-  prependNativeGlobalBindingError,
-  prependNativeInitialTemplateError,
-  throwCircularNativeGlobalBinding,
-  throwMissingNativeInitialTemplate,
-  throwMissingNativeStylesheetParameter,
-  throwMissingNativeTemplateParameter,
-  throwUnsupportedNativeInitialMode,
-  transformCompiledStylesheet,
-};
-
-export function compileAndLoadGeneratedModule(
-  stylesheet: string,
-  path: string,
-  filePath?: string,
-): {
-  readonly diagnostics: readonly ts.Diagnostic[];
-  readonly exports: Record<string, unknown>;
-} {
-  const emitted = compileStylesheetToTs(stylesheet, {
-    path,
-    ...(filePath === undefined ? {} : { filePath }),
-    runtimeModuleSpecifier: GENERATED_RUNTIME_MODULE_SPECIFIER,
-  });
-  const transpiled = ts.transpileModule(emitted, {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2022,
-    },
-    reportDiagnostics: true,
-  });
-  const module = { exports: {} as Record<string, unknown> };
-  const localRequire = (specifier: string) => {
-    if (specifier === GENERATED_RUNTIME_MODULE_SPECIFIER) {
-      return GENERATED_RUNTIME_MODULE;
-    }
-
-    throw new Error(`Unexpected generated-module import: ${specifier}`);
-  };
-  const executeModule = new Function('require', 'module', 'exports', transpiled.outputText) as (
-    requireImpl: (specifier: string) => unknown,
-    localModule: { exports: Record<string, unknown> },
-    localExports: Record<string, unknown>,
-  ) => void;
-
-  executeModule(localRequire, module, module.exports);
-
-  return {
-    diagnostics: transpiled.diagnostics ?? [],
-    exports: module.exports,
-  };
-}
 
 export function expectGeneratedFixtureToMatch(stylesheet: string, path: string): void {
   const emitted = compileStylesheetToTs(stylesheet, { path });

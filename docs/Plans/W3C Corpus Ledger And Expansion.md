@@ -130,22 +130,30 @@ execution back to upstream line 4.
 
 ## Phase 4: Metadata-driven XSLT30 widening
 
-**Status: pending.**
+**Status: in progress at the metadata-ranking and deep-equal checkpoint.**
 
-- [ ] Inventory dependency kinds, environment shapes, stylesheet references,
+- [x] Inventory dependency kinds, environment shapes, stylesheet references,
   and assertion families across all 14,600 XSLT30 cases.
-- [ ] Rank complete candidate families by implemented semantic overlap,
+- [x] Rank complete candidate families by implemented semantic overlap,
   harness readiness, diagnostic value, and backend parity cost.
-- [ ] Prefer small coherent families over isolated green cases or enormous
+- [x] Prefer small coherent families over isolated green cases or enormous
   mixed error collections.
 - [ ] Widen one family at a time, preserving its membership while dispositions
   move from unsupported to selected and passing.
-- [ ] Publish no unqualified conformance percentage; every report names its
+- [x] Publish no unqualified conformance percentage; every report names its
   suite revision, profile, exclusions, execution modes, and denominator.
 
-Likely candidates after `template` and `path` include coherent groups within
-parameters, variables, call-template, choose, literal result elements,
-node-tests, and apply-templates. The 582-case generic error set is not an early
+The deterministic metadata screen found 16 complete, harness-ready candidate
+families of at most 20 cases. Execution ranking selected the two-case
+`deep-equal` family for immediate admission; it now passes 2/2 under the
+interpreter. The four-case `for` family is next because it combines one passing
+case with focused pressure on `xsl:sequence`, sequence arithmetic, and
+`format-number()`, and FastXSLT independently selected the same family. See the
+[metadata inventory and ranking evidence](../Evidence/XSLT30%20Metadata%20Inventory%20And%20Family%20Ranking.md).
+
+Larger coherent groups within parameters, variables, call-template, choose,
+literal result elements, node-tests, and apply-templates remain candidates
+after the small-family queue. The 582-case generic error set is not an early
 family merely because Weaver already passes 13 examples from it.
 
 ## Separate future corpus work
@@ -234,3 +242,19 @@ At the corpus-linked native artifact checkpoint:
   two todo; and
 - Phase 3's initial multi-backend accounting and artifact-linkage criteria are
   complete. Native family widening continues through Phase 4.
+
+At the metadata-ranking and deep-equal checkpoint:
+
+- all 14,600 XSLT30 cases contribute dependency, environment, stylesheet, and
+  assertion metadata to a reproducible inventory;
+- the inventory retains 9,663 stylesheet references, 7,646 distinct files,
+  564 metadata shapes, and the exact 10,798 referenced / 2,161 inline / 1,641
+  absent environment split;
+- 16 complete small families receive independent interpreter, native-direct,
+  and native-emitted execution rankings with per-family outcome digests;
+- the complete `deep-equal` family passes 2/2 under its interpreter profile;
+- the complete `for` family is the next semantic decomposition target; and
+- the complete suite passes 1,037 tests across 96 files, with one skipped and
+  two todo; typecheck, focused ESLint, package build, exact corpus
+  verification, and a normal MkDocs build pass. Strict documentation mode
+  retains the same 56 pre-existing broken-link warnings.

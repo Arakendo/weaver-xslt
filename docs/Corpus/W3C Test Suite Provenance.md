@@ -32,6 +32,19 @@ The verification command:
 Use `npx tsx scripts/check-conformance-sources.ts --json` when a machine-readable
 inventory is useful.
 
+For the full XSLT30 metadata inventory and the deterministic complete-family
+execution ranking, run:
+
+```powershell
+npm run inventory:xslt30-metadata
+npm run rank:xslt30-families
+```
+
+The retained `corpus/reports/xslt30-family-ranking-v1.json` report pins the
+ranking criteria, suite revision, denominators, backend pass counts, and
+per-family outcome digests. It is candidate-planning evidence, not a
+full-suite conformance percentage.
+
 The submodule gitlink supplies content identity. The verification command is
 the authority for detecting an uninitialized, moved, or locally modified
 working copy. CI runs it on Linux/Node 22 after explicitly initializing both

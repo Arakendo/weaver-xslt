@@ -44,3 +44,9 @@ question such as:
 Treat `xslt30-test` the same way the QT3 harness treats the broader catalog:
 pick an honest denominator, document why cases are excluded, and widen the
 baseline only when the current slice is stable enough to classify failures.
+
+Use `npm run inventory:xslt30-metadata` to inspect the complete pinned suite
+metadata and `npm run rank:xslt30-families` to reproduce the retained
+small-family execution ranking. Candidate ranking does not admit cases by
+itself; admission still requires a versioned overlay that preserves every
+member of the chosen upstream family.

@@ -7,4 +7,4 @@ behavior from guaranteed behavior.
 - [XSLT30 Template And Path Family Baseline](XSLT30%20Template%20And%20Path%20Family%20Baseline.md)
 - [QT3 MVP2 Profile Baseline](QT3%20MVP2%20Profile%20Baseline.md)
 - [XSLT30 Native Parity Baseline](XSLT30%20Native%20Parity%20Baseline.md)
-
+- [XSLT30 Metadata Inventory And Family Ranking](XSLT30%20Metadata%20Inventory%20And%20Family%20Ranking.md)

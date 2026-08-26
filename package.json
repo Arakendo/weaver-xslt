@@ -68,6 +68,8 @@
     "test:coverage": "vitest run --coverage",
     "test:conformance": "vitest run test/conformance",
     "test:corpus-sources": "tsx scripts/check-conformance-sources.ts",
+    "inventory:xslt30-metadata": "tsx scripts/inventory-xslt30-metadata.ts",
+    "rank:xslt30-families": "tsx scripts/rank-xslt30-families.ts",
     "benchmark:watch": "tsx scripts/benchmark-watch.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",

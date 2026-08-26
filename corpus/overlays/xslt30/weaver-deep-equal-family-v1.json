@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "profile": "weaver-deep-equal-family-v1",
+  "requiredBackends": ["interpreter"],
+  "selectionRationale": "Admits every member of the complete deep-equal family after metadata and execution ranking identified both cases as supported by Weaver's interpreter.",
+  "cases": [
+    {
+      "setFile": "tests/fn/deep-equal/_deep-equal-test-set.xml",
+      "caseName": "deep-equal-001",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/fn/deep-equal/_deep-equal-test-set.xml",
+      "caseName": "deep-equal-002",
+      "selection": "selected"
+    }
+  ]
+}

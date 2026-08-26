@@ -7,7 +7,7 @@ import { XsltProcessor, type TransformOptions } from '../../../src/index.js';
 import { parseXml } from '../../../src/xml/parse.js';
 import { tryCreateNativeTransformPlan } from '../../../src/xslt/codegen/nativeTransformPlan.js';
 import { compileStylesheet } from '../../../src/xslt/compile/compiler.js';
-import { compileAndLoadGeneratedModule } from '../../codegen/compile.support.js';
+import { compileAndLoadGeneratedModule } from '../../codegen/generated-module.support.js';
 import type { ExecutionDisposition, VerificationBackend } from '../ledger.js';
 import type { Xslt30OverlayCase } from './overlay.js';
 

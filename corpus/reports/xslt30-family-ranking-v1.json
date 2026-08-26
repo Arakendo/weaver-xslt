@@ -1,0 +1,169 @@
+{
+  "schemaVersion": 1,
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "inventory": {
+    "testSets": 234,
+    "testCases": 14600,
+    "stylesheetReferences": 9663,
+    "distinctStylesheetFiles": 7646,
+    "metadataShapes": 564
+  },
+  "criteria": {
+    "maximumCases": 20,
+    "exactlyOneFileBackedStylesheetPerCase": true,
+    "assertions": ["assert-xml", "error"],
+    "ranking": "unadmitted first, then interpreter pass ratio, native-direct pass ratio, family size, suite path"
+  },
+  "candidates": [
+    {
+      "name": "deep-equal",
+      "setFile": "tests/fn/deep-equal/_deep-equal-test-set.xml",
+      "testCases": 2,
+      "metadataShapes": 1,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 2, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "77418d941a4f8109cd45bbc2f585ea993cca271f493ed975b3661dbe39b1a16e"
+    },
+    {
+      "name": "for",
+      "setFile": "tests/expr/for/_for-test-set.xml",
+      "testCases": 4,
+      "metadataShapes": 2,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 1, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "7eb4ee022cd299cb35cfd7382ee1022f137f1e188232c9f8400091c9930f9fe2"
+    },
+    {
+      "name": "root",
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "testCases": 10,
+      "metadataShapes": 1,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 2, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "d1872652a7d6086b7e711bf85f11a51e1bcf633b21464e4eb331e6f403af1ca0"
+    },
+    {
+      "name": "on-non-empty",
+      "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
+      "testCases": 14,
+      "metadataShapes": 2,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 1, "native-direct": 1, "native-emitted": 1 },
+      "outcomeDigest": "1beaa36a5b961f733159d425ef0d5a9afa9904a81a7d4b96e42dc90cc264bb88"
+    },
+    {
+      "name": "current",
+      "setFile": "tests/fn/current/_current-test-set.xml",
+      "testCases": 1,
+      "metadataShapes": 1,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 0, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "3e564eb29a8edcc385ab6021e277dd2a91b7a9e034371de69eac8629f1172e50"
+    },
+    {
+      "name": "sf-fold-right",
+      "setFile": "tests/strm/sf-fold-right/_sf-fold-right-test-set.xml",
+      "testCases": 1,
+      "metadataShapes": 1,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 0, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "de6409ed8f7a7a2ff6e80fed9b71346392988dc384da4fd3e2e34b386f5e0cdd"
+    },
+    {
+      "name": "innermost",
+      "setFile": "tests/fn/innermost/_innermost-test-set.xml",
+      "testCases": 2,
+      "metadataShapes": 1,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 0, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "ece9b629a1e1b919ff8c3c4de28cc9fe17f33c275c69b65e320a8f8c7c74f246"
+    },
+    {
+      "name": "sf-innermost",
+      "setFile": "tests/strm/sf-innermost/_sf-innermost-test-set.xml",
+      "testCases": 2,
+      "metadataShapes": 2,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 0, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "f762f4c236d9e726fbf14b89bb1f3dec5596e19582a627696982adc7d65a0bd6"
+    },
+    {
+      "name": "sx-FunctionCall",
+      "setFile": "tests/strm/sx-FunctionCall/_sx-FunctionCall-test-set.xml",
+      "testCases": 2,
+      "metadataShapes": 1,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 0, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "016847cf92178bbf702c2cda46baecb8f6639e0fb2e48e68723a7a15a47e88dc"
+    },
+    {
+      "name": "sf-filter",
+      "setFile": "tests/strm/sf-filter/_sf-filter-test-set.xml",
+      "testCases": 3,
+      "metadataShapes": 2,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 0, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "9e8c196a4d85767666ec96ccb9b4b406ca8892b6377a981bd2efd12a2c881534"
+    },
+    {
+      "name": "treat-as",
+      "setFile": "tests/expr/treat-as/_treat-as-test-set.xml",
+      "testCases": 4,
+      "metadataShapes": 2,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 0, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "47003950a129a9f3aa6e9fd1966bd552d9c3cf0d5d8c1392658ce6867281a354"
+    },
+    {
+      "name": "initial-mode",
+      "setFile": "tests/misc/initial-mode/_initial-mode-test-set.xml",
+      "testCases": 5,
+      "metadataShapes": 5,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 0, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "d7e4db311d65ba8155eb45db875f1daf4edd3d5f28876f258a005a9b981b5e8b"
+    },
+    {
+      "name": "unparsed-text-lines",
+      "setFile": "tests/fn/unparsed-text-lines/_unparsed-text-lines-test-set.xml",
+      "testCases": 6,
+      "metadataShapes": 2,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 0, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "0a8bf42301c6a4461b4ef51a4646712bc7f87d83a73a87111f6d1d95dc58074f"
+    },
+    {
+      "name": "unparsed-text",
+      "setFile": "tests/fn/unparsed-text/_unparsed-text-test-set.xml",
+      "testCases": 6,
+      "metadataShapes": 5,
+      "alreadyAdmitted": false,
+      "backendPassed": { "interpreter": 0, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "99d686dadb22654059abfd5fcc30d9b41d937f575e5dbb122134b6063a09c917"
+    },
+    {
+      "name": "template",
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "testCases": 6,
+      "metadataShapes": 2,
+      "alreadyAdmitted": true,
+      "backendPassed": { "interpreter": 6, "native-direct": 1, "native-emitted": 1 },
+      "outcomeDigest": "887d8141bca40a641863bf7a98dca8f49027f5471c6a5953cc81b8a5febc475a"
+    },
+    {
+      "name": "path",
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "testCases": 10,
+      "metadataShapes": 1,
+      "alreadyAdmitted": true,
+      "backendPassed": { "interpreter": 7, "native-direct": 0, "native-emitted": 0 },
+      "outcomeDigest": "c01d1a10c1b77289ed3842f6b2dae88ee926c6182f52b7c5f53c93872904efec"
+    }
+  ],
+  "recommendation": {
+    "immediateAdmission": "tests/fn/deep-equal/_deep-equal-test-set.xml",
+    "nextSemanticPressure": "tests/expr/for/_for-test-set.xml",
+    "rationale": "Admit the complete two-case deep-equal family already passing in the interpreter, then use the complete four-case for family to drive xsl:sequence, sequence arithmetic, and format-number gaps also identified by FastXSLT."
+  }
+}
