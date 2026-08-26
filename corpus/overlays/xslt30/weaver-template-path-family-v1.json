@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "profile": "weaver-template-path-family-v1",
+  "requiredBackends": ["interpreter"],
+  "selectionRationale": "Inventories every case in the XSLT 3.0 template and path test sets so Weaver can distinguish executable coverage from explicit engine or harness gaps.",
+  "cases": [
+    {
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "caseName": "template-001",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "caseName": "template-002",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "caseName": "template-003",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "caseName": "template-004",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "caseName": "template-005",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "caseName": "template-006",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-001",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-002",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-003",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-004",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-005",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-006",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-007",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-008",
+      "selection": "engine-unsupported",
+      "rationale": "Weaver does not yet implement the XPath floor() function used by this case."
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-009",
+      "selection": "engine-unsupported",
+      "rationale": "Weaver does not yet implement the XPath floor() function used by this case."
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-010",
+      "selection": "engine-unsupported",
+      "rationale": "Weaver currently produces an empty result for the complex arithmetic match pattern."
+    }
+  ]
+}

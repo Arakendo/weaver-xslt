@@ -46,18 +46,18 @@ lack a durable selection disposition.
 
 ## Phase 1: Complete small-family admission
 
-**Status: pending.**
+**Status: complete in the template/path family checkpoint.**
 
-- [ ] Admit all six cases in XSLT30 `tests/decl/template/_template-test-set.xml`.
-- [ ] Admit all ten cases in XSLT30 `tests/expr/path/_path-test-set.xml`.
-- [ ] Resolve every case's dependency, environment, stylesheet, and assertion
+- [x] Admit all six cases in XSLT30 `tests/decl/template/_template-test-set.xml`.
+- [x] Admit all ten cases in XSLT30 `tests/expr/path/_path-test-set.xml`.
+- [x] Resolve every case's dependency, environment, stylesheet, and assertion
   shape without ambient filesystem or network authority during engine
   execution.
-- [ ] Record engine-unsupported and harness-unsupported cases before changing
+- [x] Record engine-unsupported and harness-unsupported cases before changing
   semantics.
-- [ ] Execute applicable cases under the interpreter and identify which native
+- [x] Execute applicable cases under the interpreter and identify which native
   modes are required or legitimately unsupported by the current profile.
-- [ ] Add focused parity cases for every semantic behavior newly enabled by
+- [x] Add focused parity cases for every semantic behavior newly enabled by
   family widening.
 
 The `template` family is first because Weaver already passes `template-006`
@@ -65,6 +65,14 @@ and owns broader named-template, parameter, node-test, attribute, mode, and
 dispatch behavior. The `path` family follows because it applies pressure to
 XPath axes, predicates, arithmetic, functions, match patterns, and file-backed
 environments already represented elsewhere in Weaver.
+
+The completed family overlay inventories all 16 upstream members. All six
+`template` cases and seven `path` cases pass under the interpreter. Three
+`path` cases remain explicitly engine-unsupported: two require `floor()`, and
+one currently produces an empty result for a complex arithmetic match pattern.
+The discovery profile does not require native modes, and no new engine
+semantics were enabled in this checkpoint, so no new parity fixture was
+necessary. See the [family baseline evidence](../Evidence/XSLT30%20Template%20And%20Path%20Family%20Baseline.md).
 
 ## Phase 2: Migrate QT3 filtering into durable outcomes
 
@@ -147,3 +155,17 @@ At the initial accounting checkpoint:
 - XSLT30 remains 73/73 and QT3 MVP+2 remains 2,487/2,487; and
 - a normal MkDocs build passes. Strict mode retains the same 56 pre-existing
   broken-link warnings and reports no new warning from this work.
+
+At the template/path family checkpoint:
+
+- all 16 upstream cases are durably inventoried by a separate overlay;
+- 13/13 selected interpreter cases pass and three engine gaps remain visible;
+- overlay membership is checked against the complete pinned upstream test sets;
+- the reusable XSLT30 harness preserves the existing 73/73 MVP+3 checkpoint;
+- malformed actual engine output is classified as a semantic mismatch rather
+  than a harness failure;
+- the complete suite passes 1,027 tests across 90 files, with one skipped and
+  two todo; and
+- typecheck, focused ESLint, package build, exact corpus verification, and a
+  normal MkDocs build pass. Strict documentation mode retains the same 56
+  pre-existing broken-link warnings.

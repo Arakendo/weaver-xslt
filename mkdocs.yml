@@ -96,6 +96,7 @@ nav:
       - Workbench Record: Evidence/Workbench Implementation Record.md
       - Workbench Evidence: Evidence/Workbench Evidence Checklist.md
       - Chrome DevTools Verification: Evidence/Chrome DevTools Verification.md
+      - XSLT30 Template And Path Family Baseline: Evidence/XSLT30 Template And Path Family Baseline.md
       - XML Coverage Diagnostics: XML_COVERAGE_DIAGNOSTICS.md
   - Corpus:
       - Overview: Corpus/README.md
