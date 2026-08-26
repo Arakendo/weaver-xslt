@@ -94,6 +94,26 @@ export function resetRecordedTracePause(_trace: TransformContext['trace']): void
   // noop in the test runtime shim
 }
 
+export function resetRecordedTraceSummary(_trace: TransformContext['trace']): void {
+  // noop in the test runtime shim
+}
+
+export function appendCoverageWarnings(
+  _ir: StylesheetIR,
+  _sourceXml: string,
+  _context: TransformContext,
+  result: TransformResult,
+): TransformResult {
+  return result;
+}
+
+export function appendTraceSummary(
+  _context: TransformContext,
+  result: TransformResult,
+): TransformResult {
+  return result;
+}
+
 export function traceFocusEnter(node: NativeNode, _ctx?: TransformContext): NativeNode {
   return node;
 }

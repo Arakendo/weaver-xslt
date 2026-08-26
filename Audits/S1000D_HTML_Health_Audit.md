@@ -36,11 +36,26 @@ fallback pages instead of full transformed documents.
 
 ## Strong hole candidates
 
-### 0. BREX module is a performance outlier
+### 0. BREX module performance outlier — resolved at the current checkpoint
 
 The `022A` BREX module (`DMC-S1000DBIKE-AAA-D00-00-00-00AA-024A-D_002-00_EN-US.XML`)
-did not appear as a bad HTML shell; instead it behaved like a transform hang
-or extreme slowdown and hit the batch timeout at `30032 ms`.
+did not appear as a bad HTML shell; the initial audit instead observed a
+transform hang or extreme slowdown and hit the batch timeout at `30032 ms`.
+
+After the tracing and BREX lookup/dispatch optimizations in `0561dda`, the
+full-document triage run on 2026-08-26 completed with trace summaries enabled:
+
+| Mode | Elapsed | Output | Trace events | Disposition |
+| --- | ---: | ---: | ---: | --- |
+| Interpreter | 9.75 s | 946,691 characters | 58,862 | Completed. |
+| Native direct | 178.2 ms | n/a | 0 | Explicitly unsupported for this transform. |
+| Emitted bundle | 9.47 s | 946,691 characters | 58,862 | Completed. |
+
+The interpreter and bundle summaries agreed on the hottest node, template,
+instruction, and last event. A bounded `refs=20`, `br=20` run also produced
+identical 58,725-character output and 3,060-event summaries in 347.0 ms and
+197.6 ms respectively. No existing HTML artifact was available for byte-level
+comparison.
 
 Why this matters:
 
@@ -50,9 +65,8 @@ Why this matters:
 - it should be checked alongside the coverage holes, because a transform that
   cannot finish is just as blocking as one that renders an empty shell
 
-This file should stay on the audit watchlist even if its eventual HTML output
-is structurally valid, because the failure mode is excessive transform time
-rather than obvious markup damage.
+This file should remain a performance regression fixture, but the original
+timeout is no longer a current blocking observation.
 
 ### 1. Unsupported DDN / DML modules
 
@@ -162,12 +176,8 @@ that is intentionally minimal.
 
 ## Next checks to run
 
-- Inspect the BREX module that timed out during the batch run:
-  `DMC-S1000DBIKE-AAA-D00-00-00-00AA-024A-D_002-00_EN-US.XML`
-  - confirm whether the hang is caused by a specific instruction family,
-    XPath expression, or document-resolution call
-  - compare the same module under interpreter vs emitted-bundle execution if
-    the interpreter path completes faster
+- Retain the BREX module as a performance regression case and compare future
+  runs against the 2026-08-26 interpreter/bundle checkpoint above.
 - Compare the unsupported DDN / DML outputs against the source stylesheet logic
   under `.workbench/vision xslts/S1000D/` to see where the fallback branch is
   chosen.

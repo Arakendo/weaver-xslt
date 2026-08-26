@@ -1,6 +1,6 @@
 import type { GlobalParam, StylesheetIR } from '../compile/ir.js';
 import { createEmitPlan, type EmitStylesheetModuleOptions } from './plan.js';
-import { tryCreateNativeTransformPlan } from './emitInstructions.js';
+import { tryCreateNativeTransformPlan } from './nativeTransformPlan.js';
 import { renderTemplateProvenanceComment } from './provenance.js';
 import { renderTsExpression, renderTsModule } from './ts-ir.js';
 

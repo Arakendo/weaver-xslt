@@ -11,7 +11,7 @@ import { compileStylesheet } from '../xslt/compile/compiler.js';
 import {
   tryCreateNativeTransformPlan,
   type NativeTransformPlan,
-} from '../xslt/codegen/emitInstructions.js';
+} from '../xslt/codegen/nativeTransformPlan.js';
 import {
   createInitialTemplateSuggestion,
   findNamedTemplate,

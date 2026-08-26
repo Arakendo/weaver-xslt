@@ -8,3 +8,5 @@ documents in this collection are focused implementation plans. Preserve their
 checkboxes as execution history and mark superseded plans explicitly rather
 than deleting them.
 
+- [Codegen Source Decomposition](Codegen%20Source%20Decomposition.md)
+

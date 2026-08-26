@@ -135,7 +135,7 @@ async function emitJsModule(
   writeFileSync(jsPath, jsResult.js, 'utf8');
   writeFileSync(jsMapPath, jsResult.sourceMap, 'utf8');
 
-  const module = (await import(pathToFileURL(jsPath).href)) as {
+  const module = (await import(/* @vite-ignore */ decodeURI(pathToFileURL(jsPath).href))) as {
     readonly source: { readonly path: string; readonly digest: string };
     readonly transform: (
       xml: string,
@@ -180,7 +180,7 @@ async function emitBundleModule(
   );
   writeFileSync(bundleMapPath, bundle.sourceMap, 'utf8');
 
-  const module = (await import(pathToFileURL(bundlePath).href)) as {
+  const module = (await import(/* @vite-ignore */ decodeURI(pathToFileURL(bundlePath).href))) as {
     readonly source: { readonly path: string; readonly digest: string };
     readonly transform: (
       xml: string,
@@ -293,7 +293,9 @@ test('bundle emission imports and runs without package runtime dependency', asyn
     );
     writeFileSync(bundleMapPath, bundleResult.sourceMap, 'utf8');
 
-    const bundledModule = (await import(pathToFileURL(bundlePath).href)) as {
+    const bundledModule = (await import(
+      /* @vite-ignore */ decodeURI(pathToFileURL(bundlePath).href)
+    )) as {
       readonly source: { readonly digest: string };
       readonly transform: (xml: string) => ReturnType<XsltProcessor['transform']>;
     };
@@ -465,11 +467,15 @@ test('host can swap between two emitted renderer bundles for the same XML by id'
     );
     writeFileSync(secondBundleMapPath, secondBundle.sourceMap, 'utf8');
 
-    const alphaRenderer = (await import(pathToFileURL(firstBundlePath).href)) as {
+    const alphaRenderer = (await import(
+      /* @vite-ignore */ decodeURI(pathToFileURL(firstBundlePath).href)
+    )) as {
       readonly source: { readonly digest: string };
       readonly transform: (xml: string) => ReturnType<XsltProcessor['transform']>;
     };
-    const betaRenderer = (await import(pathToFileURL(secondBundlePath).href)) as {
+    const betaRenderer = (await import(
+      /* @vite-ignore */ decodeURI(pathToFileURL(secondBundlePath).href)
+    )) as {
       readonly source: { readonly digest: string };
       readonly transform: (xml: string) => ReturnType<XsltProcessor['transform']>;
     };

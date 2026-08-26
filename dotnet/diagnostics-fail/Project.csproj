@@ -7,11 +7,12 @@
     <!-- Enable failing the build on diagnostics for this test -->
     <WeaverFailOnDiagnostics>true</WeaverFailOnDiagnostics>
     <WeaverCopyToOutput>false</WeaverCopyToOutput>
+    <WeaverBuildVersion Condition="'$(WeaverBuildVersion)' == ''">0.0.1</WeaverBuildVersion>
     <WeaverOutputDir>$(MSBuildProjectDirectory)/weaver-out/</WeaverOutputDir>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Weaver.Build" Version="0.0.1" />
+    <PackageReference Include="Weaver.Build" Version="$(WeaverBuildVersion)" />
     <WeaverStylesheet Include="Stylesheets/semantic-error.xsl" />
   </ItemGroup>
 </Project>

@@ -1,12 +1,11 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, rmSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 const WORKSPACE_ROOT = resolve(import.meta.dirname, '../..');
-const WEAVER_BUILD_PROJECT = join(WORKSPACE_ROOT, 'dotnet', 'Weaver.Build', 'Weaver.Build.csproj');
 const SAMPLE_APP_PROJECT = join(WORKSPACE_ROOT, 'dotnet', 'sample-app', 'SampleApp.csproj');
 const DIAGNOSTICS_FAIL_PROJECT = join(
   WORKSPACE_ROOT,
@@ -15,7 +14,7 @@ const DIAGNOSTICS_FAIL_PROJECT = join(
   'Project.csproj',
 );
 const DIST_CLI_PATH = join(WORKSPACE_ROOT, 'dist', 'cli.js');
-const PACKAGE_VERSION = '0.0.1';
+const INTEGRATION_PACKAGE_VERSION = '0.0.1-integration';
 
 const hasDotnet = commandAvailable('dotnet');
 const hasNode = commandAvailable('node');
@@ -23,21 +22,44 @@ const hasBuiltCli = existsSync(DIST_CLI_PATH);
 const describePackageReference = hasDotnet && hasNode && hasBuiltCli ? describe : describe.skip;
 
 describePackageReference('integration Weaver.Build PackageReference consumers', () => {
+  let tempDir: string | undefined;
+
+  afterEach(() => {
+    if (tempDir !== undefined) {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+      tempDir = undefined;
+    }
+  });
+
   it('builds the sample app through the packed Weaver.Build package', () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'weaver-build-package-'));
     prepareFreshWeaverBuildPackage();
 
-    const stdout = execDotnet(['build', SAMPLE_APP_PROJECT], WORKSPACE_ROOT);
+    const stdout = execDotnet(
+      ['build', SAMPLE_APP_PROJECT, `-p:WeaverBuildVersion=${INTEGRATION_PACKAGE_VERSION}`],
+      WORKSPACE_ROOT,
+      isolatedNugetEnvironment(join(tempDir, 'packages')),
+    );
 
     expect(stdout).toContain('Build succeeded');
     expect(stdout).toContain('SampleApp');
   });
 
   it('fails the diagnostics fixture with the expected structured Weaver error', () => {
+    tempDir = mkdtempSync(join(tmpdir(), 'weaver-build-package-'));
     prepareFreshWeaverBuildPackage();
 
     let buildError: Error | undefined;
     try {
-      execDotnet(['build', DIAGNOSTICS_FAIL_PROJECT], WORKSPACE_ROOT);
+      execDotnet(
+        [
+          'build',
+          DIAGNOSTICS_FAIL_PROJECT,
+          `-p:WeaverBuildVersion=${INTEGRATION_PACKAGE_VERSION}`,
+        ],
+        WORKSPACE_ROOT,
+        isolatedNugetEnvironment(join(tempDir, 'packages')),
+      );
     } catch (error) {
       const execError = error as Error & { stdout?: Buffer | string; stderr?: Buffer | string };
       const stdout = String(execError.stdout ?? '');
@@ -61,17 +83,15 @@ describePackageReference('integration Weaver.Build PackageReference consumers', 
 
 function prepareFreshWeaverBuildPackage(): void {
   execDotnet(
-    ['pack', 'Weaver.Build.csproj', '-o', 'artifacts'],
+    [
+      'pack',
+      'Weaver.Build.csproj',
+      '-o',
+      'artifacts',
+      `-p:PackageVersion=${INTEGRATION_PACKAGE_VERSION}`,
+    ],
     join(WORKSPACE_ROOT, 'dotnet', 'Weaver.Build'),
   );
-
-  const globalPackagesPath = resolveGlobalPackagesPath();
-  rmSync(join(globalPackagesPath, 'weaver.build', PACKAGE_VERSION), {
-    recursive: true,
-    force: true,
-    maxRetries: 10,
-    retryDelay: 100,
-  });
 }
 
 function commandAvailable(command: string): boolean {
@@ -79,20 +99,22 @@ function commandAvailable(command: string): boolean {
   return probe.status === 0;
 }
 
-function execDotnet(args: readonly string[], cwd: string): string {
+function execDotnet(
+  args: readonly string[],
+  cwd: string,
+  environment: Readonly<Record<string, string>> = {},
+): string {
   return execFileSync('dotnet', args, {
     cwd,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, ...environment },
   });
 }
 
-function resolveGlobalPackagesPath(): string {
-  const output = execDotnet(['nuget', 'locals', 'global-packages', '--list'], WORKSPACE_ROOT);
-  const match = output.match(/global-packages:\s*(.+)/i);
-  if (match?.[1] === undefined) {
-    return join(homedir(), '.nuget', 'packages');
-  }
-
-  return match[1].trim();
+function isolatedNugetEnvironment(packagesPath: string): Readonly<Record<string, string>> {
+  return {
+    NUGET_PACKAGES: packagesPath,
+    NUGET_FALLBACK_PACKAGES: join(homedir(), '.nuget', 'packages'),
+  };
 }

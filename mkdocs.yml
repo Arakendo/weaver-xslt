@@ -70,6 +70,7 @@ nav:
   - Plans:
       - Overview: Plans/README.md
       - Roadmap: Plans/Weaver Roadmap.md
+      - Codegen Source Decomposition: Plans/Codegen Source Decomposition.md
       - Compile Performance: Plans/Compile Performance.md
       - Fallback File Size: Plans/Fallback File Size.md
       - JS Renderer Artifacts: Plans/JS Renderer Artifacts.md

@@ -71,6 +71,7 @@ interface WorkerExecutionRequest {
   readonly traceSummaryPath?: string;
   readonly captureTraceSummary?: boolean;
   readonly refsLimit?: number;
+  readonly brLimit?: number;
 }
 
 interface ChildExecutionPayload {
@@ -640,6 +641,7 @@ function createChildCommandArgs(request: WorkerExecutionRequest): string[] {
       : ['--child-trace-summary-path', request.traceSummaryPath]),
     ...(request.captureTraceSummary === true ? ['--child-trace-summary'] : []),
     ...(request.refsLimit === undefined ? [] : ['--refs-limit', String(request.refsLimit)]),
+    ...(request.brLimit === undefined ? [] : ['--br-limit', String(request.brLimit)]),
   ];
 }
 

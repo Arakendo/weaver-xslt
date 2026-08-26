@@ -5,6 +5,7 @@
     <RestoreSources>$(RestoreSources);$(MSBuildThisFileDirectory)..\Weaver.Build\artifacts</RestoreSources>
     <WeaverNode>node</WeaverNode>
     <WeaverCopyToOutput>true</WeaverCopyToOutput>
+    <WeaverBuildVersion Condition="'$(WeaverBuildVersion)' == ''">0.0.1</WeaverBuildVersion>
     <!-- Ensure IntermediateOutputPath is set predictably for the test -->
     <IntermediateOutputPath>$(BaseIntermediateOutputPath)</IntermediateOutputPath>
     <!-- Force a POSIX-style explicit output dir for the test to avoid escaping issues -->
@@ -12,7 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Weaver.Build" Version="0.0.1" />
+    <PackageReference Include="Weaver.Build" Version="$(WeaverBuildVersion)" />
     <WeaverStylesheet Include="Stylesheets/invoice.xsl" />
   </ItemGroup>
 

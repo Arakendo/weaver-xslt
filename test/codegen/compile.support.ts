@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 import ts from 'typescript';
 import { expect } from 'vitest';
@@ -128,10 +128,14 @@ export function compileAndLoadGeneratedModule(
 
 export function expectGeneratedFixtureToMatch(stylesheet: string, path: string): void {
   const emitted = compileStylesheetToTs(stylesheet, { path });
-  const fixture = readFileSync(
-    new URL(`../generated-fixtures/${path}.ts`, import.meta.url),
-    'utf8',
-  ).replaceAll('\r\n', '\n');
+  const fixtureUrl = new URL(`../generated-fixtures/${path}.ts`, import.meta.url);
+
+  if (process.env.WEAVER_UPDATE_GENERATED_FIXTURES === '1') {
+    writeFileSync(fixtureUrl, `${emitted.trimEnd()}\n`, 'utf8');
+    return;
+  }
+
+  const fixture = readFileSync(fixtureUrl, 'utf8').replaceAll('\r\n', '\n');
 
   expect(emitted.trimEnd()).toBe(fixture.trimEnd());
 }
