@@ -1,7 +1,7 @@
 # XSLT30 Native Parity Baseline
 
 - Date: 2026-08-26
-- Weaver baseline: `b883365` plus the checkpoint containing this record
+- Weaver baseline: `49b96f8` plus the checkpoint containing this record
 - XSLT30 revision: `6f8fd9e966ae74a251a2604abef9d904c7bc5c9b`
 - Profile: `weaver-template-path-native-parity-v1`
 - Required backends: interpreter, native-direct, native-emitted
@@ -61,10 +61,31 @@ Of the 15 non-selected cases:
 
 ## Interpretation
 
-This is a parity baseline, not a claim that Phase 3 widening is finished. It
-establishes independent backend observations and prevents an emitted fallback
-from inflating native coverage. Future native-plan widening can move cases from
-`engine-unsupported` to `selected` without changing the 16-case denominator.
+This is a parity baseline, not a claim that native family widening is finished.
+It establishes independent backend observations and prevents an emitted
+fallback from inflating native coverage. Future native-plan widening can move
+cases from `engine-unsupported` to `selected` without changing the 16-case
+denominator.
+
+## Corpus-linked generated artifact
+
+The generated-artifact suite reads the selected case identity from the parity
+overlay and compiles the exact pinned upstream `template-006.xsl` stylesheet
+under its suite-native path.
+
+The focused check verifies that:
+
+- the emitted module imports only Weaver's runtime boundary;
+- it does not call `transformCompiledStylesheet` or import the compiler;
+- exported source metadata and provenance comments retain the suite-native
+  case path;
+- the lowered literal `o` construction remains inspectable TypeScript; and
+- the source map embeds the exact upstream source and maps the generated
+  template and literal executable regions to upstream line 4.
+
+Source-map artifact filenames intentionally use the stylesheet basename, while
+the generated module's source metadata and provenance retain the full
+suite-native path. The test binds both forms back to the same overlay identity.
 
 ## Reproduction
 
@@ -82,7 +103,7 @@ as native-emitted execution.
 
 - Exact corpus verification reproduced QT3 31,821/428 and XSLT30 14,600/234.
 - Typecheck, focused ESLint, and the package build passed.
-- The complete suite passed 1,031 tests across 92 files, with one skipped and
+- The complete suite passed 1,032 tests across 93 files, with one skipped and
   two todo.
 - QT3 MVP+2 remained 2,487/2,487, XSLT30 MVP+3 remained 73/73, and the
   interpreter template/path family remained 13/13 selected.

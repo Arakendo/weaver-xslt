@@ -100,7 +100,7 @@ an XSLT match-expression integration boundary rather than absent XPath
 
 ## Phase 3: Multi-backend corpus parity
 
-**Status: in progress; initial three-backend profile complete.**
+**Status: complete in the corpus-linked native artifact checkpoint.**
 
 - [x] Record interpreter, native-direct, and native-emitted observations
   independently for profiles that require them.
@@ -108,7 +108,7 @@ an XSLT match-expression integration boundary rather than absent XPath
   serializer text.
 - [x] Record documented native fallback separately from native execution.
 - [x] Reject a profile report when a required backend observation is missing.
-- [ ] Keep generated-code readability and source-map checks in their existing
+- [x] Keep generated-code readability and source-map checks in their existing
   focused suites while linking them to the same case identity when applicable.
 
 The initial parity profile retains the complete 16-case template/path
@@ -121,6 +121,12 @@ The initial probe also found that generic emitted modules can execute through
 results are useful compatibility evidence but are not native-emitted evidence.
 The corpus harness now rejects that fallback before recording a native-emitted
 observation. See the [native parity baseline](../Evidence/XSLT30%20Native%20Parity%20Baseline.md).
+
+The selected `template-006` identity also drives a focused codegen test. It
+compiles the exact upstream stylesheet, rejects compiler imports and generic
+runtime fallback, checks readable lowered TypeScript, retains suite-native
+provenance, embeds the upstream source, and maps generated template/literal
+execution back to upstream line 4.
 
 ## Phase 4: Metadata-driven XSLT30 widening
 
@@ -216,3 +222,15 @@ At the initial native-parity checkpoint:
 - typecheck, focused ESLint, package build, exact corpus verification, and a
   normal MkDocs build pass. Strict documentation mode retains the same 56
   pre-existing broken-link warnings.
+
+At the corpus-linked native artifact checkpoint:
+
+- the parity-selected `template-006` identity is shared by corpus execution,
+  emitted-code readability, runtime-boundary, provenance, and source-map
+  checks;
+- common source-map decoding helpers are kept in focused test support rather
+  than duplicated between suites;
+- the complete suite passes 1,032 tests across 93 files, with one skipped and
+  two todo; and
+- Phase 3's initial multi-backend accounting and artifact-linkage criteria are
+  complete. Native family widening continues through Phase 4.
