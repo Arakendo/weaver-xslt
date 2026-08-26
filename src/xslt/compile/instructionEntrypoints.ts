@@ -164,7 +164,11 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
     };
   }
 
-  function compileInstructions(nodes: NodeListLike, stylesheetXml: string): Instruction[] {
+  function compileInstructions(
+    nodes: NodeListLike,
+    stylesheetXml: string,
+    parentInstructionName?: 'xsl:for-each',
+  ): Instruction[] {
     const instructions: Instruction[] = [];
 
     for (let index = 0; index < nodes.length; index += 1) {
@@ -173,7 +177,7 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
         continue;
       }
 
-      const instruction = compileInstruction(node, stylesheetXml);
+      const instruction = compileInstruction(node, stylesheetXml, parentInstructionName);
       if (instruction !== undefined) {
         instructions.push(instruction);
       }
@@ -269,7 +273,11 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
     hasMeaningfulTemplateContent: helpers.hasMeaningfulTemplateContent,
   };
 
-  function compileInstruction(node: Node, stylesheetXml: string): Instruction | undefined {
+  function compileInstruction(
+    node: Node,
+    stylesheetXml: string,
+    parentInstructionName?: 'xsl:for-each',
+  ): Instruction | undefined {
     if (node.nodeType === node.TEXT_NODE || node.nodeType === node.CDATA_SECTION_NODE) {
       const text = node.nodeValue ?? '';
       const location = getNodeSourceLocation(stylesheetXml, node, helpers.stylesheetSourceName);
@@ -292,6 +300,40 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
     }
 
     const element = node as Element;
+    if (helpers.isXsltElement(element, 'sort')) {
+      const location =
+        getAttributeValueSourceLocation(
+          stylesheetXml,
+          element,
+          'select',
+          helpers.stylesheetSourceName,
+        ) ?? getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
+      if (parentInstructionName !== 'xsl:for-each') {
+        throw helpers.createXsltStaticError(
+          'xsl:sort is only supported as a leading child of xsl:for-each.',
+          location,
+          { instructionName: 'xsl:sort' },
+        );
+      }
+      helpers.assertAllowedXsltAttributes(element, stylesheetXml, 'xsl:sort', ['select']);
+      if (helpers.hasMeaningfulTemplateContent(element)) {
+        throw helpers.createXsltStaticError(
+          'Sequence-constructor sort keys are not supported; use the select attribute.',
+          location,
+          { instructionName: 'xsl:sort' },
+        );
+      }
+      const select = element.getAttribute('select') ?? '.';
+      const instruction: Extract<Instruction, { readonly kind: 'sort' }> = {
+        kind: 'sort',
+        select: helpers.parseXPathInContext(select, location, 'xsl:sort', 'select'),
+        selectText: select,
+        ...(location === undefined ? {} : { location }),
+      };
+      helpers.irStats?.recordInstruction('sort');
+      return instruction;
+    }
+
     if (helpers.isXsltElement(element, 'apply-templates')) {
       const instruction = compileApplyTemplatesInstruction(
         element,

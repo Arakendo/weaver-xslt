@@ -78,6 +78,8 @@ function instructionLabel(instruction: Instruction): string | undefined {
       return 'xsl:if';
     case 'forEach':
       return 'xsl:for-each';
+    case 'sort':
+      return 'xsl:sort';
     case 'callTemplate':
       return 'xsl:call-template';
     case 'choose':

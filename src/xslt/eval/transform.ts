@@ -570,16 +570,24 @@ function renderInstruction(
           'xsl:for-each',
           instruction.location,
         );
-        return items
+        const sortInstructions = instruction.body.filter(
+          (bodyInstruction): bodyInstruction is Extract<Instruction, { readonly kind: 'sort' }> =>
+            bodyInstruction.kind === 'sort',
+        );
+        const body = instruction.body.filter(
+          (bodyInstruction) => bodyInstruction.kind !== 'sort',
+        );
+        const orderedItems = sortForEachItems(items, sortInstructions, context);
+        return orderedItems
           .map((item, index) =>
             renderInstructions(
-              instruction.body,
+              body,
               ir,
               {
                 ...context,
                 contextItem: item,
                 contextPosition: index + 1,
-                contextSize: items.length,
+                contextSize: orderedItems.length,
               },
               trace,
               sourceDocumentUri,
@@ -679,6 +687,8 @@ function renderInstruction(
       }
     }
     case 'conditionalContent':
+      return '';
+    case 'sort':
       return '';
     case 'copyOf': {
       try {
@@ -1054,6 +1064,48 @@ function itemToStringValue(item: XdmItem): string {
   }
 
   return String((item as XdmAtomicValue).value);
+}
+
+function sortForEachItems(
+  items: readonly XdmItem[],
+  sortInstructions: readonly Extract<Instruction, { readonly kind: 'sort' }>[],
+  context: DynamicContext,
+): readonly XdmItem[] {
+  if (sortInstructions.length === 0) {
+    return items;
+  }
+
+  const keyedItems = items.map((item, index) => ({
+    item,
+    index,
+    keys: sortInstructions.map((sortInstruction) => {
+      const values = [
+        ...evaluate(sortInstruction.select, {
+          ...context,
+          contextItem: item,
+          contextPosition: index + 1,
+          contextSize: items.length,
+        }),
+      ];
+      return values[0] === undefined ? '' : itemToStringValue(values[0]);
+    }),
+  }));
+
+  keyedItems.sort((left, right) => {
+    for (let index = 0; index < left.keys.length; index += 1) {
+      const leftKey = left.keys[index] ?? '';
+      const rightKey = right.keys[index] ?? '';
+      if (leftKey < rightKey) {
+        return -1;
+      }
+      if (leftKey > rightKey) {
+        return 1;
+      }
+    }
+    return left.index - right.index;
+  });
+
+  return keyedItems.map(({ item }) => item);
 }
 
 function serializeSequenceItems(items: readonly XdmItem[]): string {

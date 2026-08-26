@@ -54,8 +54,7 @@
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
       "caseName": "on-non-empty-010",
-      "selection": "engine-unsupported",
-      "rationale": "The case requires xsl:sort and xsl:on-non-empty inside xsl:for-each."
+      "selection": "selected"
     },
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",

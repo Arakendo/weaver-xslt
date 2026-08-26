@@ -40,7 +40,11 @@ export type InstructionCompilerHelpers = {
     ownerName: string,
     attributeName: string,
   ): XPathAst;
-  compileInstructions(nodes: NodeListLike, stylesheetXml: string): Instruction[];
+  compileInstructions(
+    nodes: NodeListLike,
+    stylesheetXml: string,
+    parentInstructionName?: 'xsl:for-each',
+  ): Instruction[];
   childElements(element: Element): Element[];
   compileWithParam(element: Element, stylesheetXml: string): WithParam;
   assertNoDuplicateWithParam(
@@ -585,11 +589,25 @@ export function compileForEachInstruction(
       helpers.stylesheetSourceName,
     ) ?? getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
 
+  const body = helpers.compileInstructions(element.childNodes, stylesheetXml, 'xsl:for-each');
+  const firstNonSortIndex = body.findIndex((instruction) => instruction.kind !== 'sort');
+  const misplacedSort = body.find(
+    (instruction, index) =>
+      instruction.kind === 'sort' && firstNonSortIndex >= 0 && index > firstNonSortIndex,
+  );
+  if (misplacedSort !== undefined) {
+    throw helpers.createXsltStaticError(
+      'xsl:sort must precede every other instruction in xsl:for-each.',
+      misplacedSort.location,
+      { instructionName: 'xsl:sort' },
+    );
+  }
+
   return {
     kind: 'forEach',
     select: helpers.parseXPathInContext(select, location, 'xsl:for-each', 'select'),
     selectText: select,
-    body: helpers.compileInstructions(element.childNodes, stylesheetXml),
+    body,
     ...(location === undefined ? {} : { location }),
   };
 }

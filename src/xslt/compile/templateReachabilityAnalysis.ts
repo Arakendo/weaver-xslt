@@ -370,6 +370,9 @@ function visitInstructionsForBindingUsage(
       case 'valueOf':
         visitXPathForBindingUsage(instruction.select, scope, usage, callbacks);
         break;
+      case 'sort':
+        visitXPathForBindingUsage(instruction.select, scope, usage, callbacks);
+        break;
       default:
         break;
     }

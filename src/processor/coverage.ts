@@ -340,6 +340,7 @@ function visitInstructionsCoverage(
         break;
       case 'valueOf':
       case 'copyOf':
+      case 'sort':
         visitXPathCoverage(instruction.select, manifest, ir);
         break;
       case 'number':

@@ -11,6 +11,7 @@
 - Retained document-node delta: `corpus/reports/xslt30-family-ranking-v7.json`
 - Retained completed root-family delta: `corpus/reports/xslt30-family-ranking-v8.json`
 - Retained conditional-content delta: `corpus/reports/xslt30-family-ranking-v9.json`
+- Retained completed conditional-content family delta: `corpus/reports/xslt30-family-ranking-v10.json`
 
 ## Result
 
@@ -138,6 +139,16 @@ path step is required. These changes move the family to 13/14 interpreter
 passes. `on-non-empty-010` remains explicit because it also requires
 `xsl:sort`; native-direct and native-emitted remain at their original 1/14.
 The v9 delta retains the resulting execution counts and outcome digest.
+
+The final family increment adds leading `xsl:sort` children to
+`xsl:for-each` under a deliberately narrow default-text profile: ascending
+order, default `select="."`, multiple stable keys, and source-located static
+diagnostics for misplaced or unsupported sort forms. This admits
+`on-non-empty-010` and completes the interpreter family at 14/14. Native
+profiles remain 1/14 because sort and conditional-content emission are still
+explicitly unsupported. The v10 delta retains the completed-family counts and
+outcome digest without broadening that claim to numeric, descending,
+language-sensitive, or custom-collation sorting.
 
 ## Reproduction
 

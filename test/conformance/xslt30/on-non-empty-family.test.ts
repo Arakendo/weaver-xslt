@@ -60,12 +60,12 @@ describe('W3C conformance — complete xsl:on-non-empty family', () => {
 
     expect(ledger.selection).toMatchObject({
       inventoried: 14,
-      selected: 13,
-      'engine-unsupported': 1,
+      selected: 14,
+      'engine-unsupported': 0,
     });
     expect(ledger.executionByBackend.interpreter).toMatchObject({
-      selected: 13,
-      passed: 13,
+      selected: 14,
+      passed: 14,
       incomplete: 0,
     });
   });

@@ -221,6 +221,15 @@ function collectXPathExpressionContexts(ir: StylesheetIR): readonly XPathExpress
             'select',
           );
           break;
+        case 'sort':
+          pushContext(
+            instruction.select,
+            instruction.selectText,
+            instruction.location,
+            'xsl:sort',
+            'select',
+          );
+          break;
         default:
           break;
       }

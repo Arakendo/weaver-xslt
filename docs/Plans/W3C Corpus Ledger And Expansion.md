@@ -211,6 +211,14 @@ This moves the family to 13/14 selected interpreter cases; the remaining
 `on-non-empty-010` gap is isolated to `xsl:sort`. Native modes remain at 1/14
 and do not silently fall back through the interpreter.
 
+The final increment adds the leading default-text `xsl:sort` slice required by
+`on-non-empty-010`. Sort keys are source-located, evaluated against the
+original for-each focus, composed stably when multiple keys are present, and
+restricted to ascending text semantics. Unsupported attributes, sort-key
+constructors, and misplaced sort instructions remain structured static
+errors. The interpreter family is complete at 14/14; native modes remain
+explicitly at 1/14.
+
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
 after the small-family queue. The 582-case generic error set is not an early
@@ -326,6 +334,9 @@ The IR 1.2 conditional-content bump regenerates the same 149 checked-in
 TypeScript artifacts; again, their only mechanical content change is the
 embedded IR version.
 
+The IR 1.3 sort-key bump regenerates those 149 artifacts once more with only
+the embedded IR version changing.
+
 At the root output-declaration checkpoint:
 
 - the complete ten-case `root` family is durably inventoried under an
@@ -405,6 +416,23 @@ At the conditional-content checkpoint:
   while native-direct and native-emitted remain 1/14; and
 - IR 1.2 is conserved in all 149 generated TypeScript fixtures;
 - the complete suite passes 1,065 tests across 101 files, with one skipped and
+  two todo; and
+- typecheck, focused ESLint, package build, exact corpus verification, and a
+  normal MkDocs build pass. Documentation retains the same pre-existing link
+  warnings.
+
+At the completed conditional-content family checkpoint:
+
+- leading `xsl:sort` children of `xsl:for-each` support default ascending text
+  keys, default `select="."`, stable multiple keys, and the original focus;
+- misplaced sort instructions, sort-key constructors, and attributes outside
+  this narrow profile remain structured static errors;
+- the complete `on-non-empty` family passes 14/14 selected interpreter cases,
+  while native-direct and native-emitted remain explicitly at 1/14;
+- the v10 ranking delta reproduces the 13/14-to-14/14 interpreter transition
+  and completed-family outcome digest;
+- IR 1.3 is conserved in all 149 generated TypeScript fixtures;
+- the complete suite passes 1,070 tests across 102 files, with one skipped and
   two todo; and
 - typecheck, focused ESLint, package build, exact corpus verification, and a
   normal MkDocs build pass. Documentation retains the same pre-existing link
