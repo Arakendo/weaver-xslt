@@ -201,12 +201,19 @@ stylesheet functions, and schema-aware result or diagnostic behavior. The
 family overlay conserves 0 selected and 4 profile-excluded cases under AR-0002
 instead of presenting absent schema typing as ordinary XPath engine failure.
 
+The next applicable candidate is the five-case `initial-mode` family. Its
+initial denominator records five harness gaps: the adapter does not yet map the
+requested mode name, and its generic parameter loader cannot distinguish the
+local and tunnel parameters nested under `<initial-mode>` from top-level
+stylesheet parameters. This classification precedes the interpreter's known
+initial-mode rejection so adapter and engine work remain independently visible.
+
 ## Reproduction
 
 ```powershell
 npm run inventory:xslt30-metadata
 npm run rank:xslt30-families
-npx vitest run test/conformance/xslt30/metadataInventory.test.ts test/conformance/xslt30/familyRanking.test.ts test/conformance/xslt30/deep-equal-family.test.ts test/conformance/xslt30/for-family.test.ts test/conformance/xslt30/root-family.test.ts test/conformance/xslt30/on-non-empty-family.test.ts test/conformance/xslt30/current-family.test.ts test/conformance/xslt30/sf-fold-right-family.test.ts test/conformance/xslt30/innermost-family.test.ts test/conformance/xslt30/treat-as-family.test.ts
+npx vitest run test/conformance/xslt30/metadataInventory.test.ts test/conformance/xslt30/familyRanking.test.ts test/conformance/xslt30/deep-equal-family.test.ts test/conformance/xslt30/for-family.test.ts test/conformance/xslt30/root-family.test.ts test/conformance/xslt30/on-non-empty-family.test.ts test/conformance/xslt30/current-family.test.ts test/conformance/xslt30/sf-fold-right-family.test.ts test/conformance/xslt30/innermost-family.test.ts test/conformance/xslt30/treat-as-family.test.ts test/conformance/xslt30/initial-mode-family.test.ts
 ```
 
 These observations apply only to the pinned suite revision and the Weaver

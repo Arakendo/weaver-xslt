@@ -130,7 +130,7 @@ execution back to upstream line 4.
 
 ## Phase 4: Metadata-driven XSLT30 widening
 
-**Status: in progress at the schema-aware treat-as review checkpoint.**
+**Status: in progress at the initial-mode harness decomposition checkpoint.**
 
 - [x] Inventory dependency kinds, environment shapes, stylesheet references,
       and assertion families across all 14,600 XSLT30 cases.
@@ -268,6 +268,14 @@ typed stylesheet functions, and schema-aware `XPDY0050` behavior. Under
 AR-0002 the complete denominator is therefore conserved as four
 profile-excluded cases, not four engine gaps. Untyped `treat as` parser and
 run-time semantics remain eligible for independent QT3 or focused work.
+
+The next applicable ranked family is the five-case `initial-mode` set. Weaver's
+public transform options already expose `initialMode`, but the XSLT30 adapter
+does not read `<initial-mode>` metadata. It also currently flattens descendant
+`param` entries into global stylesheet parameters, which would misrepresent
+the local and tunnel parameters in `initial-mode-004`. The baseline therefore
+conserves all five members as harness-unsupported before runtime mode dispatch
+or diagnostics change.
 
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates

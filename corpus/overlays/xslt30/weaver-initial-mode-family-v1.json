@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "profile": "weaver-initial-mode-family-v1",
+  "requiredBackends": ["interpreter"],
+  "selectionRationale": "Inventories the complete five-case initial-mode family before teaching the XSLT30 harness to preserve initial-mode names and local parameters.",
+  "cases": [
+    {
+      "setFile": "tests/misc/initial-mode/_initial-mode-test-set.xml",
+      "caseName": "initial-mode-001",
+      "selection": "harness-unsupported",
+      "rationale": "The harness does not yet map the initial-mode name into Weaver's transform options."
+    },
+    {
+      "setFile": "tests/misc/initial-mode/_initial-mode-test-set.xml",
+      "caseName": "initial-mode-002",
+      "selection": "harness-unsupported",
+      "rationale": "The harness does not yet preserve the requested initial mode needed to verify XTDE0045 for a #all-only rule."
+    },
+    {
+      "setFile": "tests/misc/initial-mode/_initial-mode-test-set.xml",
+      "caseName": "initial-mode-003",
+      "selection": "harness-unsupported",
+      "rationale": "The harness does not yet preserve the requested initial mode before checking the required global parameter diagnostic."
+    },
+    {
+      "setFile": "tests/misc/initial-mode/_initial-mode-test-set.xml",
+      "caseName": "initial-mode-004",
+      "selection": "harness-unsupported",
+      "rationale": "The harness currently cannot distinguish initial-mode local and tunnel parameters from global stylesheet parameters."
+    },
+    {
+      "setFile": "tests/misc/initial-mode/_initial-mode-test-set.xml",
+      "caseName": "initial-mode-005",
+      "selection": "harness-unsupported",
+      "rationale": "The harness does not yet map the requested name used to select one mode from a multi-mode template rule."
+    }
+  ]
+}
