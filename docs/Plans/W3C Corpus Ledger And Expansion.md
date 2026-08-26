@@ -130,7 +130,7 @@ execution back to upstream line 4.
 
 ## Phase 4: Metadata-driven XSLT30 widening
 
-**Status: in progress at the metadata-ranking and deep-equal checkpoint.**
+**Status: in progress at the root-family decomposition checkpoint.**
 
 - [x] Inventory dependency kinds, environment shapes, stylesheet references,
       and assertion families across all 14,600 XSLT30 cases.
@@ -171,6 +171,13 @@ The basic `format-number()` picture slice now covers the fixed-fraction form in
 `for-004`, completing the family at 4/4 selected interpreter passes. Named
 decimal formats and the complete picture grammar remain outside this narrow
 increment, and native parity remains future work.
+
+The complete ten-case `root` family is now conserved under its own interpreter
+overlay. Default-compatible `xsl:output` declarations admit UTF-8 output with
+indentation disabled without claiming transcoding or pretty-printing support.
+That moves the family from 2/10 to 5/10 passing cases. The five remaining
+dispositions separately identify stylesheet-relative `document()` resolution,
+document-node matching and serialization, and XPath node-kind-test gaps.
 
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
@@ -282,3 +289,18 @@ At the metadata-ranking and deep-equal checkpoint:
 
 The IR 1.1 bump also regenerates 149 checked-in TypeScript artifacts; their
 only mechanical content change is the embedded IR version.
+
+At the root output-declaration checkpoint:
+
+- the complete ten-case `root` family is durably inventoried under an
+  interpreter overlay;
+- 5/5 selected cases pass, with five case-specific engine gaps retained;
+- UTF-8 and disabled indentation declarations are accepted only where they
+  match Weaver's existing serializer behavior;
+- the retained v5 ranking delta records the interpreter transition from 2/10
+  to 5/10 and its outcome digest;
+- the complete suite passes 1,052 tests across 99 files, with one skipped and
+  two todo; and
+- typecheck, focused ESLint, package build, exact corpus verification, and a
+  normal MkDocs build pass. Documentation retains the same pre-existing link
+  warnings.

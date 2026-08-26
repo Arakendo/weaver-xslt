@@ -310,6 +310,10 @@ export function validateOutputDeclaration(
       continue;
     }
 
+    if (isDefaultCompatibleOutputAttribute(localName, attribute.value)) {
+      continue;
+    }
+
     if (knownLater.has(localName)) {
       throw helpers.createXsltStaticError(
         `xsl:output attribute ${attributeName} is not yet implemented in the current MVP+3 slice.`,
@@ -425,6 +429,14 @@ export function validateOutputDeclaration(
       : { suggestions: [outputSuggestion] },
     XTSE0090,
   );
+}
+
+function isDefaultCompatibleOutputAttribute(attributeName: string, value: string): boolean {
+  if (attributeName === 'encoding') {
+    return value.toUpperCase() === 'UTF-8';
+  }
+
+  return attributeName === 'indent' && value === 'no';
 }
 
 function createOutputMethodSuggestion(rawMethod: string): ErrorSuggestion | undefined {

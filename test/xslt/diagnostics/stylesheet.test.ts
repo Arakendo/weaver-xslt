@@ -313,6 +313,47 @@ describe('XSLT diagnostics', () => {
     });
   });
 
+  it('allows default-compatible xsl:output encoding and indentation declarations', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:output method="xml" encoding="UTF-8" indent="no"/>',
+      '  <xsl:template match="/">',
+      '    <out/>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+    const output = new XsltProcessor(stylesheet).transform('<root/>').output;
+
+    expect(output).toContain('<out');
+  });
+
+  it('keeps non-UTF-8 xsl:output encoding outside the supported slice', () => {
+    const stylesheet = [
+      '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+      '  <xsl:output encoding="UTF-16"/>',
+      '  <xsl:template match="/">',
+      '    <out/>',
+      '  </xsl:template>',
+      '</xsl:stylesheet>',
+    ].join('\n');
+    const error = captureError(() => {
+      new XsltProcessor(stylesheet).transform('<root/>');
+    });
+    const report = diagnosticReportFromError(error);
+
+    assertValidDiagnostic(report);
+    expect(report).toMatchObject({
+      code: 'XTSE0090',
+      phase: 'compile',
+      category: 'analysis',
+      message: 'xsl:output attribute encoding is not yet implemented in the current MVP+3 slice.',
+      details: [
+        { key: 'attributeName', value: 'encoding' },
+        { key: 'instructionName', value: 'xsl:output' },
+      ],
+    });
+  });
+
   it('allows xsl:output html method for the Vision corpus', () => {
     const stylesheet = [
       '<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',

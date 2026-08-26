@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "profile": "weaver-root-family-v1",
+  "requiredBackends": ["interpreter"],
+  "selectionRationale": "Inventories every member of the complete root-function family while conserving Weaver's initial 2/10 interpreter baseline and case-specific capability gaps.",
+  "cases": [
+    {
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "caseName": "root-0101",
+      "selection": "engine-unsupported",
+      "rationale": "The template match pattern document-node() is not yet supported."
+    },
+    {
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "caseName": "root-0102",
+      "selection": "engine-unsupported",
+      "rationale": "Serialization of the document node returned by root() is not yet conformant."
+    },
+    {
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "caseName": "root-0103",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "caseName": "root-0104",
+      "selection": "engine-unsupported",
+      "rationale": "Serialization of the document node returned by root() is not yet conformant."
+    },
+    {
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "caseName": "root-0201",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "caseName": "root-0301",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "caseName": "root-0401",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "caseName": "root-0501",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "caseName": "root-0502",
+      "selection": "engine-unsupported",
+      "rationale": "The case requires document() resource resolution relative to the stylesheet."
+    },
+    {
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "caseName": "root-0601",
+      "selection": "engine-unsupported",
+      "rationale": "XPath node-kind tests in function arguments are not yet supported."
+    }
+  ]
+}

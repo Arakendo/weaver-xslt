@@ -6,6 +6,7 @@
 - Retained semantic delta: `corpus/reports/xslt30-family-ranking-v2.json`
 - Retained arithmetic delta: `corpus/reports/xslt30-family-ranking-v3.json`
 - Retained completed-family delta: `corpus/reports/xslt30-family-ranking-v4.json`
+- Retained root output-declaration delta: `corpus/reports/xslt30-family-ranking-v5.json`
 
 ## Result
 
@@ -79,12 +80,23 @@ slice. The case passes and completes the family at 4/4 selected interpreter
 cases. This does not claim named decimal formats or the complete picture
 grammar, and native modes remain separately unsupported.
 
+The next complete-family overlay conserves all ten `root` cases. Its initial
+2/10 interpreter result exposed four cases blocked at the same declaration
+boundary. Weaver now admits only the output settings already equivalent to its
+serializer behavior: `encoding="UTF-8"` (case-insensitive) and `indent="no"`.
+Other encodings and affirmative indentation remain structured unsupported
+diagnostics rather than ignored promises. Three additional cases pass, moving
+the family to 5/10; the fourth requires stylesheet-relative `document()`
+resource resolution and remains explicit. Document-node matching,
+document-node serialization, and node-kind tests account for the other four
+gaps. The v5 delta retains the 2-to-5 transition and its outcome digest.
+
 ## Reproduction
 
 ```powershell
 npm run inventory:xslt30-metadata
 npm run rank:xslt30-families
-npx vitest run test/conformance/xslt30/metadataInventory.test.ts test/conformance/xslt30/familyRanking.test.ts test/conformance/xslt30/deep-equal-family.test.ts
+npx vitest run test/conformance/xslt30/metadataInventory.test.ts test/conformance/xslt30/familyRanking.test.ts test/conformance/xslt30/deep-equal-family.test.ts test/conformance/xslt30/for-family.test.ts test/conformance/xslt30/root-family.test.ts
 ```
 
 These observations apply only to the pinned suite revision and the Weaver

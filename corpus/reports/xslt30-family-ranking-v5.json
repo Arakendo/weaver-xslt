@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "reportVersion": 5,
+  "baseReport": "corpus/reports/xslt30-family-ranking-v4.json",
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "reason": "Records the intentional execution-ranking change after default-compatible UTF-8 and non-indenting xsl:output declarations widened the root family interpreter profile.",
+  "changes": [
+    {
+      "name": "root",
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "testCases": 10,
+      "previousBackendPassed": {
+        "interpreter": 2,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "backendPassed": {
+        "interpreter": 5,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "previousOutcomeDigest": "d1872652a7d6086b7e711bf85f11a51e1bcf633b21464e4eb331e6f403af1ca0",
+      "outcomeDigest": "4d12f6bb9eab61d7e9742e7da6415c931034ded3a7d4e15144593d8f510c1209"
+    }
+  ]
+}
