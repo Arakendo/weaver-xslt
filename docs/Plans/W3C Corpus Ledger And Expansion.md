@@ -130,7 +130,7 @@ execution back to upstream line 4.
 
 ## Phase 4: Metadata-driven XSLT30 widening
 
-**Status: in progress at the innermost-family decomposition checkpoint.**
+**Status: in progress at the schema-aware treat-as review checkpoint.**
 
 - [x] Inventory dependency kinds, environment shapes, stylesheet references,
       and assertion families across all 14,600 XSLT30 cases.
@@ -260,6 +260,14 @@ expressions remain structured unsupported diagnostics. XPath adds the standard
 reduction, and grounded subtree copying for `snapshot()`. Both upstream cases
 now pass under the interpreter, while native-direct and native-emitted remain
 explicitly 0/2.
+
+The next non-streaming ranked family is the four-case `treat-as` set, but all
+four members declare the `schema_aware` dependency. Their environments and
+stylesheets require XSD validation, `xsl:import-schema`, derived atomic types,
+typed stylesheet functions, and schema-aware `XPDY0050` behavior. Under
+AR-0002 the complete denominator is therefore conserved as four
+profile-excluded cases, not four engine gaps. Untyped `treat as` parser and
+run-time semantics remain eligible for independent QT3 or focused work.
 
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
