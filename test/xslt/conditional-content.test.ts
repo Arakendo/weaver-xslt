@@ -7,14 +7,14 @@ const stylesheet = (body: string) =>
   `<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:template match="/"><out>${body}</out></xsl:template></xsl:stylesheet>`;
 
 describe('conditional sequence content', () => {
-  it('retains source-located conditional content in IR version 1.3', () => {
+  it('retains source-located conditional content in IR version 1.4', () => {
     const ir = compileStylesheet(
       stylesheet('<value/><xsl:on-non-empty select="23"/><xsl:on-empty>empty</xsl:on-empty>'),
     );
     const literalResult = ir.templates[0]?.body[0];
     const body = literalResult?.kind === 'literalElement' ? literalResult.body : [];
 
-    expect(ir.version).toBe('1.3');
+    expect(ir.version).toBe('1.4');
     expect(body[1]).toMatchObject({
       kind: 'conditionalContent',
       condition: 'non-empty',

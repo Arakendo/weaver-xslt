@@ -328,7 +328,10 @@ function emitInstruction(
           : escapeTextLiteral(instruction.text),
       );
     case 'comment': {
-      const body = emitInstructionSequence(instruction.body, runtimeHelpers, {
+      if (instruction.select !== undefined) {
+        return undefined;
+      }
+      const body = emitInstructionSequence(instruction.body ?? [], runtimeHelpers, {
         ...options,
         contextNodeIdentifier,
       });
@@ -340,6 +343,8 @@ function emitInstruction(
         tsConcatExpression([tsStringLiteral('<!--'), body, tsStringLiteral('-->')]),
       );
     }
+    case 'copy':
+      return undefined;
     case 'valueOf': {
       const valueOfInstructionInfo = JSON.stringify({
         kind: 'xsl:value-of',

@@ -201,7 +201,9 @@ function createNodePathSignature(node: Node): string {
         current = null;
         break;
       case current.ELEMENT_NODE:
-        segments.push(`${current.namespaceURI ?? ''}:${current.localName ?? current.nodeName}`);
+        segments.push(
+          `${current.namespaceURI ?? ''}:${current.localName ?? current.nodeName}[${getSiblingPosition(current)}]`,
+        );
         current = current.parentNode;
         break;
       default:
@@ -321,7 +323,7 @@ function templateMatchesNode(
 
   const contextNode =
     node.nodeType === node.DOCUMENT_NODE ? node : (node.parentNode ?? node.ownerDocument ?? node);
-  const context = createMatchContext(contextNode, staticContext);
+  const context = createMatchContext(contextNode, node, staticContext);
 
   try {
     return [...evaluate(template.match, context)].some((item) => {
@@ -470,14 +472,27 @@ function getDefaultTemplatePriorityForAst(ast: XPathAst): number {
   return Number.NEGATIVE_INFINITY;
 }
 
-function createMatchContext(node: Node, staticContext: StaticContext): DynamicContext {
+function createMatchContext(
+  contextNode: Node,
+  currentNode: Node,
+  staticContext: StaticContext,
+): DynamicContext {
   return {
     staticContext,
-    contextItem: createXdmNode(node),
+    contextItem: createXdmNode(contextNode),
+    currentItem: createXdmNode(currentNode),
     contextPosition: 1,
     contextSize: 1,
     variables: new Map(),
   };
+}
+
+function getSiblingPosition(node: Node): number {
+  let position = 1;
+  for (let sibling = node.previousSibling; sibling !== null; sibling = sibling.previousSibling) {
+    position += 1;
+  }
+  return position;
 }
 
 function asXdmNode(item: unknown): XdmNode | undefined {

@@ -663,6 +663,7 @@ function findSingleApplyTemplatesInstruction(
           matches.push(instruction);
           break;
         case 'literalElement':
+        case 'copy':
         case 'if':
         case 'forEach':
           visit(instruction.body);

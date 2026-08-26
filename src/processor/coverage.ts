@@ -280,7 +280,17 @@ function visitInstructionsCoverage(
   for (const instruction of instructions) {
     switch (instruction.kind) {
       case 'literalElement':
+        visitInstructionsCoverage(instruction.body, manifest, ir);
+        break;
       case 'comment':
+        if (instruction.select !== undefined) {
+          visitXPathCoverage(instruction.select, manifest, ir);
+        }
+        if (instruction.body !== undefined) {
+          visitInstructionsCoverage(instruction.body, manifest, ir);
+        }
+        break;
+      case 'copy':
         visitInstructionsCoverage(instruction.body, manifest, ir);
         break;
       case 'attribute':

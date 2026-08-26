@@ -159,6 +159,7 @@ export function compileTemplateRuleDeclaration(
 ): TemplateRule {
   const templateStartTime = helpers.irStats === undefined ? 0 : performance.now();
   helpers.assertAllowedXsltAttributes(templateElement, stylesheetXml, 'xsl:template', [
+    'as',
     'exclude-result-prefixes',
     'match',
     'mode',
@@ -181,6 +182,19 @@ export function compileTemplateRuleDeclaration(
   const rawName = templateElement.getAttribute('name') ?? undefined;
   const priorityText = templateElement.getAttribute('priority');
   const priority = priorityText === null ? undefined : Number(priorityText);
+  const resultType = templateElement.getAttribute('as') ?? undefined;
+  if (resultType !== undefined && resultType !== 'comment()') {
+    throw helpers.createXsltStaticError(
+      `Unsupported xsl:template result sequence type ${JSON.stringify(resultType)}.`,
+      getAttributeValueSourceLocation(
+        stylesheetXml,
+        templateElement,
+        'as',
+        helpers.stylesheetSourceName,
+      ) ?? getNodeSourceLocation(stylesheetXml, templateElement, helpers.stylesheetSourceName),
+      { resultType },
+    );
+  }
   helpers.irStats?.beginTemplateLowering(rawName, matchText, templateElement.childNodes.length);
 
   if (matchText === undefined && rawName === undefined) {
@@ -264,6 +278,7 @@ export function compileTemplateRuleDeclaration(
     ...(name === undefined ? {} : { name }),
     modes,
     ...(priority === undefined || Number.isNaN(priority) ? {} : { priority }),
+    ...(resultType === 'comment()' ? { as: resultType } : {}),
     params,
     body,
   };

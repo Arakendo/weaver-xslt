@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "reportVersion": 11,
+  "baseReport": "corpus/reports/xslt30-family-ranking-v10.json",
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "reason": "Records the intentional execution-ranking change after shallow copy construction and fixed current() anchors completed the current family interpreter profile.",
+  "changes": [
+    {
+      "name": "current",
+      "setFile": "tests/fn/current/_current-test-set.xml",
+      "testCases": 1,
+      "previousBackendPassed": {
+        "interpreter": 0,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "backendPassed": {
+        "interpreter": 1,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "previousOutcomeDigest": "3e564eb29a8edcc385ab6021e277dd2a91b7a9e034371de69eac8629f1172e50",
+      "outcomeDigest": "a92bb3d60e00fe34f8353e42cb77fade9d55dc486ebfa92899dc5cb9c6fde962"
+    }
+  ]
+}

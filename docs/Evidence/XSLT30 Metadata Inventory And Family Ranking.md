@@ -12,6 +12,7 @@
 - Retained completed root-family delta: `corpus/reports/xslt30-family-ranking-v8.json`
 - Retained conditional-content delta: `corpus/reports/xslt30-family-ranking-v9.json`
 - Retained completed conditional-content family delta: `corpus/reports/xslt30-family-ranking-v10.json`
+- Retained completed current-family delta: `corpus/reports/xslt30-family-ranking-v11.json`
 
 ## Result
 
@@ -157,6 +158,16 @@ not merely a missing function registration: the stylesheet first requires
 value is fixed by the outer pattern evaluation. The sibling axis used inside
 the predicate is already supported. This denominator is fixed before either
 remaining disposition moves.
+
+The completed `current` increment adds a source-located shallow `xsl:copy`
+instruction, `xsl:comment select`, and the checked `comment()` template result
+annotation used by the upstream stylesheet. XPath dynamic contexts now carry
+a distinct XSLT `current()` anchor that survives nested predicate focus
+changes. Complex template-dispatch cache keys also distinguish sibling nodes,
+preventing a predicate result for one same-named sibling from being reused for
+another. `current-001` passes and completes the interpreter family at 1/1;
+native modes remain explicitly 0/1. The v11 delta retains this transition and
+its outcome digest.
 
 ## Reproduction
 

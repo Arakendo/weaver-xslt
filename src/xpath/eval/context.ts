@@ -18,6 +18,8 @@ export interface DynamicContext {
   readonly staticContext: StaticContext;
   /** Current context item (null for no focus). */
   readonly contextItem: unknown;
+  /** XSLT current() anchor, fixed across nested predicate focus changes. */
+  readonly currentItem?: unknown;
   /** 1-based position in the current focus. */
   readonly contextPosition: number;
   /** Size of the current focus. */

@@ -129,10 +129,13 @@ export function createBuiltinFunctionEvaluator(helpers: BuiltinFunctionHelpers):
     switch (normalized) {
       case 'fn:current':
         helpers.requireArity(normalized, args, 0, span);
-        if (context.contextItem === null || context.contextItem === undefined) {
+        if (
+          (context.currentItem === null || context.currentItem === undefined) &&
+          (context.contextItem === null || context.contextItem === undefined)
+        ) {
           return [];
         }
-        return [context.contextItem as XdmItem];
+        return [(context.currentItem ?? context.contextItem) as XdmItem];
       case 'fn:document': {
         helpers.requireArity(normalized, args, 1, span);
         const uriItems = helpers.evaluateExpression(args[0]!, context);

@@ -9,8 +9,7 @@
     {
       "setFile": "tests/fn/current/_current-test-set.xml",
       "caseName": "current-001",
-      "selection": "engine-unsupported",
-      "rationale": "The case requires xsl:copy plus predicate-pattern evaluation with XSLT current() scoping."
+      "selection": "selected"
     }
   ]
 }

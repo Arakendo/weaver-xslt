@@ -66,6 +66,8 @@ function instructionLabel(instruction: Instruction): string | undefined {
       return `literal ${instruction.name}`;
     case 'comment':
       return 'xsl:comment';
+    case 'copy':
+      return 'xsl:copy';
     case 'valueOf':
       return 'xsl:value-of';
     case 'sequence':

@@ -5,7 +5,7 @@
  * built-in root/element/text behavior needed for early apply-templates flows.
  */
 
-import { XMLSerializer, type Node } from '@xmldom/xmldom';
+import { XMLSerializer, type Element, type Node } from '@xmldom/xmldom';
 
 import {
   XTDE0040,
@@ -186,6 +186,7 @@ function createContext(
   return {
     staticContext,
     contextItem: item,
+    currentItem: item,
     contextPosition: position,
     contextSize: size,
     variables,
@@ -456,7 +457,44 @@ function renderInstruction(
         ? instruction.text
         : escapeText(instruction.text);
     case 'comment':
-      return `<!--${renderInstructions(instruction.body, ir, context, trace, sourceDocumentUri)}-->`;
+      return `<!--${
+        instruction.select === undefined
+          ? renderInstructions(instruction.body ?? [], ir, context, trace, sourceDocumentUri)
+          : [...evaluate(instruction.select, context)].map(itemToStringValue).join(' ')
+      }-->`;
+    case 'copy': {
+      const nodeItem = asXdmNode(context.contextItem);
+      if (nodeItem === undefined) {
+        throw new XsltError(
+          XPTY0004,
+          'xsl:copy requires a node context item in the current supported slice.',
+          instruction.location,
+        );
+      }
+      const node = nodeItem.node;
+      const body = renderInstructions(
+        instruction.body,
+        ir,
+        context,
+        trace,
+        sourceDocumentUri,
+      );
+      if (node.nodeType === node.ELEMENT_NODE) {
+        const element = node as Element;
+        const namespaceAttributes: string[] = [];
+        for (let index = 0; index < element.attributes.length; index += 1) {
+          const attribute = element.attributes.item(index);
+          if (attribute !== null && (attribute.name === 'xmlns' || attribute.prefix === 'xmlns')) {
+            namespaceAttributes.push(` ${attribute.name}="${escapeAttribute(attribute.value)}"`);
+          }
+        }
+        return `<${node.nodeName}${namespaceAttributes.join('')}>${body}</${node.nodeName}>`;
+      }
+      if (node.nodeType === node.DOCUMENT_NODE || node.nodeType === node.DOCUMENT_FRAGMENT_NODE) {
+        return body;
+      }
+      return xmlSerializer.serializeToString(node);
+    }
     case 'variable':
       return '';
     case 'literalElement': {
@@ -586,6 +624,7 @@ function renderInstruction(
               {
                 ...context,
                 contextItem: item,
+                currentItem: item,
                 contextPosition: index + 1,
                 contextSize: orderedItems.length,
               },
@@ -844,6 +883,15 @@ function renderTemplate(
     attributeCollector,
   );
 
+  if (template.as === 'comment()' && !/^<!--[\s\S]*-->$/.test(output)) {
+    throw new XsltError(
+      XPTY0004,
+      'xsl:template as="comment()" must construct exactly one comment node.',
+      template.location,
+      { expectedType: 'comment()' },
+    );
+  }
+
   if (template.name === 'language_lookup') {
     storeCachedLanguageLookupTemplateOutput(ir, context.staticContext.baseUri, variables, output);
   }
@@ -1083,6 +1131,7 @@ function sortForEachItems(
         ...evaluate(sortInstruction.select, {
           ...context,
           contextItem: item,
+          currentItem: item,
           contextPosition: index + 1,
           contextSize: items.length,
         }),

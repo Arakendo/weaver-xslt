@@ -141,9 +141,16 @@ function collectReachableNamedTemplateNames(ir: StylesheetIR): ReadonlySet<strin
     for (const instruction of instructions) {
       switch (instruction.kind) {
         case 'literalElement':
-        case 'comment':
         case 'if':
         case 'forEach':
+          visitInstructions(instruction.body);
+          break;
+        case 'comment':
+          if (instruction.body !== undefined) {
+            visitInstructions(instruction.body);
+          }
+          break;
+        case 'copy':
           visitInstructions(instruction.body);
           break;
         case 'choose':
@@ -316,7 +323,17 @@ function visitInstructionsForBindingUsage(
   for (const instruction of instructions) {
     switch (instruction.kind) {
       case 'literalElement':
+        visitInstructionsForBindingUsage(instruction.body, scope, usage, callbacks);
+        break;
       case 'comment':
+        if (instruction.select !== undefined) {
+          visitXPathForBindingUsage(instruction.select, scope, usage, callbacks);
+        }
+        if (instruction.body !== undefined) {
+          visitInstructionsForBindingUsage(instruction.body, scope, usage, callbacks);
+        }
+        break;
+      case 'copy':
         visitInstructionsForBindingUsage(instruction.body, scope, usage, callbacks);
         break;
       case 'if':

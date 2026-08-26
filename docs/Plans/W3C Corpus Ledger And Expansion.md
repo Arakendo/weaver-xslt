@@ -225,6 +225,13 @@ gap. Decomposition shows an `xsl:copy` instruction boundary before the actual
 pattern predicate and XSLT `current()` focus semantics; the required
 `preceding-sibling` navigation already exists in the XPath engine.
 
+The completion increment represents shallow `xsl:copy`, select-form
+`xsl:comment`, and the case's checked `comment()` template result annotation in
+IR 1.4. XSLT `current()` receives a separate dynamic-context anchor that is
+fixed while nested predicates change their ordinary context item. Complex
+template cache keys now distinguish sibling candidates. This completes the
+interpreter family at 1/1 while native modes remain explicitly unsupported.
+
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
 after the small-family queue. The 582-case generic error set is not an early
@@ -343,6 +350,9 @@ embedded IR version.
 The IR 1.3 sort-key bump regenerates those 149 artifacts once more with only
 the embedded IR version changing.
 
+The IR 1.4 shallow-copy and typed-comment bump regenerates the same 149
+artifacts with only their embedded IR version changing.
+
 At the root output-declaration checkpoint:
 
 - the complete ten-case `root` family is durably inventoried under an
@@ -439,6 +449,26 @@ At the completed conditional-content family checkpoint:
   and completed-family outcome digest;
 - IR 1.3 is conserved in all 149 generated TypeScript fixtures;
 - the complete suite passes 1,070 tests across 102 files, with one skipped and
+  two todo; and
+- typecheck, focused ESLint, package build, exact corpus verification, and a
+  normal MkDocs build pass. Documentation retains the same pre-existing link
+  warnings.
+
+At the completed current-family checkpoint:
+
+- source-located shallow `xsl:copy` preserves element names and namespace
+  declarations while evaluating its sequence constructor;
+- select-form `xsl:comment` and the checked `comment()` template result type
+  cover the upstream result-construction boundary;
+- XSLT `current()` anchors remain fixed while nested predicate evaluation
+  changes the ordinary XPath focus;
+- complex template-dispatch cache identities distinguish same-named siblings;
+- the complete `current` family passes 1/1 selected interpreter case, while
+  native-direct and native-emitted remain 0/1;
+- the v11 ranking delta reproduces the 0/1-to-1/1 interpreter transition and
+  completed-family outcome digest;
+- IR 1.4 is conserved in all 149 generated TypeScript fixtures;
+- the complete suite passes 1,077 tests across 104 files, with one skipped and
   two todo; and
 - typecheck, focused ESLint, package build, exact corpus verification, and a
   normal MkDocs build pass. Documentation retains the same pre-existing link

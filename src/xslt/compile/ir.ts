@@ -10,7 +10,7 @@
 import type { XPathAst } from '../../xpath/parse/ast.js';
 import type { SourceLocation } from '../../errors/index.js';
 
-export const STYLESHEET_IR_VERSION = '1.3' as const;
+export const STYLESHEET_IR_VERSION = '1.4' as const;
 
 export type AttributeValueTemplatePart =
   | {
@@ -100,6 +100,8 @@ export interface TemplateRule {
   readonly modes: readonly string[];
   /** Priority; undefined means compute from pattern. */
   readonly priority?: number;
+  /** Supported result sequence type annotation. */
+  readonly as?: 'comment()';
   /** Leading xsl:param declarations for named/template invocation. */
   readonly params: readonly TemplateParam[];
   /** Sequence of instructions to evaluate. */
@@ -130,6 +132,13 @@ export type Instruction =
     }
   | {
       readonly kind: 'comment';
+      readonly select?: XPathAst;
+      readonly selectText?: string;
+      readonly body?: readonly Instruction[];
+      readonly location?: SourceLocation;
+    }
+  | {
+      readonly kind: 'copy';
       readonly body: readonly Instruction[];
       readonly location?: SourceLocation;
     }

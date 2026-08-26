@@ -7,7 +7,7 @@ const stylesheet = (body: string) =>
   `<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:template match="/"><out>${body}</out></xsl:template></xsl:stylesheet>`;
 
 describe('xsl:sort', () => {
-  it('retains a leading default text sort key in IR version 1.3', () => {
+  it('retains a leading default text sort key in IR version 1.4', () => {
     const ir = compileStylesheet(
       stylesheet(
         '<xsl:for-each select="/*/item"><xsl:sort/><xsl:copy-of select="."/></xsl:for-each>',
@@ -16,7 +16,7 @@ describe('xsl:sort', () => {
     const literalResult = ir.templates[0]?.body[0];
     const forEach = literalResult?.kind === 'literalElement' ? literalResult.body[0] : undefined;
 
-    expect(ir.version).toBe('1.3');
+    expect(ir.version).toBe('1.4');
     expect(forEach).toMatchObject({ kind: 'forEach' });
     expect(forEach?.kind === 'forEach' ? forEach.body[0] : undefined).toMatchObject({
       kind: 'sort',

@@ -143,7 +143,21 @@ function collectXPathExpressionContexts(ir: StylesheetIR): readonly XPathExpress
     for (const instruction of instructions) {
       switch (instruction.kind) {
         case 'literalElement':
+          visitInstructions(instruction.body);
+          break;
         case 'comment':
+          pushContext(
+            instruction.select,
+            instruction.selectText,
+            instruction.location,
+            'xsl:comment',
+            'select',
+          );
+          if (instruction.body !== undefined) {
+            visitInstructions(instruction.body);
+          }
+          break;
+        case 'copy':
           visitInstructions(instruction.body);
           break;
         case 'if':

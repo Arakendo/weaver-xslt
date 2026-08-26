@@ -381,15 +381,48 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
     }
 
     if (helpers.isXsltElement(element, 'comment')) {
-      helpers.assertAllowedXsltAttributes(element, stylesheetXml, 'xsl:comment', []);
+      helpers.assertAllowedXsltAttributes(element, stylesheetXml, 'xsl:comment', ['select']);
 
-      const location = getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
+      const select = element.getAttribute('select') ?? undefined;
+      const location =
+        (select === undefined
+          ? undefined
+          : getAttributeValueSourceLocation(
+              stylesheetXml,
+              element,
+              'select',
+              helpers.stylesheetSourceName,
+            )) ?? getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
+      if (select !== undefined && helpers.hasMeaningfulTemplateContent(element)) {
+        throw helpers.createXsltStaticError(
+          'xsl:comment cannot specify both select and sequence-constructor content.',
+          location,
+          { instructionName: 'xsl:comment' },
+        );
+      }
       const instruction: Extract<Instruction, { readonly kind: 'comment' }> = {
         kind: 'comment',
-        body: compileInstructions(element.childNodes, stylesheetXml),
+        ...(select === undefined
+          ? { body: compileInstructions(element.childNodes, stylesheetXml) }
+          : {
+              select: helpers.parseXPathInContext(select, location, 'xsl:comment', 'select'),
+              selectText: select,
+            }),
         ...(location === undefined ? {} : { location }),
       };
       helpers.irStats?.recordInstruction('comment');
+      return instruction;
+    }
+
+    if (helpers.isXsltElement(element, 'copy')) {
+      helpers.assertAllowedXsltAttributes(element, stylesheetXml, 'xsl:copy', []);
+      const location = getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
+      const instruction: Extract<Instruction, { readonly kind: 'copy' }> = {
+        kind: 'copy',
+        body: compileInstructions(element.childNodes, stylesheetXml),
+        ...(location === undefined ? {} : { location }),
+      };
+      helpers.irStats?.recordInstruction('copy');
       return instruction;
     }
 

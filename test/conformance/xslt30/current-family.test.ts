@@ -27,7 +27,7 @@ describe('W3C conformance — complete current-function family', () => {
     expect(overlay.cases).toHaveLength(1);
   });
 
-  it('conserves the initial engine gap and family denominator', () => {
+  it('passes the selected case and conserves the family denominator', () => {
     const observations: VerificationObservation[] = selectedCases.map((testCase) => {
       const result = runXslt30Case(testCase);
       if (result.execution !== 'passed') {
@@ -59,12 +59,12 @@ describe('W3C conformance — complete current-function family', () => {
 
     expect(ledger.selection).toMatchObject({
       inventoried: 1,
-      selected: 0,
-      'engine-unsupported': 1,
+      selected: 1,
+      'engine-unsupported': 0,
     });
     expect(ledger.executionByBackend.interpreter).toMatchObject({
-      selected: 0,
-      passed: 0,
+      selected: 1,
+      passed: 1,
       incomplete: 0,
     });
   });
