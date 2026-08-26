@@ -12,6 +12,13 @@ describe('XPath parser coverage', () => {
     expect(parseXPath('-1')).toMatchObject({ kind: 'unary', operator: '-' });
     expect(parseXPath('+.65535032')).toMatchObject({ kind: 'unary', operator: '+' });
     expect(parseXPath('foo/bar[1]')).toMatchObject({ kind: 'path', absolute: false });
+    expect(parseXPath('/in/non-existent')).toMatchObject({
+      kind: 'path',
+      steps: [
+        { kind: 'step', nodeTest: { kind: 'nameTest', name: 'in' } },
+        { kind: 'step', nodeTest: { kind: 'nameTest', name: 'non-existent' } },
+      ],
+    });
     expect(parseXPath('./@to')).toMatchObject({
       kind: 'path',
       base: { kind: 'contextItem' },

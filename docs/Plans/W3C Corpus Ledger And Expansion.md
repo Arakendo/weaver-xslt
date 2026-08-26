@@ -202,6 +202,15 @@ passing ordering-diagnostic case and retains thirteen case-specific gaps for
 conditional sequence content, `xsl:on-empty` coexistence, `xsl:sort`, and a
 hyphenated XPath name test.
 
+The first decomposition increment adds source-located `xsl:on-empty` and
+`xsl:on-non-empty` conditional-content markers in IR 1.2. Interpreter sequence
+construction buffers the non-marker content so markers can be emitted in
+their original positions using their captured dynamic contexts. The parser
+also admits keyword-shaped tokens as XPath name tests in path-step position.
+This moves the family to 13/14 selected interpreter cases; the remaining
+`on-non-empty-010` gap is isolated to `xsl:sort`. Native modes remain at 1/14
+and do not silently fall back through the interpreter.
+
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
 after the small-family queue. The 582-case generic error set is not an early
@@ -313,6 +322,10 @@ At the metadata-ranking and deep-equal checkpoint:
 The IR 1.1 bump also regenerates 149 checked-in TypeScript artifacts; their
 only mechanical content change is the embedded IR version.
 
+The IR 1.2 conditional-content bump regenerates the same 149 checked-in
+TypeScript artifacts; again, their only mechanical content change is the
+embedded IR version.
+
 At the root output-declaration checkpoint:
 
 - the complete ten-case `root` family is durably inventoried under an
@@ -374,6 +387,24 @@ At the completed root-family checkpoint:
 - the v8 ranking delta reproduces the 9/10-to-10/10 transition and outcome
   digest;
 - the complete suite passes 1,057 tests across 99 files, with one skipped and
+  two todo; and
+- typecheck, focused ESLint, package build, exact corpus verification, and a
+  normal MkDocs build pass. Documentation retains the same pre-existing link
+  warnings.
+
+At the conditional-content checkpoint:
+
+- source-located `xsl:on-empty` and `xsl:on-non-empty` markers preserve their
+  constructor positions and captured variable contexts;
+- empty text, empty document-node content, coexistence with `xsl:on-empty`,
+  ignored `xsl:fallback`, and ordering diagnostics are covered directly;
+- keyword-shaped XPath tokens can serve as name tests in path-step position;
+- the complete `on-non-empty` family passes 13/13 selected interpreter cases,
+  retaining only the `xsl:sort`-dependent case as an explicit engine gap;
+- the v9 ranking delta reproduces the 1/14-to-13/14 interpreter transition,
+  while native-direct and native-emitted remain 1/14; and
+- IR 1.2 is conserved in all 149 generated TypeScript fixtures;
+- the complete suite passes 1,065 tests across 101 files, with one skipped and
   two todo; and
 - typecheck, focused ESLint, package build, exact corpus verification, and a
   normal MkDocs build pass. Documentation retains the same pre-existing link

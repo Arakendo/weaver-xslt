@@ -9,56 +9,47 @@
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
       "caseName": "on-non-empty-001",
-      "selection": "engine-unsupported",
-      "rationale": "xsl:on-non-empty conditional content is not yet supported."
+      "selection": "selected"
     },
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
       "caseName": "on-non-empty-002",
-      "selection": "engine-unsupported",
-      "rationale": "The case requires xsl:on-non-empty and a hyphenated XPath name test."
+      "selection": "selected"
     },
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
       "caseName": "on-non-empty-003",
-      "selection": "engine-unsupported",
-      "rationale": "xsl:on-non-empty conditional content is not yet supported."
+      "selection": "selected"
     },
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
       "caseName": "on-non-empty-004",
-      "selection": "engine-unsupported",
-      "rationale": "xsl:on-non-empty conditional content is not yet supported."
+      "selection": "selected"
     },
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
       "caseName": "on-non-empty-005",
-      "selection": "engine-unsupported",
-      "rationale": "xsl:on-non-empty conditional content is not yet supported."
+      "selection": "selected"
     },
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
       "caseName": "on-non-empty-006",
-      "selection": "engine-unsupported",
-      "rationale": "Multiple xsl:on-non-empty conditional content instructions are not yet supported."
+      "selection": "selected"
     },
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
       "caseName": "on-non-empty-007",
-      "selection": "engine-unsupported",
-      "rationale": "xsl:on-non-empty conditional content with local bindings is not yet supported."
+      "selection": "selected"
     },
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
       "caseName": "on-non-empty-008",
-      "selection": "engine-unsupported",
-      "rationale": "Body-form xsl:on-non-empty conditional content is not yet supported."
+      "selection": "selected"
     },
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
       "caseName": "on-non-empty-009",
-      "selection": "engine-unsupported",
-      "rationale": "Body-form xsl:on-non-empty conditional content is not yet supported."
+      "selection": "selected"
     },
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
@@ -69,14 +60,12 @@
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
       "caseName": "on-non-empty-011",
-      "selection": "engine-unsupported",
-      "rationale": "xsl:on-non-empty does not yet classify zero-length text as empty."
+      "selection": "selected"
     },
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
       "caseName": "on-non-empty-012",
-      "selection": "engine-unsupported",
-      "rationale": "xsl:on-non-empty does not yet classify empty document nodes as empty."
+      "selection": "selected"
     },
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
@@ -86,8 +75,7 @@
     {
       "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
       "caseName": "on-non-empty-014",
-      "selection": "engine-unsupported",
-      "rationale": "Coexisting xsl:on-empty and xsl:on-non-empty conditional content is not yet supported."
+      "selection": "selected"
     }
   ]
 }

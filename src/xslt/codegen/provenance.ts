@@ -70,6 +70,8 @@ function instructionLabel(instruction: Instruction): string | undefined {
       return 'xsl:value-of';
     case 'sequence':
       return 'xsl:sequence';
+    case 'conditionalContent':
+      return instruction.condition === 'empty' ? 'xsl:on-empty' : 'xsl:on-non-empty';
     case 'applyTemplates':
       return 'xsl:apply-templates';
     case 'if':

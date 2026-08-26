@@ -354,7 +354,15 @@ function renderInstructions(
   sourceDocumentUri = '<source-xml>',
   attributeCollector?: AttributeCollector,
 ): string {
-  let output = '';
+  const parts: Array<
+    | { readonly kind: 'output'; readonly output: string }
+    | {
+        readonly kind: 'conditional';
+        readonly instruction: Extract<Instruction, { readonly kind: 'conditionalContent' }>;
+        readonly context: DynamicContext;
+      }
+  > = [];
+  let coreOutput = '';
   let currentContext = context;
 
   for (const instruction of instructions) {
@@ -369,7 +377,12 @@ function renderInstructions(
       continue;
     }
 
-    output += renderInstruction(
+    if (instruction.kind === 'conditionalContent') {
+      parts.push({ kind: 'conditional', instruction, context: currentContext });
+      continue;
+    }
+
+    const instructionOutput = renderInstruction(
       instruction,
       ir,
       currentContext,
@@ -377,8 +390,55 @@ function renderInstructions(
       sourceDocumentUri,
       attributeCollector,
     );
+    coreOutput += instructionOutput;
+    parts.push({ kind: 'output', output: instructionOutput });
   }
 
+  const constructorIsEmpty = coreOutput.length === 0;
+  let output = '';
+  let previousConditionalItemWasAtomic = false;
+  for (const part of parts) {
+    if (part.kind === 'output') {
+      output += part.output;
+      if (part.output.length > 0) {
+        previousConditionalItemWasAtomic = false;
+      }
+      continue;
+    }
+    const conditionMatches =
+      part.instruction.condition === 'empty' ? constructorIsEmpty : !constructorIsEmpty;
+    if (!conditionMatches) {
+      continue;
+    }
+    if (part.instruction.select !== undefined) {
+      const items = [...evaluate(part.instruction.select, part.context)];
+      const conditionalOutput = serializeSequenceItems(items);
+      if (
+        conditionalOutput.length > 0 &&
+        previousConditionalItemWasAtomic &&
+        items[0]?.xdmKind === 'atomic'
+      ) {
+        output += ' ';
+      }
+      output += conditionalOutput;
+      if (conditionalOutput.length > 0) {
+        previousConditionalItemWasAtomic = items[items.length - 1]?.xdmKind === 'atomic';
+      }
+      continue;
+    }
+    const conditionalOutput = renderInstructions(
+      part.instruction.body ?? [],
+      ir,
+      part.context,
+      trace,
+      sourceDocumentUri,
+      attributeCollector,
+    );
+    output += conditionalOutput;
+    if (conditionalOutput.length > 0) {
+      previousConditionalItemWasAtomic = false;
+    }
+  }
   return output;
 }
 
@@ -618,6 +678,8 @@ function renderInstruction(
         );
       }
     }
+    case 'conditionalContent':
+      return '';
     case 'copyOf': {
       try {
         const items = [...evaluate(instruction.select, context)];

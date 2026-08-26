@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "reportVersion": 9,
+  "baseReport": "corpus/reports/xslt30-family-ranking-v8.json",
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "reason": "Records the intentional execution-ranking change after conditional sequence-content buffering and hyphenated keyword name tests widened the on-non-empty family interpreter profile.",
+  "changes": [
+    {
+      "name": "on-non-empty",
+      "setFile": "tests/insn/on-non-empty/_on-non-empty-test-set.xml",
+      "testCases": 14,
+      "previousBackendPassed": {
+        "interpreter": 1,
+        "native-direct": 1,
+        "native-emitted": 1
+      },
+      "backendPassed": {
+        "interpreter": 13,
+        "native-direct": 1,
+        "native-emitted": 1
+      },
+      "previousOutcomeDigest": "1beaa36a5b961f733159d425ef0d5a9afa9904a81a7d4b96e42dc90cc264bb88",
+      "outcomeDigest": "0a44243e8ef3a7893595c957ebd57d436f2ad3d4affcaa9d1edc9f960aed8b9b"
+    }
+  ]
+}

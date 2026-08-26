@@ -179,7 +179,78 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
       }
     }
 
+    const onEmptyIndex = instructions.findIndex(
+      (instruction) =>
+        instruction.kind === 'conditionalContent' && instruction.condition === 'empty',
+    );
+    if (onEmptyIndex >= 0 && onEmptyIndex !== instructions.length - 1) {
+      const instruction = instructions[onEmptyIndex]!;
+      throw helpers.createXsltStaticError(
+        'xsl:on-empty must be the last instruction in its sequence constructor.',
+        instruction.location,
+        { instructionName: 'xsl:on-empty' },
+      );
+    }
+
     return instructions;
+  }
+
+  function compileConditionalContentInstruction(
+    element: Element,
+    stylesheetXml: string,
+    condition: 'empty' | 'non-empty',
+  ): Extract<Instruction, { readonly kind: 'conditionalContent' }> {
+    const instructionName = condition === 'empty' ? 'xsl:on-empty' : 'xsl:on-non-empty';
+    helpers.assertAllowedXsltAttributes(element, stylesheetXml, instructionName, ['select']);
+
+    const select = element.getAttribute('select') ?? undefined;
+    const body: Instruction[] = [];
+    for (let index = 0; index < element.childNodes.length; index += 1) {
+      const child = element.childNodes.item(index);
+      if (child === null) {
+        continue;
+      }
+      if (
+        child.nodeType === child.ELEMENT_NODE &&
+        helpers.isXsltElement(child as Element, 'fallback')
+      ) {
+        continue;
+      }
+      const childInstruction = compileInstruction(child, stylesheetXml);
+      if (childInstruction !== undefined) {
+        body.push(childInstruction);
+      }
+    }
+
+    const location =
+      (select === undefined
+        ? undefined
+        : getAttributeValueSourceLocation(
+            stylesheetXml,
+            element,
+            'select',
+            helpers.stylesheetSourceName,
+          )) ?? getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
+    if (select !== undefined && body.length > 0) {
+      throw helpers.createXsltStaticError(
+        `${instructionName} cannot specify both select and sequence-constructor content.`,
+        location,
+        { instructionName },
+      );
+    }
+
+    return {
+      kind: 'conditionalContent',
+      condition,
+      ...(select === undefined
+        ? {}
+        : {
+            select: helpers.parseXPathInContext(select, location, instructionName, 'select'),
+            selectText: select,
+          }),
+      ...(select === undefined ? { body } : {}),
+      ...(location === undefined ? {} : { location }),
+    };
   }
 
   const instructionCompilerHelpers: InstructionCompilerHelpers = {
@@ -320,6 +391,16 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
       return instruction;
     }
 
+    if (
+      helpers.isXsltElement(element, 'on-empty') ||
+      helpers.isXsltElement(element, 'on-non-empty')
+    ) {
+      const condition = helpers.isXsltElement(element, 'on-empty') ? 'empty' : 'non-empty';
+      const instruction = compileConditionalContentInstruction(element, stylesheetXml, condition);
+      helpers.irStats?.recordInstruction('conditionalContent');
+      return instruction;
+    }
+
     if (helpers.isXsltElement(element, 'copy-of')) {
       const instruction = compileCopyOfInstruction(
         element,
@@ -388,6 +469,11 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
       };
       helpers.irStats?.recordInstruction('literalText');
       return instruction;
+    }
+
+    if (helpers.isXsltElement(element, 'fallback')) {
+      helpers.assertAllowedXsltAttributes(element, stylesheetXml, 'xsl:fallback', []);
+      return undefined;
     }
 
     if (element.namespaceURI === helpers.xsltNamespace) {

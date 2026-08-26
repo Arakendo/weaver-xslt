@@ -10,6 +10,7 @@
 - Retained root XDM-semantics delta: `corpus/reports/xslt30-family-ranking-v6.json`
 - Retained document-node delta: `corpus/reports/xslt30-family-ranking-v7.json`
 - Retained completed root-family delta: `corpus/reports/xslt30-family-ranking-v8.json`
+- Retained conditional-content delta: `corpus/reports/xslt30-family-ranking-v9.json`
 
 ## Result
 
@@ -126,12 +127,24 @@ buffering pressure, one combines that behavior with `xsl:on-empty`, one adds
 `xsl:sort`, and `on-non-empty-002` also exposes a hyphenated XPath name-test
 parser gap. This denominator is fixed before any dispositions move.
 
+The first conditional-content increment introduces a source-located IR 1.2
+marker for `xsl:on-empty` and `xsl:on-non-empty`. The interpreter buffers the
+surrounding sequence constructor, evaluates markers against whether its core
+serialized content is empty, and preserves each marker's position and dynamic
+variable context. Empty text and empty document-node results remain empty;
+ignored fallback content does not make the constructor non-empty. The XPath
+parser also accepts keyword-shaped tokens such as `in` as name tests where a
+path step is required. These changes move the family to 13/14 interpreter
+passes. `on-non-empty-010` remains explicit because it also requires
+`xsl:sort`; native-direct and native-emitted remain at their original 1/14.
+The v9 delta retains the resulting execution counts and outcome digest.
+
 ## Reproduction
 
 ```powershell
 npm run inventory:xslt30-metadata
 npm run rank:xslt30-families
-npx vitest run test/conformance/xslt30/metadataInventory.test.ts test/conformance/xslt30/familyRanking.test.ts test/conformance/xslt30/deep-equal-family.test.ts test/conformance/xslt30/for-family.test.ts test/conformance/xslt30/root-family.test.ts
+npx vitest run test/conformance/xslt30/metadataInventory.test.ts test/conformance/xslt30/familyRanking.test.ts test/conformance/xslt30/deep-equal-family.test.ts test/conformance/xslt30/for-family.test.ts test/conformance/xslt30/root-family.test.ts test/conformance/xslt30/on-non-empty-family.test.ts
 ```
 
 These observations apply only to the pinned suite revision and the Weaver

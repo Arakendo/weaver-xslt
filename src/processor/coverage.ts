@@ -316,6 +316,14 @@ function visitInstructionsCoverage(
           visitInstructionsCoverage(instruction.body, manifest, ir);
         }
         break;
+      case 'conditionalContent':
+        if (instruction.select !== undefined) {
+          visitXPathCoverage(instruction.select, manifest, ir);
+        }
+        if (instruction.body !== undefined) {
+          visitInstructionsCoverage(instruction.body, manifest, ir);
+        }
+        break;
       case 'callTemplate':
         visitWithParamsCoverage(instruction.withParams, manifest, ir);
         break;

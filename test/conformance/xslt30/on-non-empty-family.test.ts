@@ -27,7 +27,7 @@ describe('W3C conformance — complete xsl:on-non-empty family', () => {
     expect(overlay.cases).toHaveLength(14);
   });
 
-  it('passes selected cases and conserves the initial family baseline', () => {
+  it('passes selected cases and conserves the family denominator', () => {
     const observations: VerificationObservation[] = selectedCases.map((testCase) => {
       const result = runXslt30Case(testCase);
       if (result.execution !== 'passed') {
@@ -60,12 +60,12 @@ describe('W3C conformance — complete xsl:on-non-empty family', () => {
 
     expect(ledger.selection).toMatchObject({
       inventoried: 14,
-      selected: 1,
-      'engine-unsupported': 13,
+      selected: 13,
+      'engine-unsupported': 1,
     });
     expect(ledger.executionByBackend.interpreter).toMatchObject({
-      selected: 1,
-      passed: 1,
+      selected: 13,
+      passed: 13,
       incomplete: 0,
     });
   });

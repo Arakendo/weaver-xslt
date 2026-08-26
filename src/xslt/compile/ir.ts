@@ -10,7 +10,7 @@
 import type { XPathAst } from '../../xpath/parse/ast.js';
 import type { SourceLocation } from '../../errors/index.js';
 
-export const STYLESHEET_IR_VERSION = '1.1' as const;
+export const STYLESHEET_IR_VERSION = '1.2' as const;
 
 export type AttributeValueTemplatePart =
   | {
@@ -180,6 +180,14 @@ export type Instruction =
       readonly kind: 'sequence';
       readonly select: XPathAst;
       readonly selectText: string;
+      readonly location?: SourceLocation;
+    }
+  | {
+      readonly kind: 'conditionalContent';
+      readonly condition: 'empty' | 'non-empty';
+      readonly select?: XPathAst;
+      readonly selectText?: string;
+      readonly body?: readonly Instruction[];
       readonly location?: SourceLocation;
     }
   | {

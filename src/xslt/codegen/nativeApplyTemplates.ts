@@ -667,6 +667,11 @@ function findSingleApplyTemplatesInstruction(
         case 'forEach':
           visit(instruction.body);
           break;
+        case 'conditionalContent':
+          if (instruction.body !== undefined) {
+            visit(instruction.body);
+          }
+          break;
         case 'choose':
           for (const branch of instruction.whenBranches) {
             visit(branch.body);

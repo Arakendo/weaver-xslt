@@ -187,6 +187,18 @@ function collectXPathExpressionContexts(ir: StylesheetIR): readonly XPathExpress
             visitInstructions(instruction.body);
           }
           break;
+        case 'conditionalContent':
+          pushContext(
+            instruction.select,
+            instruction.selectText,
+            instruction.location,
+            instruction.condition === 'empty' ? 'xsl:on-empty' : 'xsl:on-non-empty',
+            'select',
+          );
+          if (instruction.body !== undefined) {
+            visitInstructions(instruction.body);
+          }
+          break;
         case 'callTemplate':
           visitWithParams(instruction.withParams);
           break;

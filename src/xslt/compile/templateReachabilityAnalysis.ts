@@ -159,6 +159,11 @@ function collectReachableNamedTemplateNames(ir: StylesheetIR): ReadonlySet<strin
             visitInstructions(instruction.body);
           }
           break;
+        case 'conditionalContent':
+          if (instruction.body !== undefined) {
+            visitInstructions(instruction.body);
+          }
+          break;
         case 'callTemplate':
           visitWithParams(instruction.withParams);
           visitNamedTemplateByName(instruction.name);
@@ -344,6 +349,14 @@ function visitInstructionsForBindingUsage(
         scope = extendScope(scope, instruction.name, { kind: 'localVariable', id });
         break;
       }
+      case 'conditionalContent':
+        if (instruction.select !== undefined) {
+          visitXPathForBindingUsage(instruction.select, scope, usage, callbacks);
+        }
+        if (instruction.body !== undefined) {
+          visitInstructionsForBindingUsage(instruction.body, scope, usage, callbacks);
+        }
+        break;
       case 'callTemplate':
         visitWithParamsForBindingUsage(instruction.withParams, scope, usage, callbacks);
         callbacks.onCallTemplate?.(instruction.name);

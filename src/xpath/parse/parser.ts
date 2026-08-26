@@ -668,17 +668,7 @@ class Parser {
     }
 
     const token = this.current();
-    if (
-      token.kind !== 'name' &&
-      !isNameTestTokenKind(token.kind) &&
-      token.kind !== 'if' &&
-      token.kind !== 'for' &&
-      token.kind !== 'let' &&
-      token.kind !== 'some' &&
-      token.kind !== 'every' &&
-      token.kind !== 'then' &&
-      token.kind !== 'else'
-    ) {
+    if (!isNodeTestTokenKind(token.kind)) {
       throw createParseError('Expected a node test.', token.span);
     }
     this.index += 1;
@@ -875,8 +865,22 @@ function isStepStart(token: Token): boolean {
     token.kind === 'dot' ||
     token.kind === 'dotDot' ||
     token.kind === 'at' ||
-    token.kind === 'name' ||
+    isNodeTestTokenKind(token.kind) ||
     token.kind === 'star'
+  );
+}
+
+function isNodeTestTokenKind(kind: TokenKind): boolean {
+  return (
+    kind === 'name' ||
+    isNameTestTokenKind(kind) ||
+    kind === 'if' ||
+    kind === 'for' ||
+    kind === 'let' ||
+    kind === 'some' ||
+    kind === 'every' ||
+    kind === 'then' ||
+    kind === 'else'
   );
 }
 

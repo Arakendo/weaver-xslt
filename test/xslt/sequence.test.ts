@@ -7,12 +7,12 @@ const stylesheet = (body: string) =>
   `<xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"><xsl:template match="/"><out>${body}</out></xsl:template></xsl:stylesheet>`;
 
 describe('xsl:sequence', () => {
-  it('retains a source-located select expression in IR version 1.1', () => {
+  it('retains a source-located select expression in IR version 1.2', () => {
     const ir = compileStylesheet(stylesheet('<xsl:sequence select="1 to 3"/>'));
     const literalResult = ir.templates[0]?.body[0];
     const sequence = literalResult?.kind === 'literalElement' ? literalResult.body[0] : undefined;
 
-    expect(ir.version).toBe('1.1');
+    expect(ir.version).toBe('1.2');
     expect(sequence).toMatchObject({
       kind: 'sequence',
       selectText: '1 to 3',
