@@ -179,6 +179,12 @@ That moves the family from 2/10 to 5/10 passing cases. The five remaining
 dispositions separately identify stylesheet-relative `document()` resolution,
 document-node matching and serialization, and XPath node-kind-test gaps.
 
+The next decomposition centralizes XDM string-value semantics for DOM-backed
+nodes and filters DOM-only document whitespace from XPath child navigation.
+Together with empty `element()` kind tests, that advances `root` to 8/10. Only
+`document-node()` template matching and stylesheet-relative `document()`
+resolution remain; neither is folded into this semantic increment.
+
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
 after the small-family queue. The 582-case generic error set is not an early
@@ -300,6 +306,24 @@ At the root output-declaration checkpoint:
 - the retained v5 ranking delta records the interpreter transition from 2/10
   to 5/10 and its outcome digest;
 - the complete suite passes 1,052 tests across 99 files, with one skipped and
+  two todo; and
+- typecheck, focused ESLint, package build, exact corpus verification, and a
+  normal MkDocs build pass. Documentation retains the same pre-existing link
+  warnings.
+
+At the root XDM-semantics checkpoint:
+
+- empty `element()` kind tests are parsed as path steps rather than function
+  calls;
+- DOM-backed node string values share one XDM implementation across XPath and
+  XSLT evaluation;
+- document child navigation and string values exclude DOM-only whitespace
+  outside the document element;
+- the complete `root` family passes 8/8 selected interpreter cases, retaining
+  two explicit engine gaps;
+- the v6 ranking delta reproduces the 5/10-to-8/10 transition and outcome
+  digest;
+- the complete suite passes 1,054 tests across 99 files, with one skipped and
   two todo; and
 - typecheck, focused ESLint, package build, exact corpus verification, and a
   normal MkDocs build pass. Documentation retains the same pre-existing link

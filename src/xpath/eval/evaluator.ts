@@ -14,6 +14,7 @@ import {
   createXdmBoolean,
   createXdmNumber,
   createXdmString,
+  getNodeStringValue,
   type XdmAtomicValue,
   type XdmItem,
   type XdmNode,
@@ -283,7 +284,7 @@ function evaluateNumericOperand(items: readonly XdmItem[], span: SpanLike): numb
   }
 
   if (item?.xdmKind === 'node') {
-    return Number((item as XdmNode).node.textContent ?? '');
+    return Number(getNodeStringValue((item as XdmNode).node));
   }
 
   const atomicItem = item as XdmAtomicValue;

@@ -33,6 +33,7 @@ import { parseXml } from '../../xml/parse.js';
 import {
   createXdmNode,
   createXdmString,
+  getNodeStringValue,
   type XdmAtomicValue,
   type XdmItem,
   type XdmNode,
@@ -987,7 +988,7 @@ function renderBuiltInTemplate(
 function itemToStringValue(item: XdmItem): string {
   const nodeItem = asXdmNode(item);
   if (nodeItem !== undefined) {
-    return nodeItem.node.textContent ?? '';
+    return getNodeStringValue(nodeItem.node);
   }
 
   return String((item as XdmAtomicValue).value);

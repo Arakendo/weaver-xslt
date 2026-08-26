@@ -2,6 +2,7 @@ import type { Node } from '@xmldom/xmldom';
 
 import { FORG0001, FORG0006, XPTY0004 } from '../../errors/codes.js';
 import {
+  getNodeStringValue,
   type XdmArray,
   type XdmAtomicValue,
   type XdmItem,
@@ -106,7 +107,7 @@ export function createComparisonHelpers(dependencies: ComparisonHelperDependenci
   } {
     if (item.xdmKind === 'node') {
       return {
-        value: (item as XdmNode).node.textContent ?? '',
+        value: getNodeStringValue((item as XdmNode).node),
         source: 'node',
       };
     }
@@ -169,7 +170,7 @@ export function createComparisonHelpers(dependencies: ComparisonHelperDependenci
   function atomizeItems(items: readonly XdmItem[]): readonly (boolean | number | string)[] {
     return expandArrayItems(items).map((item) => {
       if (item.xdmKind === 'node') {
-        return (item as XdmNode).node.textContent ?? '';
+        return getNodeStringValue((item as XdmNode).node);
       }
 
       return (item as XdmAtomicValue).value;
@@ -179,7 +180,7 @@ export function createComparisonHelpers(dependencies: ComparisonHelperDependenci
   function atomizedNumericValues(items: readonly XdmItem[], span: SpanLike, functionName: string): number[] {
     return expandArrayItems(items).map((item) => {
       if (item.xdmKind === 'node') {
-        const numericValue = coerceNumericValue((item as XdmNode).node.textContent ?? '');
+        const numericValue = coerceNumericValue(getNodeStringValue((item as XdmNode).node));
         if (numericValue === undefined) {
           throw dependencies.createXPathError(FORG0001, `Function ${functionName} could not convert an atomized value to a number.`, span, {
             functionName,
@@ -255,7 +256,7 @@ export function createComparisonHelpers(dependencies: ComparisonHelperDependenci
 
   function atomizeComparableItem(item: XdmItem, span: SpanLike, functionName: string): boolean | number | string {
     if (item.xdmKind === 'node') {
-      return (item as XdmNode).node.textContent ?? '';
+      return getNodeStringValue((item as XdmNode).node);
     }
 
     const atomic = item as XdmAtomicValue;
@@ -436,7 +437,7 @@ export function createComparisonHelpers(dependencies: ComparisonHelperDependenci
 
     const [item] = items;
     if (item?.xdmKind === 'node') {
-      return (item as XdmNode).node.textContent ?? '';
+      return getNodeStringValue((item as XdmNode).node);
     }
 
     return (item as XdmAtomicValue).value;

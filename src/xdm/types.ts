@@ -65,6 +65,43 @@ export function createXdmNode(node: Node): XdmNode {
   return { xdmKind: 'node', node };
 }
 
+/** Returns the XPath Data Model string value for a DOM-backed node. */
+export function getNodeStringValue(node: Node): string {
+  if (
+    node.nodeType === node.DOCUMENT_NODE ||
+    node.nodeType === node.DOCUMENT_FRAGMENT_NODE ||
+    node.nodeType === node.ELEMENT_NODE
+  ) {
+    return getDescendantTextValue(node);
+  }
+
+  if (node.nodeType === node.TEXT_NODE || node.nodeType === node.CDATA_SECTION_NODE) {
+    return node.nodeValue ?? '';
+  }
+
+  return node.nodeValue ?? '';
+}
+
+function getDescendantTextValue(node: Node): string {
+  let value = '';
+  for (let index = 0; index < node.childNodes.length; index += 1) {
+    const child = node.childNodes.item(index);
+    if (child === null) {
+      continue;
+    }
+    if (child.nodeType === child.TEXT_NODE || child.nodeType === child.CDATA_SECTION_NODE) {
+      if (node.nodeType !== node.DOCUMENT_NODE) {
+        value += child.nodeValue ?? '';
+      }
+      continue;
+    }
+    if (child.nodeType === child.ELEMENT_NODE) {
+      value += getDescendantTextValue(child);
+    }
+  }
+  return value;
+}
+
 export function createXdmMap(entries: XdmMap['entries']): XdmMap {
   return { xdmKind: 'map', entries };
 }

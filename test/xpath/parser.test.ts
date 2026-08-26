@@ -158,6 +158,22 @@ describe('XPath parser coverage', () => {
       kind: 'path',
       steps: [{ kind: 'step' }, { kind: 'step', nodeTest: { kind: 'kindTest', name: 'comment' } }],
     });
+    expect(parseXPath('root(element())')).toMatchObject({
+      kind: 'functionCall',
+      callee: 'root',
+      arguments: [
+        {
+          kind: 'path',
+          steps: [
+            {
+              kind: 'step',
+              axis: 'child',
+              nodeTest: { kind: 'kindTest', name: 'element' },
+            },
+          ],
+        },
+      ],
+    });
     expect(parseXPath('//@xml:*')).toMatchObject({
       kind: 'path',
       steps: [

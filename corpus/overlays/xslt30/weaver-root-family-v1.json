@@ -15,8 +15,7 @@
     {
       "setFile": "tests/fn/root/_root-test-set.xml",
       "caseName": "root-0102",
-      "selection": "engine-unsupported",
-      "rationale": "Serialization of the document node returned by root() is not yet conformant."
+      "selection": "selected"
     },
     {
       "setFile": "tests/fn/root/_root-test-set.xml",
@@ -26,8 +25,7 @@
     {
       "setFile": "tests/fn/root/_root-test-set.xml",
       "caseName": "root-0104",
-      "selection": "engine-unsupported",
-      "rationale": "Serialization of the document node returned by root() is not yet conformant."
+      "selection": "selected"
     },
     {
       "setFile": "tests/fn/root/_root-test-set.xml",
@@ -58,8 +56,7 @@
     {
       "setFile": "tests/fn/root/_root-test-set.xml",
       "caseName": "root-0601",
-      "selection": "engine-unsupported",
-      "rationale": "XPath node-kind tests in function arguments are not yet supported."
+      "selection": "selected"
     }
   ]
 }

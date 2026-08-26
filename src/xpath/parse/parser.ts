@@ -838,6 +838,7 @@ function unescapeStringLiteral(lexeme: string): string {
 function isKindTestName(value: string): value is KindTest['name'] {
   return (
     value === 'comment' ||
+    value === 'element' ||
     value === 'node' ||
     value === 'processing-instruction' ||
     value === 'text'

@@ -7,6 +7,7 @@ import {
   createXdmInteger,
   createXdmNumber,
   createXdmString,
+  getNodeStringValue,
   type XdmAtomicValue,
   type XdmItem,
   type XdmNode,
@@ -124,7 +125,7 @@ export function createBuiltinFunctionSupport(helpers: BuiltinFunctionSupportHelp
     }
 
     if (item.xdmKind === 'node') {
-      return (item as XdmNode).node.textContent ?? '';
+      return getNodeStringValue((item as XdmNode).node);
     }
 
     if (item.xdmKind !== 'atomic') {
@@ -269,7 +270,7 @@ export function createBuiltinFunctionSupport(helpers: BuiltinFunctionSupportHelp
     }
 
     if (item.xdmKind === 'node') {
-      return Number((item as XdmNode).node.textContent ?? '');
+      return Number(getNodeStringValue((item as XdmNode).node));
     }
 
     const atomic = item as XdmAtomicValue;

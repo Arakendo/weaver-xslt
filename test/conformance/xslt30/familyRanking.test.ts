@@ -11,6 +11,7 @@ const REPORT_V2_PATH = join(REPO_ROOT, 'corpus', 'reports', 'xslt30-family-ranki
 const REPORT_V3_PATH = join(REPO_ROOT, 'corpus', 'reports', 'xslt30-family-ranking-v3.json');
 const REPORT_V4_PATH = join(REPO_ROOT, 'corpus', 'reports', 'xslt30-family-ranking-v4.json');
 const REPORT_V5_PATH = join(REPO_ROOT, 'corpus', 'reports', 'xslt30-family-ranking-v5.json');
+const REPORT_V6_PATH = join(REPO_ROOT, 'corpus', 'reports', 'xslt30-family-ranking-v6.json');
 
 describe('XSLT30 complete-family execution ranking', () => {
   it('preserves the original discovery ranking as immutable evidence', () => {
@@ -81,8 +82,23 @@ describe('XSLT30 complete-family execution ranking', () => {
     });
   });
 
-  it('reproduces the retained root output-declaration ranking delta', () => {
+  it('preserves the retained root output-declaration ranking delta', () => {
     const retained = JSON.parse(readFileSync(REPORT_V5_PATH, 'utf8')) as {
+      readonly changes: ReadonlyArray<{
+        readonly name: string;
+        readonly backendPassed: Readonly<Record<string, number>>;
+        readonly outcomeDigest: string;
+      }>;
+    };
+    expect(retained.changes[0]).toMatchObject({
+      name: 'root',
+      backendPassed: { interpreter: 5, 'native-direct': 0, 'native-emitted': 0 },
+      outcomeDigest: '4d12f6bb9eab61d7e9742e7da6415c931034ded3a7d4e15144593d8f510c1209',
+    });
+  });
+
+  it('reproduces the retained root XDM-semantics ranking delta', () => {
+    const retained = JSON.parse(readFileSync(REPORT_V6_PATH, 'utf8')) as {
       readonly changes: ReadonlyArray<{
         readonly name: string;
         readonly backendPassed: Readonly<Record<string, number>>;

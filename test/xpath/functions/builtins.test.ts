@@ -157,6 +157,15 @@ describe('XPath built-in function coverage', () => {
     expect(rootNode).toHaveLength(1);
     expect(rootNode[0]?.node.nodeName).toBe('#document');
 
+    const rootFromElementKindTest = [
+      ...evaluate(parseXPath('root(element())'), context),
+    ] as XdmNode[];
+    expect(rootFromElementKindTest).toHaveLength(1);
+    expect(rootFromElementKindTest[0]?.node.nodeName).toBe('#document');
+    expect([...evaluate(parseXPath('string(root(element()))'), context)]).toMatchObject([
+      { type: 'xs:string', value: 'A12.5B' },
+    ]);
+
     expect(() => [...evaluate(parseXPath('string([1, 2])'), context)]).toThrowError(
       expect.objectContaining({ code: 'FOTY0014' } satisfies Partial<XPathError>),
     );

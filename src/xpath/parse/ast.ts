@@ -142,7 +142,7 @@ export interface QuantifiedExpression {
 
 export interface KindTest {
   readonly kind: 'kindTest';
-  readonly name: 'comment' | 'node' | 'processing-instruction' | 'text';
+  readonly name: 'comment' | 'element' | 'node' | 'processing-instruction' | 'text';
   readonly span: SourceSpan;
 }
 

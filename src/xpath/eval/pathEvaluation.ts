@@ -416,6 +416,9 @@ export function createPathEvaluator(dependencies: PathEvaluationDependencies): {
       if (step.nodeTest.name === 'comment') {
         return node.nodeType === 8;
       }
+      if (step.nodeTest.name === 'element') {
+        return node.nodeType === 1;
+      }
       if (step.nodeTest.name === 'text') {
         return node.nodeType === 3;
       }

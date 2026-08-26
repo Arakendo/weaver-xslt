@@ -125,7 +125,10 @@ function collectChildren(node: Node): Node[] {
   const children = node.childNodes;
   for (let index = 0; index < children.length; index += 1) {
     const child = children.item(index);
-    if (child !== null) {
+    if (
+      child !== null &&
+      !(node.nodeType === node.DOCUMENT_NODE && child.nodeType === child.TEXT_NODE)
+    ) {
       items.push(child);
     }
   }

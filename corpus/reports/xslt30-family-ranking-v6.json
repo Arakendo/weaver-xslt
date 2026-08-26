@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "reportVersion": 6,
+  "baseReport": "corpus/reports/xslt30-family-ranking-v5.json",
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "reason": "Records the intentional execution-ranking change after element kind tests and centralized XDM document-node child and string-value semantics widened the root family interpreter profile.",
+  "changes": [
+    {
+      "name": "root",
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "testCases": 10,
+      "previousBackendPassed": {
+        "interpreter": 5,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "backendPassed": {
+        "interpreter": 8,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "previousOutcomeDigest": "4d12f6bb9eab61d7e9742e7da6415c931034ded3a7d4e15144593d8f510c1209",
+      "outcomeDigest": "3d4e0dd2ecbe5eaee9271c61afaa23e62fb1da1016444bdd9191a6dffa9cf1a1"
+    }
+  ]
+}

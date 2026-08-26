@@ -1,5 +1,5 @@
 import { FOTY0014, XPTY0004 } from '../../errors/codes.js';
-import { createXdmNumber, type XdmAtomicValue, type XdmItem, type XdmNode } from '../../xdm/types.js';
+import { createXdmNumber, getNodeStringValue, type XdmAtomicValue, type XdmItem, type XdmNode } from '../../xdm/types.js';
 import type { DynamicContext } from './context.js';
 import type { XPathAst } from '../parse/ast.js';
 
@@ -44,7 +44,7 @@ export function createScalarHelpers(dependencies: ScalarHelperDependencies): {
 
   function coerceItemToStringValue(item: XdmItem, span: SpanLike): string {
     if (item.xdmKind === 'node') {
-      return (item as XdmNode).node.textContent ?? '';
+      return getNodeStringValue((item as XdmNode).node);
     }
 
     if (item.xdmKind !== 'atomic') {

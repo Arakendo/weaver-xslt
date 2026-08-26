@@ -7,6 +7,7 @@
 - Retained arithmetic delta: `corpus/reports/xslt30-family-ranking-v3.json`
 - Retained completed-family delta: `corpus/reports/xslt30-family-ranking-v4.json`
 - Retained root output-declaration delta: `corpus/reports/xslt30-family-ranking-v5.json`
+- Retained root XDM-semantics delta: `corpus/reports/xslt30-family-ranking-v6.json`
 
 ## Result
 
@@ -90,6 +91,16 @@ the family to 5/10; the fourth requires stylesheet-relative `document()`
 resource resolution and remains explicit. Document-node matching,
 document-node serialization, and node-kind tests account for the other four
 gaps. The v5 delta retains the 2-to-5 transition and its outcome digest.
+
+The second `root` increment recognizes empty `element()` kind tests as path
+steps and centralizes DOM-backed XDM node string values. Document and element
+string values now concatenate descendant text nodes while excluding comments,
+processing instructions, and DOM-only whitespace outside the document
+element. Document child navigation applies the same XDM boundary. This moves
+`root-0102`, `root-0104`, and `root-0601` into the selected passing set and the
+family to 8/10. The v6 delta retains that transition. The remaining cases are
+still divided between `document-node()` template matching and explicit
+stylesheet-relative resource resolution.
 
 ## Reproduction
 

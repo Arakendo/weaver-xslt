@@ -21,6 +21,15 @@ function createContext(xml: string): DynamicContext {
 }
 
 describe('XPath navigation coverage', () => {
+  it('does not expose DOM whitespace as XDM document-node children', () => {
+    const context = createContext('\n<root/>\n');
+
+    expect([...evaluate(parseXPath('count(node())'), context)]).toMatchObject([
+      { type: 'xs:integer', value: 1 },
+    ]);
+    expect([...evaluate(parseXPath('text()'), context)]).toEqual([]);
+  });
+
   it('supports the parent axis through .. and parent::', () => {
     const context = createContext('<root><group><item>A</item><item>B</item></group></root>');
 
