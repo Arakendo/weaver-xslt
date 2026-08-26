@@ -35,6 +35,7 @@ export const FOCA0002 = 'FOCA0002'; // invalid lexical value
 export const FOCH0001 = 'FOCH0001'; // invalid XML character codepoint
 export const FOCH0002 = 'FOCH0002'; // unsupported collation
 export const FOER0000 = 'FOER0000'; // fn:error with no args
+export const FODF1310 = 'FODF1310'; // invalid format-number picture
 export const FOTY0014 = 'FOTY0014'; // string value not defined for function/map/array
 
 // Static XSLT errors

@@ -5,6 +5,7 @@
 - Retained discovery report: `corpus/reports/xslt30-family-ranking-v1.json`
 - Retained semantic delta: `corpus/reports/xslt30-family-ranking-v2.json`
 - Retained arithmetic delta: `corpus/reports/xslt30-family-ranking-v3.json`
+- Retained completed-family delta: `corpus/reports/xslt30-family-ranking-v4.json`
 
 ## Result
 
@@ -70,6 +71,13 @@ behavior exercised by `for-003`: each return expression is empty and
 `sum(())` produces zero. The case now passes, moving the family to 3/3 selected
 interpreter cases with only `format-number()` remaining. The v3 delta retains
 the corresponding backend count and outcome digest transition.
+
+The third increment adds the basic unnamed-decimal-format picture slice needed
+by `format-number()` in `for-004`, including mandatory/optional fractional
+digits, three-digit grouping, and structured `FODF1310` rejection outside that
+slice. The case passes and completes the family at 4/4 selected interpreter
+cases. This does not claim named decimal formats or the complete picture
+grammar, and native modes remain separately unsupported.
 
 ## Reproduction
 

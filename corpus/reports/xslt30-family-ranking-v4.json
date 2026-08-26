@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "reportVersion": 4,
+  "baseReport": "corpus/reports/xslt30-family-ranking-v3.json",
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "reason": "Records the intentional execution-ranking change after basic format-number picture support completed the for family interpreter profile.",
+  "changes": [
+    {
+      "name": "for",
+      "setFile": "tests/expr/for/_for-test-set.xml",
+      "testCases": 4,
+      "previousBackendPassed": {
+        "interpreter": 3,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "backendPassed": {
+        "interpreter": 4,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "previousOutcomeDigest": "ca62d8e0b868c390d8b27f37651b7d04760d4d64438c3fd931e65eaeed2e566f",
+      "outcomeDigest": "0224a4e0c1c28c8b2f4fbbfc98d4edadb7f3675678bd5c4ca5e8e1e2cc563921"
+    }
+  ]
+}

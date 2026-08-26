@@ -167,6 +167,11 @@ non-singleton numeric values. That moves `for-003` into the selected passing
 set and leaves `format-number()` in `for-004` as the family's only remaining
 engine gap.
 
+The basic `format-number()` picture slice now covers the fixed-fraction form in
+`for-004`, completing the family at 4/4 selected interpreter passes. Named
+decimal formats and the complete picture grammar remain outside this narrow
+increment, and native parity remains future work.
+
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
 after the small-family queue. The 582-case generic error set is not an early
@@ -270,7 +275,7 @@ At the metadata-ranking and deep-equal checkpoint:
   and native-emitted execution rankings with per-family outcome digests;
 - the complete `deep-equal` family passes 2/2 under its interpreter profile;
 - the complete `for` family is the next semantic decomposition target; and
-- the complete suite passes 1,046 tests across 98 files, with one skipped and
+- the complete suite passes 1,047 tests across 98 files, with one skipped and
   two todo; typecheck, focused ESLint, package build, exact corpus
   verification, and a normal MkDocs build pass. Strict documentation mode
   retains the same 56 pre-existing broken-link warnings.

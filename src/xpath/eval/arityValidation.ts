@@ -50,6 +50,7 @@ const EXACT_ARITY_NAMES = new Map<string, readonly string[]>([
     '2',
     [
       'fn:deep-equal',
+      'fn:format-number',
       'fn:QName',
       'fn:trace',
       'map:entry',

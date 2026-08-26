@@ -106,6 +106,12 @@ describe('XPath built-in function coverage', () => {
     ]);
     expect([...evaluate(parseXPath('round((), 2)'), context)]).toEqual([]);
     expect([...evaluate(parseXPath('abs(())'), context)]).toEqual([]);
+    expect([...evaluate(parseXPath('format-number(36.02, "0.00")'), context)]).toMatchObject([
+      { type: 'xs:string', value: '36.02' },
+    ]);
+    expect([...evaluate(parseXPath('format-number(1234.5, "#,##0.00")'), context)]).toMatchObject([
+      { type: 'xs:string', value: '1,234.50' },
+    ]);
   });
 
   it('evaluates string-value and atomization built-ins', () => {

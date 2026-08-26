@@ -24,8 +24,7 @@
     {
       "setFile": "tests/expr/for/_for-test-set.xml",
       "caseName": "for-004",
-      "selection": "engine-unsupported",
-      "rationale": "Weaver does not yet implement the format-number() function used by this case."
+      "selection": "selected"
     }
   ]
 }
