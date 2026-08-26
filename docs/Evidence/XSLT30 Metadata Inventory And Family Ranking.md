@@ -8,6 +8,7 @@
 - Retained completed-family delta: `corpus/reports/xslt30-family-ranking-v4.json`
 - Retained root output-declaration delta: `corpus/reports/xslt30-family-ranking-v5.json`
 - Retained root XDM-semantics delta: `corpus/reports/xslt30-family-ranking-v6.json`
+- Retained document-node delta: `corpus/reports/xslt30-family-ranking-v7.json`
 
 ## Result
 
@@ -101,6 +102,13 @@ element. Document child navigation applies the same XDM boundary. This moves
 family to 8/10. The v6 delta retains that transition. The remaining cases are
 still divided between `document-node()` template matching and explicit
 stylesheet-relative resource resolution.
+
+The third `root` increment adds empty `document-node()` kind tests and the
+pattern-specific rule needed to match the source document itself. Kind-test
+patterns now also receive their standard `-0.5` default priority within the
+supported empty-test slice. `root-0101` passes, moving the family to 9/10 and
+leaving only stylesheet-relative `document()` resolution. The v7 delta retains
+the 8-to-9 transition without changing native support claims.
 
 ## Reproduction
 

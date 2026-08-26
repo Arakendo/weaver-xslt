@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "reportVersion": 7,
+  "baseReport": "corpus/reports/xslt30-family-ranking-v6.json",
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "reason": "Records the intentional execution-ranking change after document-node kind tests and document-node template matching widened the root family interpreter profile.",
+  "changes": [
+    {
+      "name": "root",
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "testCases": 10,
+      "previousBackendPassed": {
+        "interpreter": 8,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "backendPassed": {
+        "interpreter": 9,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "previousOutcomeDigest": "3d4e0dd2ecbe5eaee9271c61afaa23e62fb1da1016444bdd9191a6dffa9cf1a1",
+      "outcomeDigest": "6c0a375ffe7add75fe782971b3cc726a7464d9f4bff2806f999771052bf9fa89"
+    }
+  ]
+}

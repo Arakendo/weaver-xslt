@@ -60,12 +60,12 @@ describe('W3C conformance — complete root-function family', () => {
 
     expect(ledger.selection).toMatchObject({
       inventoried: 10,
-      selected: 8,
-      'engine-unsupported': 2,
+      selected: 9,
+      'engine-unsupported': 1,
     });
     expect(ledger.executionByBackend.interpreter).toMatchObject({
-      selected: 8,
-      passed: 8,
+      selected: 9,
+      passed: 9,
       incomplete: 0,
     });
   });

@@ -9,8 +9,7 @@
     {
       "setFile": "tests/fn/root/_root-test-set.xml",
       "caseName": "root-0101",
-      "selection": "engine-unsupported",
-      "rationale": "The template match pattern document-node() is not yet supported."
+      "selection": "selected"
     },
     {
       "setFile": "tests/fn/root/_root-test-set.xml",

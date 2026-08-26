@@ -1400,6 +1400,18 @@ describe('Weaver scaffold', () => {
     });
   });
 
+  it('matches a document-node() template against the source document', () => {
+    const proc = new XsltProcessor(`
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:template match="document-node()"><out><xsl:value-of select="root(.)"/></out></xsl:template>
+      </xsl:stylesheet>
+    `);
+
+    expect(proc.transform('<doc>value</doc>')).toEqual({
+      output: '<out>value</out>',
+    });
+  });
+
   it('supports absolute root-child match patterns such as /doc', () => {
     const proc = new XsltProcessor(`
       <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">

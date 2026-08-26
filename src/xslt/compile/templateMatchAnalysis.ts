@@ -380,10 +380,7 @@ function getTemplateEffectivePriority(template: TemplateRule): number {
     return -0.5;
   }
 
-  if (
-    step.nodeTest.kind === 'kindTest' &&
-    (step.nodeTest.name === 'node' || step.nodeTest.name === 'text')
-  ) {
+  if (step.nodeTest.kind === 'kindTest') {
     return -0.5;
   }
 

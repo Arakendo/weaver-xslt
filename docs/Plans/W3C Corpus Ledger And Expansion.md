@@ -185,6 +185,11 @@ Together with empty `element()` kind tests, that advances `root` to 8/10. Only
 `document-node()` template matching and stylesheet-relative `document()`
 resolution remain; neither is folded into this semantic increment.
 
+Empty `document-node()` kind tests and document-node template matching move
+`root-0101` into the selected set, bringing the family to 9/10. The sole
+remaining case is intentionally isolated at the host resource/base-URI
+boundary rather than treated as another node-semantics change.
+
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
 after the small-family queue. The 582-case generic error set is not an early
@@ -324,6 +329,23 @@ At the root XDM-semantics checkpoint:
 - the v6 ranking delta reproduces the 5/10-to-8/10 transition and outcome
   digest;
 - the complete suite passes 1,054 tests across 99 files, with one skipped and
+  two todo; and
+- typecheck, focused ESLint, package build, exact corpus verification, and a
+  normal MkDocs build pass. Documentation retains the same pre-existing link
+  warnings.
+
+At the document-node matching checkpoint:
+
+- empty `document-node()` is represented as an XPath kind test;
+- template dispatch matches that pattern directly against the source document
+  while ordinary child-axis evaluation remains unchanged;
+- supported empty kind-test patterns share the standard `-0.5` default
+  priority;
+- the complete `root` family passes 9/9 selected interpreter cases, retaining
+  only the stylesheet-relative `document()` resource gap;
+- the v7 ranking delta reproduces the 8/10-to-9/10 transition and outcome
+  digest;
+- the complete suite passes 1,056 tests across 99 files, with one skipped and
   two todo; and
 - typecheck, focused ESLint, package build, exact corpus verification, and a
   normal MkDocs build pass. Documentation retains the same pre-existing link

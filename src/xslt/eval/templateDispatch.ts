@@ -310,6 +310,10 @@ function templateMatchesNode(
     return false;
   }
 
+  if (isDocumentNodeTemplateMatch(template.match)) {
+    return node.nodeType === node.DOCUMENT_NODE;
+  }
+
   const simplePathMatch = tryGetSimpleTemplatePathMatch(template.match);
   if (simplePathMatch !== undefined) {
     return matchesSimpleTemplatePath(node, simplePathMatch.path, simplePathMatch.absolute);
@@ -327,6 +331,22 @@ function templateMatchesNode(
   } catch {
     return false;
   }
+}
+
+function isDocumentNodeTemplateMatch(match: XPathAst): boolean {
+  if (match.kind !== 'path' || match.absolute || match.base !== undefined) {
+    return false;
+  }
+
+  const step = match.steps[0];
+  return (
+    match.steps.length === 1 &&
+    step?.kind === 'step' &&
+    step.axis === 'child' &&
+    step.predicates.length === 0 &&
+    step.nodeTest.kind === 'kindTest' &&
+    step.nodeTest.name === 'document-node'
+  );
 }
 
 function tryGetSimpleTemplatePathMatch(
@@ -443,10 +463,7 @@ function getDefaultTemplatePriorityForAst(ast: XPathAst): number {
     return -0.5;
   }
 
-  if (
-    step.nodeTest.kind === 'kindTest' &&
-    (step.nodeTest.name === 'node' || step.nodeTest.name === 'text')
-  ) {
+  if (step.nodeTest.kind === 'kindTest') {
     return -0.5;
   }
 

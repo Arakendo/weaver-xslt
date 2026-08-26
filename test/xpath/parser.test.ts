@@ -174,6 +174,16 @@ describe('XPath parser coverage', () => {
         },
       ],
     });
+    expect(parseXPath('document-node()')).toMatchObject({
+      kind: 'path',
+      steps: [
+        {
+          kind: 'step',
+          axis: 'child',
+          nodeTest: { kind: 'kindTest', name: 'document-node' },
+        },
+      ],
+    });
     expect(parseXPath('//@xml:*')).toMatchObject({
       kind: 'path',
       steps: [
