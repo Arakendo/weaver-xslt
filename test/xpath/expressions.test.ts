@@ -21,6 +21,14 @@ function createContext(xml: string): DynamicContext {
 }
 
 describe('XPath expression coverage', () => {
+  it('propagates empty operands through unary and binary arithmetic', () => {
+    const context = createContext('<root/>');
+
+    expect([...evaluate(parseXPath('/root/missing + 1'), context)]).toEqual([]);
+    expect([...evaluate(parseXPath('1 * /root/missing'), context)]).toEqual([]);
+    expect([...evaluate(parseXPath('-/root/missing'), context)]).toEqual([]);
+  });
+
   it('evaluates integer range expressions', () => {
     const context = createContext('<root/>');
 

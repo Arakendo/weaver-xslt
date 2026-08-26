@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "reportVersion": 3,
+  "baseReport": "corpus/reports/xslt30-family-ranking-v2.json",
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "reason": "Records the intentional execution-ranking change after XPath empty arithmetic propagation moved for-003 into the selected interpreter profile.",
+  "changes": [
+    {
+      "name": "for",
+      "setFile": "tests/expr/for/_for-test-set.xml",
+      "testCases": 4,
+      "previousBackendPassed": {
+        "interpreter": 2,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "backendPassed": {
+        "interpreter": 3,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "previousOutcomeDigest": "a186d3e63fa3c60305c44c4a731896307bbb02212d6086b70d87a26be3995fb3",
+      "outcomeDigest": "ca62d8e0b868c390d8b27f37651b7d04760d4d64438c3fd931e65eaeed2e566f"
+    }
+  ]
+}

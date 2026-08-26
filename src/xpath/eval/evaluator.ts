@@ -87,10 +87,11 @@ function evaluateExpression(ast: XPathAst, context: DynamicContext): XdmItem[] {
     case 'sequence':
       return ast.items.flatMap((item) => evaluateExpression(item, context));
     case 'unary': {
-      const operand = requireSingleNumber(
-        evaluateExpression(ast.operand, context),
-        ast.operand.span,
-      );
+      const operandItems = evaluateExpression(ast.operand, context);
+      if (operandItems.length === 0) {
+        return [];
+      }
+      const operand = requireSingleNumber(operandItems, ast.operand.span);
       if (ast.operand.kind === 'number' && isDecimalLiteralLexeme(ast.operand.lexeme)) {
         return [
           createXdmNumber(
@@ -156,8 +157,16 @@ function evaluateBinaryExpression(
     operator === 'idiv' ||
     operator === 'mod'
   ) {
-    const left = evaluateNumericOperand(evaluateExpression(leftAst, context), leftAst.span);
-    const right = evaluateNumericOperand(evaluateExpression(rightAst, context), rightAst.span);
+    const leftItems = evaluateExpression(leftAst, context);
+    if (leftItems.length === 0) {
+      return [];
+    }
+    const rightItems = evaluateExpression(rightAst, context);
+    if (rightItems.length === 0) {
+      return [];
+    }
+    const left = evaluateNumericOperand(leftItems, leftAst.span);
+    const right = evaluateNumericOperand(rightItems, rightAst.span);
     if ((operator === 'idiv' || operator === 'mod') && right === 0) {
       throw createXPathError(FOAR0001, 'Division by zero.', span);
     }

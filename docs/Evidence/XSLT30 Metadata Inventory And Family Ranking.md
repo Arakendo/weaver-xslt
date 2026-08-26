@@ -4,6 +4,7 @@
 - Suite revision: `6f8fd9e966ae74a251a2604abef9d904c7bc5c9b`
 - Retained discovery report: `corpus/reports/xslt30-family-ranking-v1.json`
 - Retained semantic delta: `corpus/reports/xslt30-family-ranking-v2.json`
+- Retained arithmetic delta: `corpus/reports/xslt30-family-ranking-v3.json`
 
 ## Result
 
@@ -62,6 +63,13 @@ to 2/2 selected interpreter cases with two remaining engine gaps. Native-direct
 and native-emitted stay explicitly unsupported for this instruction. The v2
 delta report preserves the original discovery report while recording the
 changed backend count and outcome digest.
+
+The second increment corrects XPath unary and binary arithmetic to propagate
+an empty operand as an empty result instead of raising `XPTY0004`. This is the
+behavior exercised by `for-003`: each return expression is empty and
+`sum(())` produces zero. The case now passes, moving the family to 3/3 selected
+interpreter cases with only `format-number()` remaining. The v3 delta retains
+the corresponding backend count and outcome digest transition.
 
 ## Reproduction
 

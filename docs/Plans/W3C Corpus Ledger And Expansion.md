@@ -162,6 +162,11 @@ passing selected case. Sequence arithmetic (`for-003`) and `format-number()`
 (`for-004`) remain explicit gaps; native modes remain unsupported for the new
 instruction until the shared native plan supports it.
 
+XPath arithmetic now propagates empty operands rather than diagnosing them as
+non-singleton numeric values. That moves `for-003` into the selected passing
+set and leaves `format-number()` in `for-004` as the family's only remaining
+engine gap.
+
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
 after the small-family queue. The 582-case generic error set is not an early
@@ -265,7 +270,7 @@ At the metadata-ranking and deep-equal checkpoint:
   and native-emitted execution rankings with per-family outcome digests;
 - the complete `deep-equal` family passes 2/2 under its interpreter profile;
 - the complete `for` family is the next semantic decomposition target; and
-- the complete suite passes 1,044 tests across 98 files, with one skipped and
+- the complete suite passes 1,046 tests across 98 files, with one skipped and
   two todo; typecheck, focused ESLint, package build, exact corpus
   verification, and a normal MkDocs build pass. Strict documentation mode
   retains the same 56 pre-existing broken-link warnings.

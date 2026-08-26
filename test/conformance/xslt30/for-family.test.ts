@@ -27,7 +27,7 @@ describe('W3C conformance — complete for-expression family', () => {
     expect(overlay.cases).toHaveLength(4);
   });
 
-  it('passes selected cases and conserves two explicit engine gaps', () => {
+  it('passes selected cases and conserves one explicit engine gap', () => {
     const observations: VerificationObservation[] = selectedCases.map((testCase) => {
       const result = runXslt30Case(testCase);
       if (result.execution !== 'passed') {
@@ -60,12 +60,12 @@ describe('W3C conformance — complete for-expression family', () => {
 
     expect(ledger.selection).toMatchObject({
       inventoried: 4,
-      selected: 2,
-      'engine-unsupported': 2,
+      selected: 3,
+      'engine-unsupported': 1,
     });
     expect(ledger.executionByBackend.interpreter).toMatchObject({
-      selected: 2,
-      passed: 2,
+      selected: 3,
+      passed: 3,
       incomplete: 0,
     });
   });

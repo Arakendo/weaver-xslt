@@ -19,8 +19,7 @@
     {
       "setFile": "tests/expr/for/_for-test-set.xml",
       "caseName": "for-003",
-      "selection": "engine-unsupported",
-      "rationale": "Weaver currently applies singleton numeric arithmetic to the sequence produced by this case."
+      "selection": "selected"
     },
     {
       "setFile": "tests/expr/for/_for-test-set.xml",
