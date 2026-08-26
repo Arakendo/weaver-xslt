@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "reportVersion": 8,
+  "baseReport": "corpus/reports/xslt30-family-ranking-v7.json",
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "reason": "Records the intentional execution-ranking change after the harness preserved stylesheet base-URI provenance for relative document() resolution, completing the root family interpreter profile.",
+  "changes": [
+    {
+      "name": "root",
+      "setFile": "tests/fn/root/_root-test-set.xml",
+      "testCases": 10,
+      "previousBackendPassed": {
+        "interpreter": 9,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "backendPassed": {
+        "interpreter": 10,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "previousOutcomeDigest": "6c0a375ffe7add75fe782971b3cc726a7464d9f4bff2806f999771052bf9fa89",
+      "outcomeDigest": "e2f7c0bbbd4e98ef75a0a2d8b239f1a34ffe854920802c568cd04d19cb47914b"
+    }
+  ]
+}

@@ -49,8 +49,7 @@
     {
       "setFile": "tests/fn/root/_root-test-set.xml",
       "caseName": "root-0502",
-      "selection": "engine-unsupported",
-      "rationale": "The case requires document() resource resolution relative to the stylesheet."
+      "selection": "selected"
     },
     {
       "setFile": "tests/fn/root/_root-test-set.xml",

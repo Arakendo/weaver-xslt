@@ -190,6 +190,12 @@ Empty `document-node()` kind tests and document-node template matching move
 remaining case is intentionally isolated at the host resource/base-URI
 boundary rather than treated as another node-semantics change.
 
+The harness now preserves the actual pinned stylesheet path as the explicit
+base URI for every file-backed XSLT30 execution. That allows `root-0502` to use
+Weaver's existing relative `document()` support against its declared sibling
+resource and completes the interpreter family at 10/10. Native modes remain
+separately unsupported for all ten cases.
+
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
 after the small-family queue. The 582-case generic error set is not an early
@@ -346,6 +352,22 @@ At the document-node matching checkpoint:
 - the v7 ranking delta reproduces the 8/10-to-9/10 transition and outcome
   digest;
 - the complete suite passes 1,056 tests across 99 files, with one skipped and
+  two todo; and
+- typecheck, focused ESLint, package build, exact corpus verification, and a
+  normal MkDocs build pass. Documentation retains the same pre-existing link
+  warnings.
+
+At the completed root-family checkpoint:
+
+- the XSLT30 harness supplies each file-backed stylesheet's actual pinned path
+  as the explicit transform base URI;
+- `root-0502` resolves its declared sibling document without relying on the
+  process working directory;
+- the complete `root` family passes 10/10 selected interpreter cases, while
+  native-direct and native-emitted remain 0/10;
+- the v8 ranking delta reproduces the 9/10-to-10/10 transition and outcome
+  digest;
+- the complete suite passes 1,057 tests across 99 files, with one skipped and
   two todo; and
 - typecheck, focused ESLint, package build, exact corpus verification, and a
   normal MkDocs build pass. Documentation retains the same pre-existing link

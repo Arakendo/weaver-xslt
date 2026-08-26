@@ -9,6 +9,7 @@
 - Retained root output-declaration delta: `corpus/reports/xslt30-family-ranking-v5.json`
 - Retained root XDM-semantics delta: `corpus/reports/xslt30-family-ranking-v6.json`
 - Retained document-node delta: `corpus/reports/xslt30-family-ranking-v7.json`
+- Retained completed root-family delta: `corpus/reports/xslt30-family-ranking-v8.json`
 
 ## Result
 
@@ -109,6 +110,14 @@ patterns now also receive their standard `-0.5` default priority within the
 supported empty-test slice. `root-0101` passes, moving the family to 9/10 and
 leaving only stylesheet-relative `document()` resolution. The v7 delta retains
 the 8-to-9 transition without changing native support claims.
+
+The final `root` increment corrects corpus execution provenance. The harness
+now supplies each file-backed stylesheet's actual pinned path as the explicit
+transform base URI, allowing the already-supported `document()` function to
+resolve declared sibling resources without falling back to the process working
+directory. `root-0502` passes and completes the family at 10/10 selected
+interpreter cases. This is not a new ambient resource capability or a native
+support claim; the v8 delta records native-direct and native-emitted at 0/10.
 
 ## Reproduction
 

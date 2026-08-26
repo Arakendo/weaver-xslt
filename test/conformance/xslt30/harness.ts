@@ -131,14 +131,18 @@ function loadXslt30Case(testCase: Xslt30OverlayCase): LoadedXslt30Case {
   }
 
   const expected = loadExpectedResult(testCaseElement, setDirectory);
-  const stylesheet = readFileSync(join(setDirectory, stylesheetFile), 'utf8');
-  const options = loadTransformOptions(testCaseElement);
+  const stylesheetPath = join(setDirectory, stylesheetFile);
+  const stylesheet = readFileSync(stylesheetPath, 'utf8');
+  const options = {
+    ...loadTransformOptions(testCaseElement),
+    baseUri: stylesheetPath,
+  };
 
   return {
     stylesheet,
     source,
     expected,
-    ...(options === undefined ? {} : { options }),
+    options,
   };
 }
 
