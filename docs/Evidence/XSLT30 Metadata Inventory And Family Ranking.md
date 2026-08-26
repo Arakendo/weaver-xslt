@@ -208,6 +208,14 @@ local and tunnel parameters nested under `<initial-mode>` from top-level
 stylesheet parameters. This classification precedes the interpreter's known
 initial-mode rejection so adapter and engine work remain independently visible.
 
+The first harness increment maps the requested mode QName into Weaver's public
+transform options. Four dispositions consequently advance to
+engine-unsupported: `initial-mode-001` and `initial-mode-005` reach `XTDE0040`,
+while cases 002 and 003 first encounter the unsupported affirmative indentation
+declaration. Case 004 remains harness-unsupported because its local and tunnel
+parameters must not be flattened into global stylesheet parameters. The
+retained v13 digest changes while pass counts remain 0/5 on every backend.
+
 ## Reproduction
 
 ```powershell

@@ -277,6 +277,15 @@ the local and tunnel parameters in `initial-mode-004`. The baseline therefore
 conserves all five members as harness-unsupported before runtime mode dispatch
 or diagnostics change.
 
+The first adapter increment now preserves the requested initial-mode QName in
+the transform options. Four cases move from harness-unsupported to explicit
+engine gaps: two reach the interpreter's `XTDE0040` initial-mode boundary, and
+two expose an earlier unsupported `indent="yes"` output declaration instead of
+their required `XTDE0045` or `XTDE0050` diagnostics. `initial-mode-004` remains
+harness-unsupported because local and tunnel mode parameters still lack a
+distinct host representation. The v13 digest records this outcome transition
+even though every backend remains at 0/5 passes.
+
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
 after the small-family queue. The 582-case generic error set is not an early

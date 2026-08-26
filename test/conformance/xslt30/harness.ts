@@ -237,14 +237,21 @@ function loadTransformOptions(
     initialTemplateName === undefined || initialTemplateElement === undefined
       ? undefined
       : normalizeQNameForTest(initialTemplateName, initialTemplateElement);
+  const initialModeElement = testElement.getElementsByTagName('initial-mode')[0];
+  const initialModeName = initialModeElement?.getAttribute('name') ?? undefined;
+  const initialMode =
+    initialModeName === undefined || initialModeElement === undefined
+      ? undefined
+      : normalizeQNameForTest(initialModeName, initialModeElement);
   const parameters = loadTransformParameters(testElement);
 
-  if (initialTemplate === undefined && parameters === undefined) {
+  if (initialTemplate === undefined && initialMode === undefined && parameters === undefined) {
     return undefined;
   }
 
   return {
     ...(initialTemplate === undefined ? {} : { initialTemplate }),
+    ...(initialMode === undefined ? {} : { initialMode }),
     ...(parameters === undefined ? {} : { parameters }),
   };
 }

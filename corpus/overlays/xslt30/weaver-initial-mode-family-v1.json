@@ -4,25 +4,25 @@
   "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
   "profile": "weaver-initial-mode-family-v1",
   "requiredBackends": ["interpreter"],
-  "selectionRationale": "Inventories the complete five-case initial-mode family before teaching the XSLT30 harness to preserve initial-mode names and local parameters.",
+  "selectionRationale": "Inventories the complete five-case initial-mode family after preserving requested mode names while retaining the local/tunnel parameter adapter gap separately.",
   "cases": [
     {
       "setFile": "tests/misc/initial-mode/_initial-mode-test-set.xml",
       "caseName": "initial-mode-001",
-      "selection": "harness-unsupported",
-      "rationale": "The harness does not yet map the initial-mode name into Weaver's transform options."
+      "selection": "engine-unsupported",
+      "rationale": "The harness preserves the requested mode; the interpreter currently rejects initial-mode execution with XTDE0040."
     },
     {
       "setFile": "tests/misc/initial-mode/_initial-mode-test-set.xml",
       "caseName": "initial-mode-002",
-      "selection": "harness-unsupported",
-      "rationale": "The harness does not yet preserve the requested initial mode needed to verify XTDE0045 for a #all-only rule."
+      "selection": "engine-unsupported",
+      "rationale": "The harness preserves the requested mode; output declaration handling currently precedes the required XTDE0045 initial-mode diagnostic."
     },
     {
       "setFile": "tests/misc/initial-mode/_initial-mode-test-set.xml",
       "caseName": "initial-mode-003",
-      "selection": "harness-unsupported",
-      "rationale": "The harness does not yet preserve the requested initial mode before checking the required global parameter diagnostic."
+      "selection": "engine-unsupported",
+      "rationale": "The harness preserves the requested mode; output declaration handling currently precedes the required XTDE0050 global-parameter diagnostic."
     },
     {
       "setFile": "tests/misc/initial-mode/_initial-mode-test-set.xml",
@@ -33,8 +33,8 @@
     {
       "setFile": "tests/misc/initial-mode/_initial-mode-test-set.xml",
       "caseName": "initial-mode-005",
-      "selection": "harness-unsupported",
-      "rationale": "The harness does not yet map the requested name used to select one mode from a multi-mode template rule."
+      "selection": "engine-unsupported",
+      "rationale": "The harness preserves the requested name; the interpreter currently rejects initial-mode execution with XTDE0040."
     }
   ]
 }

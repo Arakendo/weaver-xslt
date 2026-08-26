@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { summarizeVerificationLedger } from '../ledger.js';
-import { hasXslt30Catalog } from './harness.js';
+import { hasXslt30Catalog, runXslt30Case } from './harness.js';
 import { loadXslt30FamilyCaseNames } from './metadataInventory.js';
 import { loadXslt30Overlay } from './overlay.js';
 
@@ -25,7 +25,7 @@ describe('W3C conformance — complete initial-mode family', () => {
     expect(overlay.cases).toHaveLength(5);
   });
 
-  it('conserves the initial harness gap and family denominator', () => {
+  it('conserves the decomposed harness and engine gaps', () => {
     const ledger = summarizeVerificationLedger(
       overlay.cases.map((testCase) => ({
         suite: overlay.suite,
@@ -41,13 +41,45 @@ describe('W3C conformance — complete initial-mode family', () => {
     expect(ledger.selection).toMatchObject({
       inventoried: 5,
       selected: 0,
-      'harness-unsupported': 5,
-      'engine-unsupported': 0,
+      'harness-unsupported': 1,
+      'engine-unsupported': 4,
     });
     expect(ledger.executionByBackend.interpreter).toMatchObject({
       selected: 0,
       passed: 0,
       incomplete: 0,
     });
+  });
+
+  it('preserves the initial mode in execution probes', () => {
+    const engineCases = overlay.cases.filter(
+      (testCase) => testCase.selection === 'engine-unsupported',
+    );
+    expect(
+      engineCases.map((testCase) =>
+        runXslt30Case({ ...testCase, selection: 'selected' }),
+      ),
+    ).toEqual([
+      {
+        execution: 'engine-failure',
+        detail:
+          'expected XML result but received XTDE0040: [XTDE0040] Initial modes are not yet implemented in the current MVP+3 slice.',
+      },
+      {
+        execution: 'diagnostic-mismatch',
+        detail:
+          'expected error XTDE0045 but received XTSE0090: [XTSE0090] xsl:output attribute indent is not yet implemented in the current MVP+3 slice.',
+      },
+      {
+        execution: 'diagnostic-mismatch',
+        detail:
+          'expected error XTDE0050 but received XTSE0090: [XTSE0090] xsl:output attribute indent is not yet implemented in the current MVP+3 slice.',
+      },
+      {
+        execution: 'engine-failure',
+        detail:
+          'expected XML result but received XTDE0040: [XTDE0040] Initial modes are not yet implemented in the current MVP+3 slice.',
+      },
+    ]);
   });
 });

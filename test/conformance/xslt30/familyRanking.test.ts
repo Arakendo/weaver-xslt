@@ -18,6 +18,7 @@ const REPORT_V9_PATH = join(REPO_ROOT, 'corpus', 'reports', 'xslt30-family-ranki
 const REPORT_V10_PATH = join(REPO_ROOT, 'corpus', 'reports', 'xslt30-family-ranking-v10.json');
 const REPORT_V11_PATH = join(REPO_ROOT, 'corpus', 'reports', 'xslt30-family-ranking-v11.json');
 const REPORT_V12_PATH = join(REPO_ROOT, 'corpus', 'reports', 'xslt30-family-ranking-v12.json');
+const REPORT_V13_PATH = join(REPO_ROOT, 'corpus', 'reports', 'xslt30-family-ranking-v13.json');
 
 describe('XSLT30 complete-family execution ranking', () => {
   it('preserves the original discovery ranking as immutable evidence', () => {
@@ -223,6 +224,26 @@ describe('XSLT30 complete-family execution ranking', () => {
     expect(current).toBeDefined();
     expect(retained.changes[0]).toMatchObject({
       name: 'innermost',
+      backendPassed: current!.backendPassed,
+      outcomeDigest: current!.outcomeDigest,
+    });
+  });
+
+  it('reproduces the retained initial-mode harness outcome delta', () => {
+    const retained = JSON.parse(readFileSync(REPORT_V13_PATH, 'utf8')) as {
+      readonly changes: ReadonlyArray<{
+        readonly name: string;
+        readonly backendPassed: Readonly<Record<string, number>>;
+        readonly outcomeDigest: string;
+      }>;
+    };
+    const current = createXslt30FamilyRanking(REPO_ROOT).candidates.find(
+      (candidate) => candidate.name === 'initial-mode',
+    );
+
+    expect(current).toBeDefined();
+    expect(retained.changes[0]).toMatchObject({
+      name: 'initial-mode',
       backendPassed: current!.backendPassed,
       outcomeDigest: current!.outcomeDigest,
     });
