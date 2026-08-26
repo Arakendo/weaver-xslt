@@ -73,6 +73,7 @@ nav:
       - Codegen Source Decomposition: Plans/Codegen Source Decomposition.md
       - Static Analysis Source Decomposition: Plans/Static Analysis Source Decomposition.md
       - Interpreter Source Decomposition: Plans/Interpreter Source Decomposition.md
+      - Runtime Source Decomposition: Plans/Runtime Source Decomposition.md
       - Compile Performance: Plans/Compile Performance.md
       - Fallback File Size: Plans/Fallback File Size.md
       - JS Renderer Artifacts: Plans/JS Renderer Artifacts.md
