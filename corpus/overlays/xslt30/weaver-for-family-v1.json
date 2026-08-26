@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "profile": "weaver-for-family-v1",
+  "requiredBackends": ["interpreter"],
+  "selectionRationale": "Inventories every member of the complete for-expression family so sequence construction, arithmetic, and formatting gaps can move independently against a stable denominator.",
+  "cases": [
+    {
+      "setFile": "tests/expr/for/_for-test-set.xml",
+      "caseName": "for-001",
+      "selection": "engine-unsupported",
+      "rationale": "Weaver does not yet implement the xsl:sequence instruction used by this case."
+    },
+    {
+      "setFile": "tests/expr/for/_for-test-set.xml",
+      "caseName": "for-002",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/expr/for/_for-test-set.xml",
+      "caseName": "for-003",
+      "selection": "engine-unsupported",
+      "rationale": "Weaver currently applies singleton numeric arithmetic to the sequence produced by this case."
+    },
+    {
+      "setFile": "tests/expr/for/_for-test-set.xml",
+      "caseName": "for-004",
+      "selection": "engine-unsupported",
+      "rationale": "Weaver does not yet implement the format-number() function used by this case."
+    }
+  ]
+}

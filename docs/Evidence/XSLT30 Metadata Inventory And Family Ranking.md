@@ -51,7 +51,9 @@ template/path work. Weaver adopts that planning lesson without copying the
 peer's narrower capability assumptions: execution probing shows `for-002`
 already passes here, while `for-001` requires `xsl:sequence`, `for-003`
 exposes sequence arithmetic behavior, and `for-004` requires
-`format-number()`. That family is the next semantic decomposition target.
+`format-number()`. A family overlay now conserves all four members, selecting
+the passing case and retaining the other three as explicit engine gaps. That
+family is the next semantic decomposition target.
 
 ## Reproduction
 

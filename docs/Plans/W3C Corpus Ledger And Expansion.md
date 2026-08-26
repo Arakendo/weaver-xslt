@@ -138,7 +138,7 @@ execution back to upstream line 4.
   harness readiness, diagnostic value, and backend parity cost.
 - [x] Prefer small coherent families over isolated green cases or enormous
   mixed error collections.
-- [ ] Widen one family at a time, preserving its membership while dispositions
+- [x] Widen one family at a time, preserving its membership while dispositions
   move from unsupported to selected and passing.
 - [x] Publish no unqualified conformance percentage; every report names its
   suite revision, profile, exclusions, execution modes, and denominator.
@@ -150,6 +150,11 @@ interpreter. The four-case `for` family is next because it combines one passing
 case with focused pressure on `xsl:sequence`, sequence arithmetic, and
 `format-number()`, and FastXSLT independently selected the same family. See the
 [metadata inventory and ranking evidence](../Evidence/XSLT30%20Metadata%20Inventory%20And%20Family%20Ranking.md).
+
+The complete `for` denominator is now admitted separately: `for-002` passes,
+while the other three cases retain those precise engine-unsupported
+dispositions. Implementation can move each disposition without changing the
+family membership.
 
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
@@ -254,7 +259,7 @@ At the metadata-ranking and deep-equal checkpoint:
   and native-emitted execution rankings with per-family outcome digests;
 - the complete `deep-equal` family passes 2/2 under its interpreter profile;
 - the complete `for` family is the next semantic decomposition target; and
-- the complete suite passes 1,037 tests across 96 files, with one skipped and
+- the complete suite passes 1,039 tests across 97 files, with one skipped and
   two todo; typecheck, focused ESLint, package build, exact corpus
   verification, and a normal MkDocs build pass. Strict documentation mode
   retains the same 56 pre-existing broken-link warnings.
