@@ -97,6 +97,7 @@ nav:
       - Workbench Evidence: Evidence/Workbench Evidence Checklist.md
       - Chrome DevTools Verification: Evidence/Chrome DevTools Verification.md
       - XSLT30 Template And Path Family Baseline: Evidence/XSLT30 Template And Path Family Baseline.md
+      - QT3 MVP2 Profile Baseline: Evidence/QT3 MVP2 Profile Baseline.md
       - XML Coverage Diagnostics: XML_COVERAGE_DIAGNOSTICS.md
   - Corpus:
       - Overview: Corpus/README.md

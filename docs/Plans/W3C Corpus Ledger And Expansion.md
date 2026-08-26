@@ -76,18 +76,27 @@ necessary. See the [family baseline evidence](../Evidence/XSLT30%20Template%20An
 
 ## Phase 2: Migrate QT3 filtering into durable outcomes
 
-**Status: pending.**
+**Status: complete in the QT3 MVP2 profile checkpoint.**
 
-- [ ] Preserve the current structured exclusion reasons as ledger selection
+- [x] Preserve the current structured exclusion reasons as ledger selection
   dispositions rather than debug-only output.
-- [ ] Version the MVP+2 selection policy and retain every discovered case in
+- [x] Version the MVP+2 selection policy and retain every discovered case in
   the selected test sets.
-- [ ] Treat unknown assertion, dependency, and environment shapes as visible
+- [x] Treat unknown assertion, dependency, and environment shapes as visible
   metadata or harness outcomes.
-- [ ] Retain broad-baseline reports instead of publishing only the filtered
+- [x] Retain broad-baseline reports instead of publishing only the filtered
   passing denominator.
-- [ ] Pair XSLT family work with complete QT3 groups when XPath semantics are
+- [x] Pair XSLT family work with complete QT3 groups when XPath semantics are
   the actual implementation pressure.
+
+The versioned MVP2 profile now conserves all 7,289 upstream cases across its
+65 test sets. Its 2,487 selected cases pass, while 4,802 non-selected cases
+retain explicit dispositions. Expected totals plus a digest over every
+identity, disposition, reason, and detail make selection drift visible even
+when aggregate counts do not change. The existing `fn/floor` QT3 group is
+included and passing; the XSLT `path-008`/`path-009` gaps therefore identify
+an XSLT match-expression integration boundary rather than absent XPath
+`floor()` semantics. See the [QT3 profile evidence](../Evidence/QT3%20MVP2%20Profile%20Baseline.md).
 
 ## Phase 3: Multi-backend corpus parity
 
@@ -165,6 +174,19 @@ At the template/path family checkpoint:
 - malformed actual engine output is classified as a semantic mismatch rather
   than a harness failure;
 - the complete suite passes 1,027 tests across 90 files, with one skipped and
+  two todo; and
+- typecheck, focused ESLint, package build, exact corpus verification, and a
+  normal MkDocs build pass. Strict documentation mode retains the same 56
+  pre-existing broken-link warnings.
+
+At the QT3 MVP2 profile checkpoint:
+
+- all 7,289 upstream cases in the 65 admitted test sets receive durable
+  selection outcomes;
+- 2,487/2,487 selected interpreter cases pass, with 4,802 explicit
+  non-selected outcomes;
+- an outcome digest detects per-case selection, reason, or detail drift;
+- the complete suite passes 1,028 tests across 91 files, with one skipped and
   two todo; and
 - typecheck, focused ESLint, package build, exact corpus verification, and a
   normal MkDocs build pass. Strict documentation mode retains the same 56

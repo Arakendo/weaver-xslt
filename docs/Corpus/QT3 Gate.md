@@ -5,10 +5,11 @@ roadmap slice before measuring pass rates. The goal is an honest denominator:
 run cases that exercise supported MVP+2 semantics, exclude cases that depend on
 later-tier features, and make those exclusions explainable when the slice moves.
 
-ADR-0005 now requires the next gate revision to retain these classifications
-as durable ledger outcomes. The current source predicate remains the MVP+2
-checkpoint while that migration is performed; it is not the final historical
-report format.
+ADR-0005 requires these classifications to remain durable ledger outcomes.
+The `weaver-mvp2-v1` profile now versions the selected test sets, disposition
+policy, expected totals, and a digest over every case outcome. The source
+predicate computes the current result; the profile prevents it from silently
+changing history.
 
 ## What the gate does
 
@@ -42,6 +43,12 @@ otherwise hide more interesting scope drift.
 
 ## Debugging the denominator
 
+The default MVP+2 report conserves all 7,289 upstream cases in its 65 admitted
+test sets: 2,487 selected, 1,086 profile-excluded, 2,991 engine-unsupported, 54
+harness-unsupported, and 671 metadata failures. The 671 cases use test or
+assertion metadata shapes the current adapter does not decode; they are visible
+in the denominator instead of being silently skipped.
+
 Use these environment variables with `test/conformance/qt3/mvp2.test.ts`:
 
 - `QT3_BROAD_BASELINE=1` enables the broader baseline test.
@@ -69,4 +76,5 @@ When a new MVP slice adds syntax or functions:
    understandable.
 
 Keep the gate narrow and explicit. If the denominator changes, it should be
-obvious why.
+obvious why, and the profile totals and outcome digest must be reviewed
+together. See the [QT3 MVP2 profile baseline](../Evidence/QT3%20MVP2%20Profile%20Baseline.md).
