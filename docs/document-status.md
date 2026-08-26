@@ -13,6 +13,7 @@ contracts may evolve through deliberate review.
 - [ADR-0001: Engine Representation And Semantic Ownership](ADR/ADR-0001-engine-representation-and-semantic-ownership.md)
 - [ADR-0002: Diagnostics And Public Boundaries](ADR/ADR-0002-diagnostics-and-public-boundaries.md)
 - [ADR-0003: Dual Execution And Conformance Parity](ADR/ADR-0003-dual-execution-and-conformance-parity.md)
+- [ADR-0004: Source Unit Cohesion, Size Pressure, And Decomposition](ADR/ADR-0004-source-unit-cohesion-size-pressure-and-decomposition.md)
 
 ## Open Or Incubating Reviews
 

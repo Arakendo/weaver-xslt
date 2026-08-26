@@ -61,6 +61,7 @@ nav:
           - Engine Representation And Semantic Ownership: ADR/ADR-0001-engine-representation-and-semantic-ownership.md
           - Diagnostics And Public Boundaries: ADR/ADR-0002-diagnostics-and-public-boundaries.md
           - Dual Execution And Conformance Parity: ADR/ADR-0003-dual-execution-and-conformance-parity.md
+          - Source Unit Cohesion, Size Pressure, And Decomposition: ADR/ADR-0004-source-unit-cohesion-size-pressure-and-decomposition.md
       - Reviews:
           - Overview: Architectural Reviews/README.md
           - Streaming And Incremental Execution: Architectural Reviews/AR-0001-streaming-and-incremental-execution-boundary.md
@@ -86,13 +87,13 @@ nav:
       - Workbench Record: Evidence/Workbench Implementation Record.md
       - Workbench Evidence: Evidence/Workbench Evidence Checklist.md
       - Chrome DevTools Verification: Evidence/Chrome DevTools Verification.md
-        - XML Coverage Diagnostics: XML_COVERAGE_DIAGNOSTICS.md
+      - XML Coverage Diagnostics: XML_COVERAGE_DIAGNOSTICS.md
   - Corpus:
       - Overview: Corpus/README.md
       - Comparison Harness: Corpus/Comparison Harness.md
       - QT3 Gate: Corpus/QT3 Gate.md
       - Test Sources: Corpus/Test Sources.md
-        - .NET XML Suite: DOTNET_XML_SUITE.md
+      - .NET XML Suite: DOTNET_XML_SUITE.md
   - Notes:
       - Overview: Notes/README.md
       - Project Brief: Notes/Weaver Project Brief.md
