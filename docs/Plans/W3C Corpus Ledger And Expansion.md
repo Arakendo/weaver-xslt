@@ -35,13 +35,13 @@ lack a durable selection disposition.
 **Status: complete in this checkpoint.**
 
 - [x] Accept ledger identity, classification, conservation, and corpus-purpose
-  invariants in ADR-0005.
+      invariants in ADR-0005.
 - [x] Add cross-platform checks for exact submodule revisions, clean upstream
-  worktrees, catalog references, duplicate references, and structural totals.
+      worktrees, catalog references, duplicate references, and structural totals.
 - [x] Add a private typed ledger model with conservation and duplicate/unknown
-  observation rejection tests.
+      observation rejection tests.
 - [x] Move the 73-case XSLT30 selection from source code into a versioned
-  first-party JSON overlay.
+      first-party JSON overlay.
 - [x] Preserve the existing QT3 and XSLT30 passing checkpoints.
 
 ## Phase 1: Complete small-family admission
@@ -51,14 +51,14 @@ lack a durable selection disposition.
 - [x] Admit all six cases in XSLT30 `tests/decl/template/_template-test-set.xml`.
 - [x] Admit all ten cases in XSLT30 `tests/expr/path/_path-test-set.xml`.
 - [x] Resolve every case's dependency, environment, stylesheet, and assertion
-  shape without ambient filesystem or network authority during engine
-  execution.
+      shape without ambient filesystem or network authority during engine
+      execution.
 - [x] Record engine-unsupported and harness-unsupported cases before changing
-  semantics.
+      semantics.
 - [x] Execute applicable cases under the interpreter and identify which native
-  modes are required or legitimately unsupported by the current profile.
+      modes are required or legitimately unsupported by the current profile.
 - [x] Add focused parity cases for every semantic behavior newly enabled by
-  family widening.
+      family widening.
 
 The `template` family is first because Weaver already passes `template-006`
 and owns broader named-template, parameter, node-test, attribute, mode, and
@@ -79,15 +79,15 @@ necessary. See the [family baseline evidence](../Evidence/XSLT30%20Template%20An
 **Status: complete in the QT3 MVP2 profile checkpoint.**
 
 - [x] Preserve the current structured exclusion reasons as ledger selection
-  dispositions rather than debug-only output.
+      dispositions rather than debug-only output.
 - [x] Version the MVP+2 selection policy and retain every discovered case in
-  the selected test sets.
+      the selected test sets.
 - [x] Treat unknown assertion, dependency, and environment shapes as visible
-  metadata or harness outcomes.
+      metadata or harness outcomes.
 - [x] Retain broad-baseline reports instead of publishing only the filtered
-  passing denominator.
+      passing denominator.
 - [x] Pair XSLT family work with complete QT3 groups when XPath semantics are
-  the actual implementation pressure.
+      the actual implementation pressure.
 
 The versioned MVP2 profile now conserves all 7,289 upstream cases across its
 65 test sets. Its 2,487 selected cases pass, while 4,802 non-selected cases
@@ -103,13 +103,13 @@ an XSLT match-expression integration boundary rather than absent XPath
 **Status: complete in the corpus-linked native artifact checkpoint.**
 
 - [x] Record interpreter, native-direct, and native-emitted observations
-  independently for profiles that require them.
+      independently for profiles that require them.
 - [x] Compare structured semantic output and diagnostic identity before
-  serializer text.
+      serializer text.
 - [x] Record documented native fallback separately from native execution.
 - [x] Reject a profile report when a required backend observation is missing.
 - [x] Keep generated-code readability and source-map checks in their existing
-  focused suites while linking them to the same case identity when applicable.
+      focused suites while linking them to the same case identity when applicable.
 
 The initial parity profile retains the complete 16-case template/path
 denominator and requires interpreter, native-direct, and native-emitted
@@ -133,15 +133,15 @@ execution back to upstream line 4.
 **Status: in progress at the metadata-ranking and deep-equal checkpoint.**
 
 - [x] Inventory dependency kinds, environment shapes, stylesheet references,
-  and assertion families across all 14,600 XSLT30 cases.
+      and assertion families across all 14,600 XSLT30 cases.
 - [x] Rank complete candidate families by implemented semantic overlap,
-  harness readiness, diagnostic value, and backend parity cost.
+      harness readiness, diagnostic value, and backend parity cost.
 - [x] Prefer small coherent families over isolated green cases or enormous
-  mixed error collections.
+      mixed error collections.
 - [x] Widen one family at a time, preserving its membership while dispositions
-  move from unsupported to selected and passing.
+      move from unsupported to selected and passing.
 - [x] Publish no unqualified conformance percentage; every report names its
-  suite revision, profile, exclusions, execution modes, and denominator.
+      suite revision, profile, exclusions, execution modes, and denominator.
 
 The deterministic metadata screen found 16 complete, harness-ready candidate
 families of at most 20 cases. Execution ranking selected the two-case
@@ -155,6 +155,12 @@ The complete `for` denominator is now admitted separately: `for-002` passes,
 while the other three cases retain those precise engine-unsupported
 dispositions. Implementation can move each disposition without changing the
 family membership.
+
+The first disposition has now moved: `xsl:sequence` is represented in IR
+version 1.1 and executed by the interpreter, so `for-001` joins `for-002` as a
+passing selected case. Sequence arithmetic (`for-003`) and `format-number()`
+(`for-004`) remain explicit gaps; native modes remain unsupported for the new
+instruction until the shared native plan supports it.
 
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
@@ -259,7 +265,10 @@ At the metadata-ranking and deep-equal checkpoint:
   and native-emitted execution rankings with per-family outcome digests;
 - the complete `deep-equal` family passes 2/2 under its interpreter profile;
 - the complete `for` family is the next semantic decomposition target; and
-- the complete suite passes 1,039 tests across 97 files, with one skipped and
+- the complete suite passes 1,044 tests across 98 files, with one skipped and
   two todo; typecheck, focused ESLint, package build, exact corpus
   verification, and a normal MkDocs build pass. Strict documentation mode
   retains the same 56 pre-existing broken-link warnings.
+
+The IR 1.1 bump also regenerates 149 checked-in TypeScript artifacts; their
+only mechanical content change is the embedded IR version.

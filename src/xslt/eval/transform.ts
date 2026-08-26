@@ -595,6 +595,28 @@ function renderInstruction(
         );
       }
     }
+    case 'sequence': {
+      try {
+        const items = [...evaluate(instruction.select, context)];
+        emitInstructionSelectEvents(
+          items,
+          trace,
+          sourceDocumentUri,
+          'xsl:sequence',
+          instruction.location,
+        );
+        return serializeSequenceItems(items);
+      } catch (error) {
+        throw withPrependedFrame(
+          error,
+          createInstructionFrame(
+            `xsl:sequence select="${instruction.selectText}"`,
+            instruction.location,
+          ),
+          createRelatedLocation('containing instruction', instruction.location),
+        );
+      }
+    }
     case 'copyOf': {
       try {
         const items = [...evaluate(instruction.select, context)];
@@ -969,6 +991,28 @@ function itemToStringValue(item: XdmItem): string {
   }
 
   return String((item as XdmAtomicValue).value);
+}
+
+function serializeSequenceItems(items: readonly XdmItem[]): string {
+  let output = '';
+  let previousWasAtomic = false;
+
+  for (const item of items) {
+    const nodeItem = asXdmNode(item);
+    if (nodeItem !== undefined) {
+      output += xmlSerializer.serializeToString(nodeItem.node);
+      previousWasAtomic = false;
+      continue;
+    }
+
+    if (previousWasAtomic) {
+      output += ' ';
+    }
+    output += escapeText(itemToStringValue(item));
+    previousWasAtomic = true;
+  }
+
+  return output;
 }
 
 function evaluateGlobalBindings(

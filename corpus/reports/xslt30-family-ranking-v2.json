@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "reportVersion": 2,
+  "baseReport": "corpus/reports/xslt30-family-ranking-v1.json",
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "reason": "Records the intentional execution-ranking change after xsl:sequence support moved for-001 into the selected interpreter profile.",
+  "changes": [
+    {
+      "name": "for",
+      "setFile": "tests/expr/for/_for-test-set.xml",
+      "testCases": 4,
+      "previousBackendPassed": {
+        "interpreter": 1,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "backendPassed": {
+        "interpreter": 2,
+        "native-direct": 0,
+        "native-emitted": 0
+      },
+      "previousOutcomeDigest": "7eb4ee022cd299cb35cfd7382ee1022f137f1e188232c9f8400091c9930f9fe2",
+      "outcomeDigest": "a186d3e63fa3c60305c44c4a731896307bbb02212d6086b70d87a26be3995fb3"
+    }
+  ]
+}

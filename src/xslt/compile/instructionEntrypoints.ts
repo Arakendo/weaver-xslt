@@ -16,6 +16,7 @@ import {
   compileForEachInstruction,
   compileIfInstruction,
   compileNumberInstruction,
+  compileSequenceInstruction,
   compileValueOfInstruction,
   compileVariableInstruction,
   type InstructionCompilerHelpers,
@@ -306,6 +307,16 @@ export function createInstructionEntrypoints(helpers: InstructionEntrypointHelpe
         instructionCompilerHelpers,
       );
       helpers.irStats?.recordInstruction('valueOf');
+      return instruction;
+    }
+
+    if (helpers.isXsltElement(element, 'sequence')) {
+      const instruction = compileSequenceInstruction(
+        element,
+        stylesheetXml,
+        instructionCompilerHelpers,
+      );
+      helpers.irStats?.recordInstruction('sequence');
       return instruction;
     }
 

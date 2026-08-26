@@ -1,7 +1,10 @@
 import type { SourceLocation } from '../../errors/index.js';
 import type { ChooseWhenBranch, Instruction, TemplateRule } from '../compile/ir.js';
 
-export function renderTemplateProvenanceComment(template: TemplateRule, sourcePath?: string): string {
+export function renderTemplateProvenanceComment(
+  template: TemplateRule,
+  sourcePath?: string,
+): string {
   return renderLocationComment(
     template.matchText !== undefined
       ? `match=${JSON.stringify(template.matchText)}`
@@ -13,7 +16,10 @@ export function renderTemplateProvenanceComment(template: TemplateRule, sourcePa
   );
 }
 
-export function renderInstructionProvenanceComment(instruction: Instruction, sourcePath?: string): string | undefined {
+export function renderInstructionProvenanceComment(
+  instruction: Instruction,
+  sourcePath?: string,
+): string | undefined {
   const label = instructionLabel(instruction);
   if (label === undefined) {
     return undefined;
@@ -26,22 +32,30 @@ export function renderWhenProvenanceComment(branch: ChooseWhenBranch, sourcePath
   return renderLocationComment('xsl:when', branch.location, sourcePath);
 }
 
-export function renderOtherwiseProvenanceComment(location: SourceLocation | undefined, sourcePath?: string): string {
+export function renderOtherwiseProvenanceComment(
+  location: SourceLocation | undefined,
+  sourcePath?: string,
+): string {
   return renderLocationComment('xsl:otherwise', location, sourcePath);
 }
 
-export function renderCommentedArrowFunction(comment: string, parameters: string, bodyCode: string): string {
+export function renderCommentedArrowFunction(
+  comment: string,
+  parameters: string,
+  bodyCode: string,
+): string {
   return `${parameters} => (\n  ${comment}\n  ${bodyCode}\n)`;
 }
 
-function renderLocationComment(label: string, location: SourceLocation | undefined, sourcePath?: string): string {
+function renderLocationComment(
+  label: string,
+  location: SourceLocation | undefined,
+  sourcePath?: string,
+): string {
   const source = sourcePath ?? location?.source;
   const line = location?.line;
-  const locationLabel = source === undefined
-    ? undefined
-    : line === undefined
-      ? source
-      : `${source}:${line}`;
+  const locationLabel =
+    source === undefined ? undefined : line === undefined ? source : `${source}:${line}`;
 
   return locationLabel === undefined ? `/** ${label} */` : `/** ${label} (${locationLabel}) */`;
 }
@@ -54,6 +68,8 @@ function instructionLabel(instruction: Instruction): string | undefined {
       return 'xsl:comment';
     case 'valueOf':
       return 'xsl:value-of';
+    case 'sequence':
+      return 'xsl:sequence';
     case 'applyTemplates':
       return 'xsl:apply-templates';
     case 'if':

@@ -9,8 +9,7 @@
     {
       "setFile": "tests/expr/for/_for-test-set.xml",
       "caseName": "for-001",
-      "selection": "engine-unsupported",
-      "rationale": "Weaver does not yet implement the xsl:sequence instruction used by this case."
+      "selection": "selected"
     },
     {
       "setFile": "tests/expr/for/_for-test-set.xml",

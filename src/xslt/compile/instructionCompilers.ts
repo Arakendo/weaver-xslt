@@ -643,6 +643,47 @@ export function compileValueOfInstruction(
   };
 }
 
+export function compileSequenceInstruction(
+  element: Element,
+  stylesheetXml: string,
+  helpers: InstructionCompilerHelpers,
+): Extract<Instruction, { readonly kind: 'sequence' }> {
+  helpers.assertAllowedXsltAttributes(element, stylesheetXml, 'xsl:sequence', ['select']);
+
+  const select = element.getAttribute('select');
+  if (select === null || select.length === 0) {
+    throw helpers.createXsltStaticError(
+      'xsl:sequence requires a select attribute in the current Weaver slice.',
+      getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName),
+      {
+        suggestions: [
+          {
+            kind: 'fix',
+            label: 'add select="..." to xsl:sequence',
+            replacement: 'select="..."',
+            confidence: 1,
+          },
+        ],
+      },
+    );
+  }
+
+  const location =
+    getAttributeValueSourceLocation(
+      stylesheetXml,
+      element,
+      'select',
+      helpers.stylesheetSourceName,
+    ) ?? getNodeSourceLocation(stylesheetXml, element, helpers.stylesheetSourceName);
+
+  return {
+    kind: 'sequence',
+    select: helpers.parseXPathInContext(select, location, 'xsl:sequence', 'select'),
+    selectText: select,
+    ...(location === undefined ? {} : { location }),
+  };
+}
+
 export function compileCopyOfInstruction(
   element: Element,
   stylesheetXml: string,

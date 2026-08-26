@@ -2,7 +2,8 @@
 
 - Status: observed checkpoint
 - Suite revision: `6f8fd9e966ae74a251a2604abef9d904c7bc5c9b`
-- Retained report: `corpus/reports/xslt30-family-ranking-v1.json`
+- Retained discovery report: `corpus/reports/xslt30-family-ranking-v1.json`
+- Retained semantic delta: `corpus/reports/xslt30-family-ranking-v2.json`
 
 ## Result
 
@@ -54,6 +55,13 @@ exposes sequence arithmetic behavior, and `for-004` requires
 `format-number()`. A family overlay now conserves all four members, selecting
 the passing case and retaining the other three as explicit engine gaps. That
 family is the next semantic decomposition target.
+
+The first decomposition increment adds a source-located `xsl:sequence` IR node
+and interpreter sequence construction. `for-001` now passes, moving the family
+to 2/2 selected interpreter cases with two remaining engine gaps. Native-direct
+and native-emitted stay explicitly unsupported for this instruction. The v2
+delta report preserves the original discovery report while recording the
+changed backend count and outcome digest.
 
 ## Reproduction
 

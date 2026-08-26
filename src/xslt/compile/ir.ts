@@ -10,7 +10,7 @@
 import type { XPathAst } from '../../xpath/parse/ast.js';
 import type { SourceLocation } from '../../errors/index.js';
 
-export const STYLESHEET_IR_VERSION = '1.0' as const;
+export const STYLESHEET_IR_VERSION = '1.1' as const;
 
 export type AttributeValueTemplatePart =
   | {
@@ -175,6 +175,12 @@ export type Instruction =
       readonly location?: SourceLocation;
       readonly separator?: string;
       readonly disableOutputEscaping?: boolean;
+    }
+  | {
+      readonly kind: 'sequence';
+      readonly select: XPathAst;
+      readonly selectText: string;
+      readonly location?: SourceLocation;
     }
   | {
       readonly kind: 'copyOf';
