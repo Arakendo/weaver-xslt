@@ -130,7 +130,7 @@ execution back to upstream line 4.
 
 ## Phase 4: Metadata-driven XSLT30 widening
 
-**Status: in progress at the root-family decomposition checkpoint.**
+**Status: in progress at the streaming fold-right decomposition checkpoint.**
 
 - [x] Inventory dependency kinds, environment shapes, stylesheet references,
       and assertion families across all 14,600 XSLT30 cases.
@@ -231,6 +231,17 @@ IR 1.4. XSLT `current()` receives a separate dynamic-context anchor that is
 fixed while nested predicates change their ordinary context item. Complex
 template cache keys now distinguish sibling candidates. This completes the
 interpreter family at 1/1 while native modes remain explicitly unsupported.
+
+The next ranked denominator is the single-case `sf-fold-right` family. Its
+baseline overlay retains the case as engine-unsupported and records its exact
+first compiler boundary: the static global variable used by `use-when`.
+Decomposition also separates `xsl:strip-space`, typed stylesheet functions,
+named function references, `fold-right()`, decimal semantics,
+stylesheet-relative `xsl:source-document`, and the instruction's streaming
+claim. AR-0001 remains deferred because buffering this input could reproduce
+the expected output without proving streamability. Non-streaming prerequisites
+may advance independently; the corpus case will not be selected under a false
+streaming claim.
 
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates

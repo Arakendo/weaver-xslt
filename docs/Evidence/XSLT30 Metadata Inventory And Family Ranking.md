@@ -169,12 +169,21 @@ another. `current-001` passes and completes the interpreter family at 1/1;
 native modes remain explicitly 0/1. The v11 delta retains this transition and
 its outcome digest.
 
+The next ranked one-case family, `sf-fold-right`, is now conserved without
+being mistaken for a narrow function addition. Its first exact compiler
+failure is the static global variable used by `use-when`. The same upstream
+case also composes `xsl:strip-space`, a typed stylesheet function and
+parameters, a named function reference, `fold-right()`, decimal arithmetic,
+stylesheet-relative `xsl:source-document`, and a streaming dependency. The
+family overlay retains one engine gap while AR-0001 records why reproducing the
+expected value through buffering would not establish streamability.
+
 ## Reproduction
 
 ```powershell
 npm run inventory:xslt30-metadata
 npm run rank:xslt30-families
-npx vitest run test/conformance/xslt30/metadataInventory.test.ts test/conformance/xslt30/familyRanking.test.ts test/conformance/xslt30/deep-equal-family.test.ts test/conformance/xslt30/for-family.test.ts test/conformance/xslt30/root-family.test.ts test/conformance/xslt30/on-non-empty-family.test.ts
+npx vitest run test/conformance/xslt30/metadataInventory.test.ts test/conformance/xslt30/familyRanking.test.ts test/conformance/xslt30/deep-equal-family.test.ts test/conformance/xslt30/for-family.test.ts test/conformance/xslt30/root-family.test.ts test/conformance/xslt30/on-non-empty-family.test.ts test/conformance/xslt30/current-family.test.ts test/conformance/xslt30/sf-fold-right-family.test.ts
 ```
 
 These observations apply only to the pinned suite revision and the Weaver
