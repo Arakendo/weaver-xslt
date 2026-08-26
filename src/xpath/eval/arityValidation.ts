@@ -44,6 +44,9 @@ const EXACT_ARITY_NAMES = new Map<string, readonly string[]>([
       'fn:head',
       'fn:tail',
       'fn:document',
+      'fn:doc',
+      'fn:innermost',
+      'fn:snapshot',
     ],
   ],
   [

@@ -20,10 +20,11 @@ The pinned XSLT30 corpus now contributes one concrete pressure case,
 `xsl:source-document streamable="yes"`, Weaver must account for a static global
 variable and `use-when`, `xsl:strip-space`, a typed stylesheet function,
 stylesheet parameters, a named function reference, `fold-right()`, and decimal
-arithmetic. The current exact first boundary is rejection of the global
-`static` attribute. A buffered implementation could reproduce the expected
-`<out>54.37</out>` without establishing streamability, so a green result alone
-would not prove a streaming contract.
+arithmetic. Bounded boolean static gating now passes that first prerequisite;
+the current exact boundary is the typed `xsl:function` declaration. A buffered
+implementation could reproduce the expected `<out>54.37</out>` without
+establishing streamability, so a green result alone would not prove a streaming
+contract.
 
 ## Disposition
 

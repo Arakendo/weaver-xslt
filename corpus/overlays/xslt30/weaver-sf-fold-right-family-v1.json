@@ -4,13 +4,13 @@
   "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
   "profile": "weaver-sf-fold-right-family-v1",
   "requiredBackends": ["interpreter"],
-  "selectionRationale": "Inventories the complete one-case streaming fold-right family while keeping its static-compilation, streaming, source-document, stylesheet-function, and higher-order-function boundaries explicit.",
+  "selectionRationale": "Inventories the complete one-case streaming fold-right family while keeping its remaining stylesheet-function, higher-order-function, source-document, and streaming boundaries explicit after bounded static gating advanced the first failure.",
   "cases": [
     {
       "setFile": "tests/strm/sf-fold-right/_sf-fold-right-test-set.xml",
       "caseName": "sf-fold-right-003",
       "selection": "engine-unsupported",
-      "rationale": "The first compiler boundary is a static global variable used by use-when; beyond it, the case combines xsl:source-document streaming with a stylesheet function, a named function reference, and fold-right()."
+      "rationale": "The first remaining compiler boundary is the typed xsl:function declaration; beyond it, the case combines a named function reference and fold-right() with streaming xsl:source-document."
     }
   ]
 }

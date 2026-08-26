@@ -56,7 +56,7 @@ describe('W3C conformance — complete streaming fold-right family', () => {
     expect(result).toEqual({
       execution: 'engine-failure',
       detail:
-        'expected XML result but received XTSE0090: [XTSE0090] xsl:variable has an unsupported attribute static.',
+        'expected XML result but received XTSE0010: [XTSE0010] Unsupported top-level XSLT declaration xsl:function in current MVP+3 slice.',
     });
   });
 });

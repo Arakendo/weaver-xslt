@@ -92,7 +92,7 @@ export function createBuiltinFunctionEvaluator(helpers: BuiltinFunctionHelpers):
     helpers,
     support,
   );
-  const { evaluateNodeBuiltinFunction } = createBuiltinNodeFunctionEvaluator(support);
+  const { evaluateNodeBuiltinFunction } = createBuiltinNodeFunctionEvaluator(helpers, support);
   const { evaluateNumericBuiltinFunction } = createBuiltinNumericFunctionEvaluator(
     helpers,
     support,
@@ -136,6 +136,7 @@ export function createBuiltinFunctionEvaluator(helpers: BuiltinFunctionHelpers):
           return [];
         }
         return [(context.currentItem ?? context.contextItem) as XdmItem];
+      case 'fn:doc':
       case 'fn:document': {
         helpers.requireArity(normalized, args, 1, span);
         const uriItems = helpers.evaluateExpression(args[0]!, context);

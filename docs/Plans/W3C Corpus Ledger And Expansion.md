@@ -233,10 +233,11 @@ template cache keys now distinguish sibling candidates. This completes the
 interpreter family at 1/1 while native modes remain explicitly unsupported.
 
 The next ranked denominator is the single-case `sf-fold-right` family. Its
-baseline overlay retains the case as engine-unsupported and records its exact
-first compiler boundary: the static global variable used by `use-when`.
-Decomposition also separates `xsl:strip-space`, typed stylesheet functions,
-named function references, `fold-right()`, decimal semantics,
+baseline overlay retains the case as engine-unsupported. Its initial static
+global boundary now passes under the bounded boolean gating slice added for the
+non-streaming `innermost` family, moving the exact first failure to the typed
+`xsl:function` declaration. Decomposition also separates named function
+references, `fold-right()`, decimal semantics,
 stylesheet-relative `xsl:source-document`, and the instruction's streaming
 claim. AR-0001 remains deferred because buffering this input could reproduce
 the expected output without proving streamability. Non-streaming prerequisites
@@ -250,6 +251,15 @@ Beyond that shared boundary, `innermost-901` isolates stylesheet-relative
 `doc()` plus `innermost()`, while `innermost-001` additionally applies
 `snapshot()`. The baseline retains both engine gaps before any static or node
 semantics change.
+
+The completion increment reduces a deliberately bounded static slice: unique
+top-level boolean variables with `static="yes"` may gate later top-level
+declarations through a direct variable-reference `use-when`. Other static
+expressions remain structured unsupported diagnostics. XPath adds the standard
+`doc()` resource function name, identity-preserving `innermost()` node
+reduction, and grounded subtree copying for `snapshot()`. Both upstream cases
+now pass under the interpreter, while native-direct and native-emitted remain
+explicitly 0/2.
 
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
@@ -488,6 +498,24 @@ At the completed current-family checkpoint:
   completed-family outcome digest;
 - IR 1.4 is conserved in all 149 generated TypeScript fixtures;
 - the complete suite passes 1,077 tests across 104 files, with one skipped and
+  two todo; and
+- typecheck, focused ESLint, package build, exact corpus verification, and a
+  normal MkDocs build pass. Documentation retains the same pre-existing link
+  warnings.
+
+At the completed innermost-family checkpoint:
+
+- unique boolean static globals support direct variable-reference top-level
+  `use-when` gating without claiming general static XPath evaluation;
+- the XPath engine owns `doc()`, grounded `snapshot()` subtree copies, and
+  identity-preserving `innermost()` reduction in document order;
+- the complete `innermost` family passes 2/2 selected interpreter cases, while
+  native-direct and native-emitted remain 0/2;
+- the deferred `sf-fold-right` baseline advances honestly to its next exact
+  failure, the typed `xsl:function` declaration;
+- the v12 ranking delta reproduces the 0/2-to-2/2 interpreter transition and
+  completed-family outcome digest;
+- the complete suite passes 1,092 tests across 109 files, with one skipped and
   two todo; and
 - typecheck, focused ESLint, package build, exact corpus verification, and a
   normal MkDocs build pass. Documentation retains the same pre-existing link

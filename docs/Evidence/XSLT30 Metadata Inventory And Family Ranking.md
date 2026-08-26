@@ -170,10 +170,10 @@ native modes remain explicitly 0/1. The v11 delta retains this transition and
 its outcome digest.
 
 The next ranked one-case family, `sf-fold-right`, is now conserved without
-being mistaken for a narrow function addition. Its first exact compiler
-failure is the static global variable used by `use-when`. The same upstream
-case also composes `xsl:strip-space`, a typed stylesheet function and
-parameters, a named function reference, `fold-right()`, decimal arithmetic,
+being mistaken for a narrow function addition. Its initial static-global
+failure now passes under the bounded boolean gating slice, moving the exact
+first failure to its typed stylesheet function. The same upstream case also
+composes stylesheet parameters, a named function reference, `fold-right()`, decimal arithmetic,
 stylesheet-relative `xsl:source-document`, and a streaming dependency. The
 family overlay retains one engine gap while AR-0001 records why reproducing the
 expected value through buffering would not establish streamability.
@@ -185,6 +185,14 @@ the common stylesheet-relative `doc()` and `innermost()` requirements from
 the grounded case's additional `snapshot()` requirement. Neither member is
 selected merely because Weaver already supports relative `doc()` in other
 contexts.
+
+The completed increment admits both cases. Static preprocessing is restricted
+to unique boolean top-level variables and direct variable-reference
+`use-when` guards; it does not claim a general compile-time XPath evaluator.
+The shared XPath engine now owns `doc()` resolution, grounded snapshot copies,
+and identity-preserving innermost node reduction in document order. The v12
+delta records the interpreter move from 0/2 to 2/2 while both native profiles
+remain 0/2.
 
 ## Reproduction
 

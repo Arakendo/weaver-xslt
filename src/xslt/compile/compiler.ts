@@ -49,6 +49,7 @@ import {
   normalizeXsltQName,
   parseXPathInContext,
 } from './xsltNameResolution.js';
+import { reduceSupportedStaticUseWhen } from './staticUseWhen.js';
 import {
   assertNoDuplicateGlobalBindings,
   assertNoDuplicateNamedTemplates,
@@ -262,6 +263,8 @@ export function compileStylesheet(
       XTSE0500,
     );
   }
+
+  reduceSupportedStaticUseWhen(root);
 
   measureCompileIrPhase(
     options.irStats,
