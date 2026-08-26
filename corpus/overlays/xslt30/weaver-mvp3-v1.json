@@ -1,0 +1,375 @@
+{
+  "schemaVersion": 1,
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "profile": "weaver-mvp3-v1",
+  "requiredBackends": ["interpreter"],
+  "selectionRationale": "Preserves Weaver's established 73-case MVP+3 checkpoint while the complete-family ledger is introduced.",
+  "cases": [
+    {
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "caseName": "template-006",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/insn/choose/_choose-test-set.xml",
+      "caseName": "choose-0601",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/insn/choose/_choose-test-set.xml",
+      "caseName": "choose-0602",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/insn/choose/_choose-test-set.xml",
+      "caseName": "choose-0102",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/attr/xpath-default-namespace/_xpath-default-namespace-test-set.xml",
+      "caseName": "xpath-default-namespace-1101",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/fn/position/_position-test-set.xml",
+      "caseName": "position-1125",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/insn/call-template/_call-template-test-set.xml",
+      "caseName": "call-template-0101",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/insn/call-template/_call-template-test-set.xml",
+      "caseName": "call-template-0102",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/insn/call-template/_call-template-test-set.xml",
+      "caseName": "call-template-0103",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/insn/call-template/_call-template-test-set.xml",
+      "caseName": "call-template-0801",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/insn/call-template/_call-template-test-set.xml",
+      "caseName": "call-template-2101",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/misc/error/_error-test-set.xml",
+      "caseName": "error-0670a",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/misc/error/_error-test-set.xml",
+      "caseName": "error-0670d",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/misc/error/_error-test-set.xml",
+      "caseName": "error-0660c",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/misc/error/_error-test-set.xml",
+      "caseName": "error-0660d",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/misc/error/_error-test-set.xml",
+      "caseName": "error-0630b",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/misc/error/_error-test-set.xml",
+      "caseName": "error-0630c",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/misc/error/_error-test-set.xml",
+      "caseName": "error-0620a",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/misc/error/_error-test-set.xml",
+      "caseName": "error-0620b",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/misc/error/_error-test-set.xml",
+      "caseName": "error-0650b",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/misc/error/_error-test-set.xml",
+      "caseName": "error-0650c",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/misc/error/_error-test-set.xml",
+      "caseName": "error-0680a",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/misc/error/_error-test-set.xml",
+      "caseName": "error-0690a",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/misc/error/_error-test-set.xml",
+      "caseName": "error-0700a",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/param/_param-test-set.xml",
+      "caseName": "param-0102",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/param/_param-test-set.xml",
+      "caseName": "param-0103",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/param/_param-test-set.xml",
+      "caseName": "param-0105",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/param/_param-test-set.xml",
+      "caseName": "param-0106",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/param/_param-test-set.xml",
+      "caseName": "param-0107",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/param/_param-test-set.xml",
+      "caseName": "param-0109",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/param/_param-test-set.xml",
+      "caseName": "param-0111",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/param/_param-test-set.xml",
+      "caseName": "param-0112",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/param/_param-test-set.xml",
+      "caseName": "param-0113",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/param/_param-test-set.xml",
+      "caseName": "param-0114",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/param/_param-test-set.xml",
+      "caseName": "param-0115",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/variable/_variable-test-set.xml",
+      "caseName": "variable-0111",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/variable/_variable-test-set.xml",
+      "caseName": "variable-1009",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/variable/_variable-test-set.xml",
+      "caseName": "variable-0601",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/variable/_variable-test-set.xml",
+      "caseName": "variable-0801",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/variable/_variable-test-set.xml",
+      "caseName": "variable-0802",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/variable/_variable-test-set.xml",
+      "caseName": "variable-1001",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/variable/_variable-test-set.xml",
+      "caseName": "variable-1004",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/variable/_variable-test-set.xml",
+      "caseName": "variable-1007",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/variable/_variable-test-set.xml",
+      "caseName": "variable-1005",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/decl/variable/_variable-test-set.xml",
+      "caseName": "variable-2401",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-022",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/expr/nodetest/_nodetest-test-set.xml",
+      "caseName": "nodetest-001",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-011",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-012",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-013",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-015",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-016",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-017",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-018",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-019",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-020",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-021",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-023",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-024",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-025",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-026",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-027",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-028",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-029",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-030",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-032",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-033",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-034",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/type/string/_string-test-set.xml",
+      "caseName": "string-035",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/insn/lre/_lre-test-set.xml",
+      "caseName": "lre-001",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/insn/lre/_lre-test-set.xml",
+      "caseName": "lre-002",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/insn/apply-templates/_apply-templates-test-set.xml",
+      "caseName": "conflict-resolution-0102c",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/insn/apply-templates/_apply-templates-test-set.xml",
+      "caseName": "conflict-resolution-0104c",
+      "selection": "selected"
+    }
+  ]
+}

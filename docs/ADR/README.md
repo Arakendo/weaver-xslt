@@ -7,4 +7,5 @@ must follow them unless a later ADR explicitly supersedes the decision.
 - [ADR-0002: Diagnostics And Public Boundaries](ADR-0002-diagnostics-and-public-boundaries.md)
 - [ADR-0003: Dual Execution And Conformance Parity](ADR-0003-dual-execution-and-conformance-parity.md)
 - [ADR-0004: Source Unit Cohesion, Size Pressure, And Decomposition](ADR-0004-source-unit-cohesion-size-pressure-and-decomposition.md)
+- [ADR-0005: Verification Ledger And Corpus Accounting](ADR-0005-verification-ledger-and-corpus-accounting.md)
 

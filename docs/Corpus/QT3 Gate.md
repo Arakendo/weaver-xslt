@@ -5,6 +5,11 @@ roadmap slice before measuring pass rates. The goal is an honest denominator:
 run cases that exercise supported MVP+2 semantics, exclude cases that depend on
 later-tier features, and make those exclusions explainable when the slice moves.
 
+ADR-0005 now requires the next gate revision to retain these classifications
+as durable ledger outcomes. The current source predicate remains the MVP+2
+checkpoint while that migration is performed; it is not the final historical
+report format.
+
 ## What the gate does
 
 - Rejects unsupported environment setup and spec dependencies before execution.

@@ -62,6 +62,7 @@ nav:
           - Diagnostics And Public Boundaries: ADR/ADR-0002-diagnostics-and-public-boundaries.md
           - Dual Execution And Conformance Parity: ADR/ADR-0003-dual-execution-and-conformance-parity.md
           - Source Unit Cohesion, Size Pressure, And Decomposition: ADR/ADR-0004-source-unit-cohesion-size-pressure-and-decomposition.md
+          - Verification Ledger And Corpus Accounting: ADR/ADR-0005-verification-ledger-and-corpus-accounting.md
       - Reviews:
           - Overview: Architectural Reviews/README.md
           - Streaming And Incremental Execution: Architectural Reviews/AR-0001-streaming-and-incremental-execution-boundary.md
@@ -77,6 +78,7 @@ nav:
       - CLI Source Decomposition: Plans/CLI Source Decomposition.md
       - Regex Source Decomposition: Plans/Regex Source Decomposition.md
       - Stylesheet Compiler Source Decomposition: Plans/Stylesheet Compiler Source Decomposition.md
+      - W3C Corpus Ledger And Expansion: Plans/W3C Corpus Ledger And Expansion.md
       - Compile Performance: Plans/Compile Performance.md
       - Fallback File Size: Plans/Fallback File Size.md
       - JS Renderer Artifacts: Plans/JS Renderer Artifacts.md
@@ -97,6 +99,7 @@ nav:
       - XML Coverage Diagnostics: XML_COVERAGE_DIAGNOSTICS.md
   - Corpus:
       - Overview: Corpus/README.md
+      - W3C Test Suite Provenance: Corpus/W3C Test Suite Provenance.md
       - Comparison Harness: Corpus/Comparison Harness.md
       - QT3 Gate: Corpus/QT3 Gate.md
       - Test Sources: Corpus/Test Sources.md

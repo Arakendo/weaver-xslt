@@ -6,15 +6,13 @@ import { describe, expect, it } from 'vitest';
 
 import { XsltProcessor, type TransformOptions } from '../../../src/index.js';
 import { parseXml } from '../../../src/xml/parse.js';
+import type { VerificationObservation } from '../ledger.js';
+import { summarizeVerificationLedger } from '../ledger.js';
+import { loadXslt30Overlay, type Xslt30OverlayCase } from './overlay.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..', '..', '..');
 const XSLT30_ROOT = join(REPO_ROOT, 'vendor', 'xslt30-test');
-
-type Xslt30SliceCase = {
-  readonly setFile: string;
-  readonly caseName: string;
-};
 
 type LoadedXslt30Case = {
   readonly stylesheet: string;
@@ -33,300 +31,10 @@ type Xslt30ExpectedResult =
       readonly code: string;
     };
 
-const MVP3_XSLT30_CASES: readonly Xslt30SliceCase[] = [
-  {
-    setFile: 'tests/decl/template/_template-test-set.xml',
-    caseName: 'template-006',
-  },
-  {
-    setFile: 'tests/insn/choose/_choose-test-set.xml',
-    caseName: 'choose-0601',
-  },
-  {
-    setFile: 'tests/insn/choose/_choose-test-set.xml',
-    caseName: 'choose-0602',
-  },
-  {
-    setFile: 'tests/insn/choose/_choose-test-set.xml',
-    caseName: 'choose-0102',
-  },
-  {
-    setFile: 'tests/attr/xpath-default-namespace/_xpath-default-namespace-test-set.xml',
-    caseName: 'xpath-default-namespace-1101',
-  },
-  {
-    setFile: 'tests/fn/position/_position-test-set.xml',
-    caseName: 'position-1125',
-  },
-  {
-    setFile: 'tests/insn/call-template/_call-template-test-set.xml',
-    caseName: 'call-template-0101',
-  },
-  {
-    setFile: 'tests/insn/call-template/_call-template-test-set.xml',
-    caseName: 'call-template-0102',
-  },
-  {
-    setFile: 'tests/insn/call-template/_call-template-test-set.xml',
-    caseName: 'call-template-0103',
-  },
-  {
-    setFile: 'tests/insn/call-template/_call-template-test-set.xml',
-    caseName: 'call-template-0801',
-  },
-  {
-    setFile: 'tests/insn/call-template/_call-template-test-set.xml',
-    caseName: 'call-template-2101',
-  },
-  {
-    setFile: 'tests/misc/error/_error-test-set.xml',
-    caseName: 'error-0670a',
-  },
-  {
-    setFile: 'tests/misc/error/_error-test-set.xml',
-    caseName: 'error-0670d',
-  },
-  {
-    setFile: 'tests/misc/error/_error-test-set.xml',
-    caseName: 'error-0660c',
-  },
-  {
-    setFile: 'tests/misc/error/_error-test-set.xml',
-    caseName: 'error-0660d',
-  },
-  {
-    setFile: 'tests/misc/error/_error-test-set.xml',
-    caseName: 'error-0630b',
-  },
-  {
-    setFile: 'tests/misc/error/_error-test-set.xml',
-    caseName: 'error-0630c',
-  },
-  {
-    setFile: 'tests/misc/error/_error-test-set.xml',
-    caseName: 'error-0620a',
-  },
-  {
-    setFile: 'tests/misc/error/_error-test-set.xml',
-    caseName: 'error-0620b',
-  },
-  {
-    setFile: 'tests/misc/error/_error-test-set.xml',
-    caseName: 'error-0650b',
-  },
-  {
-    setFile: 'tests/misc/error/_error-test-set.xml',
-    caseName: 'error-0650c',
-  },
-  {
-    setFile: 'tests/misc/error/_error-test-set.xml',
-    caseName: 'error-0680a',
-  },
-  {
-    setFile: 'tests/misc/error/_error-test-set.xml',
-    caseName: 'error-0690a',
-  },
-  {
-    setFile: 'tests/misc/error/_error-test-set.xml',
-    caseName: 'error-0700a',
-  },
-  {
-    setFile: 'tests/decl/param/_param-test-set.xml',
-    caseName: 'param-0102',
-  },
-  {
-    setFile: 'tests/decl/param/_param-test-set.xml',
-    caseName: 'param-0103',
-  },
-  {
-    setFile: 'tests/decl/param/_param-test-set.xml',
-    caseName: 'param-0105',
-  },
-  {
-    setFile: 'tests/decl/param/_param-test-set.xml',
-    caseName: 'param-0106',
-  },
-  {
-    setFile: 'tests/decl/param/_param-test-set.xml',
-    caseName: 'param-0107',
-  },
-  {
-    setFile: 'tests/decl/param/_param-test-set.xml',
-    caseName: 'param-0109',
-  },
-  {
-    setFile: 'tests/decl/param/_param-test-set.xml',
-    caseName: 'param-0111',
-  },
-  {
-    setFile: 'tests/decl/param/_param-test-set.xml',
-    caseName: 'param-0112',
-  },
-  {
-    setFile: 'tests/decl/param/_param-test-set.xml',
-    caseName: 'param-0113',
-  },
-  {
-    setFile: 'tests/decl/param/_param-test-set.xml',
-    caseName: 'param-0114',
-  },
-  {
-    setFile: 'tests/decl/param/_param-test-set.xml',
-    caseName: 'param-0115',
-  },
-  {
-    setFile: 'tests/decl/variable/_variable-test-set.xml',
-    caseName: 'variable-0111',
-  },
-  {
-    setFile: 'tests/decl/variable/_variable-test-set.xml',
-    caseName: 'variable-1009',
-  },
-  {
-    setFile: 'tests/decl/variable/_variable-test-set.xml',
-    caseName: 'variable-0601',
-  },
-  {
-    setFile: 'tests/decl/variable/_variable-test-set.xml',
-    caseName: 'variable-0801',
-  },
-  {
-    setFile: 'tests/decl/variable/_variable-test-set.xml',
-    caseName: 'variable-0802',
-  },
-  {
-    setFile: 'tests/decl/variable/_variable-test-set.xml',
-    caseName: 'variable-1001',
-  },
-  {
-    setFile: 'tests/decl/variable/_variable-test-set.xml',
-    caseName: 'variable-1004',
-  },
-  {
-    setFile: 'tests/decl/variable/_variable-test-set.xml',
-    caseName: 'variable-1007',
-  },
-  {
-    setFile: 'tests/decl/variable/_variable-test-set.xml',
-    caseName: 'variable-1005',
-  },
-  {
-    setFile: 'tests/decl/variable/_variable-test-set.xml',
-    caseName: 'variable-2401',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-022',
-  },
-  {
-    setFile: 'tests/expr/nodetest/_nodetest-test-set.xml',
-    caseName: 'nodetest-001',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-011',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-012',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-013',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-015',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-016',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-017',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-018',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-019',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-020',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-021',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-023',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-024',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-025',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-026',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-027',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-028',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-029',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-030',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-032',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-033',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-034',
-  },
-  {
-    setFile: 'tests/type/string/_string-test-set.xml',
-    caseName: 'string-035',
-  },
-  {
-    setFile: 'tests/insn/lre/_lre-test-set.xml',
-    caseName: 'lre-001',
-  },
-  {
-    setFile: 'tests/insn/lre/_lre-test-set.xml',
-    caseName: 'lre-002',
-  },
-  {
-    setFile: 'tests/insn/apply-templates/_apply-templates-test-set.xml',
-    caseName: 'conflict-resolution-0102c',
-  },
-  {
-    setFile: 'tests/insn/apply-templates/_apply-templates-test-set.xml',
-    caseName: 'conflict-resolution-0104c',
-  },
-];
+const MVP3_XSLT30_OVERLAY = loadXslt30Overlay();
+const MVP3_XSLT30_CASES = MVP3_XSLT30_OVERLAY.cases.filter(
+  (testCase) => testCase.selection === 'selected',
+);
 
 describe('W3C conformance — XSLT 3.0 MVP+3 slice', () => {
   if (!existsSync(join(XSLT30_ROOT, 'catalog.xml'))) {
@@ -336,6 +44,7 @@ describe('W3C conformance — XSLT 3.0 MVP+3 slice', () => {
 
   it('executes a real filtered XSLT 3.0 slice and reports a pass rate', () => {
     let passed = 0;
+    const observations: VerificationObservation[] = [];
 
     for (const testCase of MVP3_XSLT30_CASES) {
       const loaded = loadXslt30Case(testCase);
@@ -344,43 +53,77 @@ describe('W3C conformance — XSLT 3.0 MVP+3 slice', () => {
       try {
         if (loaded.expected.kind === 'xml') {
           if (execution.kind !== 'success') {
-            throw new Error(`expected XML result ${JSON.stringify(loaded.expected.xml)} but got error ${execution.code}`);
+            throw new Error(
+              `expected XML result ${JSON.stringify(loaded.expected.xml)} but got error ${execution.code}`,
+            );
           }
 
           expect(normalizeXml(execution.output)).toBe(normalizeXml(loaded.expected.xml));
         } else {
           if (execution.kind !== 'error') {
-            throw new Error(`expected error ${loaded.expected.code} but got output ${JSON.stringify(execution.output)}`);
+            throw new Error(
+              `expected error ${loaded.expected.code} but got output ${JSON.stringify(execution.output)}`,
+            );
           }
 
           expect(execution.code).toBe(loaded.expected.code);
         }
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
-        throw new Error(`XSLT 3.0 case ${testCase.caseName} failed: ${detail}\nactual=${JSON.stringify(execution)}\nexpected=${JSON.stringify(loaded.expected)}`);
+        throw new Error(
+          `XSLT 3.0 case ${testCase.caseName} failed: ${detail}\nactual=${JSON.stringify(execution)}\nexpected=${JSON.stringify(loaded.expected)}`,
+        );
       }
       passed += 1;
+      observations.push({
+        suite: MVP3_XSLT30_OVERLAY.suite,
+        suiteRevision: MVP3_XSLT30_OVERLAY.suiteRevision,
+        setFile: testCase.setFile,
+        caseName: testCase.caseName,
+        backend: 'interpreter',
+        execution: 'passed',
+      });
     }
 
-    // eslint-disable-next-line no-console
+    const ledger = summarizeVerificationLedger(
+      MVP3_XSLT30_OVERLAY.cases.map((testCase) => ({
+        suite: MVP3_XSLT30_OVERLAY.suite,
+        suiteRevision: MVP3_XSLT30_OVERLAY.suiteRevision,
+        setFile: testCase.setFile,
+        caseName: testCase.caseName,
+        selection: testCase.selection,
+      })),
+      observations,
+      MVP3_XSLT30_OVERLAY.requiredBackends,
+    );
+
     console.log(`  XSLT 3.0 MVP+3 slice: ${passed}/${MVP3_XSLT30_CASES.length} passed`);
     expect(passed).toBe(MVP3_XSLT30_CASES.length);
+    expect(ledger.selection.inventoried).toBe(MVP3_XSLT30_OVERLAY.cases.length);
+    expect(ledger.executionByBackend.interpreter).toMatchObject({
+      selected: MVP3_XSLT30_CASES.length,
+      passed: MVP3_XSLT30_CASES.length,
+      incomplete: 0,
+    });
   });
 });
 
-function loadXslt30Case(testCase: Xslt30SliceCase): LoadedXslt30Case {
+function loadXslt30Case(testCase: Xslt30OverlayCase): LoadedXslt30Case {
   const setPath = join(XSLT30_ROOT, testCase.setFile);
   const setDirectory = dirname(setPath);
   const setDocument = parseXml(readFileSync(setPath, 'utf8'));
-  const testCaseElement = asElements(setDocument.getElementsByTagName('test-case'))
-    .find((entry) => entry.getAttribute('name') === testCase.caseName);
+  const testCaseElement = asElements(setDocument.getElementsByTagName('test-case')).find(
+    (entry) => entry.getAttribute('name') === testCase.caseName,
+  );
   if (testCaseElement === undefined) {
     throw new Error(`Unable to locate XSLT 3.0 case ${testCase.caseName} in ${testCase.setFile}.`);
   }
 
   const environment = resolveEnvironment(setDocument, testCaseElement);
   const source = loadSourceXml(environment, setDirectory);
-  const stylesheetFile = testCaseElement.getElementsByTagName('stylesheet')[0]?.getAttribute('file');
+  const stylesheetFile = testCaseElement
+    .getElementsByTagName('stylesheet')[0]
+    ?.getAttribute('file');
   if (stylesheetFile === undefined || stylesheetFile === null || stylesheetFile.length === 0) {
     throw new Error(`XSLT 3.0 case ${testCase.caseName} is missing a stylesheet file.`);
   }
@@ -397,7 +140,9 @@ function loadXslt30Case(testCase: Xslt30SliceCase): LoadedXslt30Case {
   };
 }
 
-function executeXslt30Case(loaded: LoadedXslt30Case):
+function executeXslt30Case(
+  loaded: LoadedXslt30Case,
+):
   | { readonly kind: 'success'; readonly output: string }
   | { readonly kind: 'error'; readonly code: string; readonly detail: string } {
   try {
@@ -414,7 +159,12 @@ function executeXslt30Case(loaded: LoadedXslt30Case):
 }
 
 function extractErrorCode(error: unknown): string {
-  if (typeof error === 'object' && error !== null && 'code' in error && typeof (error as { code: unknown }).code === 'string') {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof (error as { code: unknown }).code === 'string'
+  ) {
     return (error as { code: string }).code;
   }
 
@@ -436,9 +186,10 @@ function loadTransformOptions(testCaseElement: Element): TransformOptions | unde
 
   const initialTemplateElement = testElement.getElementsByTagName('initial-template')[0];
   const initialTemplateName = initialTemplateElement?.getAttribute('name') ?? undefined;
-  const initialTemplate = initialTemplateName === undefined || initialTemplateElement === undefined
-    ? undefined
-    : normalizeQNameForTest(initialTemplateName, initialTemplateElement);
+  const initialTemplate =
+    initialTemplateName === undefined || initialTemplateElement === undefined
+      ? undefined
+      : normalizeQNameForTest(initialTemplateName, initialTemplateElement);
   const parameters = loadTransformParameters(testElement);
 
   if (initialTemplate === undefined && parameters === undefined) {
@@ -451,9 +202,12 @@ function loadTransformOptions(testCaseElement: Element): TransformOptions | unde
   };
 }
 
-function loadTransformParameters(testElement: Element): Readonly<Record<string, unknown>> | undefined {
-  const entries = asElements(testElement.getElementsByTagName('param'))
-    .filter((element) => (element.getAttribute('static') ?? 'no') !== 'yes');
+function loadTransformParameters(
+  testElement: Element,
+): Readonly<Record<string, unknown>> | undefined {
+  const entries = asElements(testElement.getElementsByTagName('param')).filter(
+    (element) => (element.getAttribute('static') ?? 'no') !== 'yes',
+  );
   if (entries.length === 0) {
     return undefined;
   }
@@ -463,7 +217,9 @@ function loadTransformParameters(testElement: Element): Readonly<Record<string, 
     const name = entry.getAttribute('name');
     const select = entry.getAttribute('select');
     if (name === null || name.length === 0 || select === null || select.length === 0) {
-      throw new Error('XSLT 3.0 transform parameter metadata requires both name and select attributes.');
+      throw new Error(
+        'XSLT 3.0 transform parameter metadata requires both name and select attributes.',
+      );
     }
 
     parameters[normalizeQNameForTest(name, entry)] = parseTransformParameterValue(select);
@@ -489,7 +245,9 @@ function parseTransformParameterValue(select: string): unknown {
     return Number(select);
   }
 
-  throw new Error(`Unsupported XSLT 3.0 transform parameter metadata expression ${JSON.stringify(select)} in current MVP+3 slice.`);
+  throw new Error(
+    `Unsupported XSLT 3.0 transform parameter metadata expression ${JSON.stringify(select)} in current MVP+3 slice.`,
+  );
 }
 
 function resolveEnvironment(setDocument: Document, testCaseElement: Element): Element | undefined {
@@ -500,8 +258,9 @@ function resolveEnvironment(setDocument: Document, testCaseElement: Element): El
       return localEnvironment;
     }
 
-    return asElements(setDocument.getElementsByTagName('environment'))
-      .find((entry) => entry.getAttribute('name') === ref);
+    return asElements(setDocument.getElementsByTagName('environment')).find(
+      (entry) => entry.getAttribute('name') === ref,
+    );
   }
 
   return undefined;
@@ -512,8 +271,9 @@ function loadSourceXml(environment: Element | undefined, setDirectory: string): 
     return '<root/>';
   }
 
-  const sourceElement = asElements(environment.getElementsByTagName('source'))
-    .find((entry) => (entry.getAttribute('role') ?? '.') === '.');
+  const sourceElement = asElements(environment.getElementsByTagName('source')).find(
+    (entry) => (entry.getAttribute('role') ?? '.') === '.',
+  );
   if (sourceElement === undefined) {
     return '<root/>';
   }
