@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "profile": "weaver-template-path-native-parity-v1",
+  "requiredBackends": ["interpreter", "native-direct", "native-emitted"],
+  "selectionRationale": "Applies the three-backend parity contract to the complete template/path family inventory while selecting only cases supported by the shared native plan.",
+  "cases": [
+    {
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "caseName": "template-001",
+      "selection": "engine-unsupported",
+      "rationale": "The shared native planner does not support this stylesheet; emitted code would use the generic interpreter-backed fallback."
+    },
+    {
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "caseName": "template-002",
+      "selection": "engine-unsupported",
+      "rationale": "The shared native planner does not support this stylesheet; emitted code would use the generic interpreter-backed fallback."
+    },
+    {
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "caseName": "template-003",
+      "selection": "engine-unsupported",
+      "rationale": "The shared native planner does not support this stylesheet; emitted code would use the generic interpreter-backed fallback."
+    },
+    {
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "caseName": "template-004",
+      "selection": "engine-unsupported",
+      "rationale": "The shared native planner does not support this stylesheet; emitted code would use the generic interpreter-backed fallback."
+    },
+    {
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "caseName": "template-005",
+      "selection": "engine-unsupported",
+      "rationale": "The shared native planner does not support this stylesheet; emitted code would use the generic interpreter-backed fallback."
+    },
+    {
+      "setFile": "tests/decl/template/_template-test-set.xml",
+      "caseName": "template-006",
+      "selection": "selected"
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-001",
+      "selection": "engine-unsupported",
+      "rationale": "The shared native planner does not support this stylesheet; emitted code would use the generic interpreter-backed fallback."
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-002",
+      "selection": "engine-unsupported",
+      "rationale": "The shared native planner does not support this stylesheet; emitted code would use the generic interpreter-backed fallback."
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-003",
+      "selection": "engine-unsupported",
+      "rationale": "The shared native planner does not support this stylesheet; emitted code would use the generic interpreter-backed fallback."
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-004",
+      "selection": "engine-unsupported",
+      "rationale": "The shared native planner does not support this stylesheet; emitted code would use the generic interpreter-backed fallback."
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-005",
+      "selection": "engine-unsupported",
+      "rationale": "The shared native planner does not support this stylesheet; emitted code would use the generic interpreter-backed fallback."
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-006",
+      "selection": "engine-unsupported",
+      "rationale": "The shared native planner does not support this stylesheet; emitted code would use the generic interpreter-backed fallback."
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-007",
+      "selection": "engine-unsupported",
+      "rationale": "The shared native planner does not support this stylesheet; emitted code would use the generic interpreter-backed fallback."
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-008",
+      "selection": "engine-unsupported",
+      "rationale": "Interpreter execution is also blocked by the missing floor() integration; native parity is not yet applicable."
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-009",
+      "selection": "engine-unsupported",
+      "rationale": "Interpreter execution is also blocked by the missing floor() integration; native parity is not yet applicable."
+    },
+    {
+      "setFile": "tests/expr/path/_path-test-set.xml",
+      "caseName": "path-010",
+      "selection": "engine-unsupported",
+      "rationale": "Interpreter execution currently produces an empty result, and the native planner does not support this match pattern."
+    }
+  ]
+}

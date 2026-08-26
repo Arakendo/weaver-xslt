@@ -100,16 +100,27 @@ an XSLT match-expression integration boundary rather than absent XPath
 
 ## Phase 3: Multi-backend corpus parity
 
-**Status: pending.**
+**Status: in progress; initial three-backend profile complete.**
 
-- [ ] Record interpreter, native-direct, and native-emitted observations
+- [x] Record interpreter, native-direct, and native-emitted observations
   independently for profiles that require them.
-- [ ] Compare structured semantic output and diagnostic identity before
+- [x] Compare structured semantic output and diagnostic identity before
   serializer text.
-- [ ] Record documented native fallback separately from native execution.
-- [ ] Reject a profile report when a required backend observation is missing.
+- [x] Record documented native fallback separately from native execution.
+- [x] Reject a profile report when a required backend observation is missing.
 - [ ] Keep generated-code readability and source-map checks in their existing
   focused suites while linking them to the same case identity when applicable.
+
+The initial parity profile retains the complete 16-case template/path
+denominator and requires interpreter, native-direct, and native-emitted
+observations. `template-006` is the first selected case and passes under all
+three. The other 15 cases remain engine-unsupported for this profile.
+
+The initial probe also found that generic emitted modules can execute through
+`transformCompiledStylesheet` when no shared native plan exists. Those
+results are useful compatibility evidence but are not native-emitted evidence.
+The corpus harness now rejects that fallback before recording a native-emitted
+observation. See the [native parity baseline](../Evidence/XSLT30%20Native%20Parity%20Baseline.md).
 
 ## Phase 4: Metadata-driven XSLT30 widening
 
@@ -187,6 +198,20 @@ At the QT3 MVP2 profile checkpoint:
   non-selected outcomes;
 - an outcome digest detects per-case selection, reason, or detail drift;
 - the complete suite passes 1,028 tests across 91 files, with one skipped and
+  two todo; and
+- typecheck, focused ESLint, package build, exact corpus verification, and a
+  normal MkDocs build pass. Strict documentation mode retains the same 56
+  pre-existing broken-link warnings.
+
+At the initial native-parity checkpoint:
+
+- the complete 16-case template/path denominator is retained;
+- `template-006` passes independently under interpreter, native-direct, and
+  genuine native-emitted execution;
+- 15 engine-unsupported cases remain visible;
+- generic `transformCompiledStylesheet` emission is rejected as
+  native-emitted evidence when no shared native plan exists;
+- the complete suite passes 1,031 tests across 92 files, with one skipped and
   two todo; and
 - typecheck, focused ESLint, package build, exact corpus verification, and a
   normal MkDocs build pass. Strict documentation mode retains the same 56

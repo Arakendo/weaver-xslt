@@ -5,7 +5,10 @@ import type { Attr, Document, Element, Node } from '@xmldom/xmldom';
 
 import { XsltProcessor, type TransformOptions } from '../../../src/index.js';
 import { parseXml } from '../../../src/xml/parse.js';
-import type { ExecutionDisposition } from '../ledger.js';
+import { tryCreateNativeTransformPlan } from '../../../src/xslt/codegen/nativeTransformPlan.js';
+import { compileStylesheet } from '../../../src/xslt/compile/compiler.js';
+import { compileAndLoadGeneratedModule } from '../../codegen/compile.support.js';
+import type { ExecutionDisposition, VerificationBackend } from '../ledger.js';
 import type { Xslt30OverlayCase } from './overlay.js';
 
 const REPO_ROOT = join(import.meta.dirname, '..', '..', '..');
@@ -15,7 +18,7 @@ type LoadedXslt30Case = {
   readonly stylesheet: string;
   readonly source: string;
   readonly expected: Xslt30ExpectedResult;
-  readonly options?: TransformOptions;
+  readonly options?: Omit<TransformOptions, 'execution'>;
 };
 
 type Xslt30ExpectedResult =
@@ -37,7 +40,10 @@ export function hasXslt30Catalog(): boolean {
   return existsSync(join(XSLT30_ROOT, 'catalog.xml'));
 }
 
-export function runXslt30Case(testCase: Xslt30OverlayCase): Xslt30CaseRunResult {
+export function runXslt30Case(
+  testCase: Xslt30OverlayCase,
+  backend: VerificationBackend = 'interpreter',
+): Xslt30CaseRunResult {
   let loaded: LoadedXslt30Case;
   try {
     loaded = loadXslt30Case(testCase);
@@ -48,7 +54,7 @@ export function runXslt30Case(testCase: Xslt30OverlayCase): Xslt30CaseRunResult 
     };
   }
 
-  const actual = executeXslt30Case(loaded);
+  const actual = executeXslt30Case(loaded, backend, testCase.caseName);
   if (loaded.expected.kind === 'xml') {
     if (actual.kind === 'error') {
       return {
@@ -138,12 +144,51 @@ function loadXslt30Case(testCase: Xslt30OverlayCase): LoadedXslt30Case {
 
 function executeXslt30Case(
   loaded: LoadedXslt30Case,
+  backend: VerificationBackend,
+  caseName: string,
 ):
   | { readonly kind: 'success'; readonly output: string }
   | { readonly kind: 'error'; readonly code: string; readonly detail: string } {
   try {
+    if (backend === 'native-emitted') {
+      const sourcePath = `corpus/${caseName}.xsl`;
+      const ir = compileStylesheet(loaded.stylesheet);
+      if (tryCreateNativeTransformPlan(ir, sourcePath) === undefined) {
+        return {
+          kind: 'error',
+          code: 'WEAVER_XSLT_NATIVE_UNSUPPORTED',
+          detail: 'emission would use the generic transformCompiledStylesheet fallback',
+        };
+      }
+
+      const generated = compileAndLoadGeneratedModule(loaded.stylesheet, sourcePath);
+      if (generated.diagnostics.length > 0) {
+        return {
+          kind: 'error',
+          code: 'WEAVER_EMITTED_COMPILE_FAILURE',
+          detail: generated.diagnostics
+            .map((diagnostic) => String(diagnostic.messageText))
+            .join('; '),
+        };
+      }
+
+      const generatedModule = generated.exports as {
+        readonly transform: (
+          source: string,
+          options?: Omit<TransformOptions, 'execution'>,
+        ) => { readonly output: string };
+      };
+      return {
+        kind: 'success',
+        output: generatedModule.transform(loaded.source, loaded.options).output,
+      };
+    }
+
     const proc = new XsltProcessor(loaded.stylesheet);
-    const { output } = proc.transform(loaded.source, loaded.options);
+    const { output } = proc.transform(loaded.source, {
+      ...loaded.options,
+      execution: backend === 'native-direct' ? 'native' : 'interpreter',
+    });
     return { kind: 'success', output };
   } catch (error) {
     return {
@@ -174,7 +219,9 @@ function extractErrorCode(error: unknown): string {
   return 'UNKNOWN';
 }
 
-function loadTransformOptions(testCaseElement: Element): TransformOptions | undefined {
+function loadTransformOptions(
+  testCaseElement: Element,
+): Omit<TransformOptions, 'execution'> | undefined {
   const testElement = testCaseElement.getElementsByTagName('test')[0];
   if (testElement === undefined) {
     return undefined;
