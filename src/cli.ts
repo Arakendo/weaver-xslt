@@ -1,6 +1,5 @@
 import {
   existsSync,
-  readdirSync,
   readFileSync,
   realpathSync,
   renameSync,
@@ -13,7 +12,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import chokidar from 'chokidar';
 
-import { formatDiagnostics, renderDiagnosticError, projectDiagnosticReports, diagnosticReportFromError } from './diagnostics/index.js';
+import {
+  formatDiagnostics,
+  renderDiagnosticError,
+  projectDiagnosticReports,
+  diagnosticReportFromError,
+} from './diagnostics/index.js';
 import {
   XsltProcessor,
   type TransformExecutionFallbackReason,
@@ -27,6 +31,13 @@ import {
 } from './processor/compile.js';
 import { bundleJs } from './processor/bundleJs.js';
 import { transpileTsToJs, writeJsArtifact } from './processor/emitJs.js';
+import {
+  createGlobMatcher,
+  findGlobBaseDirectory,
+  globSync,
+  hasGlobMagic,
+  testPath,
+} from './cliGlob.js';
 
 export interface CliIo {
   readonly stdout: (text: string) => void;
@@ -107,30 +118,36 @@ export async function runCli(
 
       switch (helpCommand) {
         case 'compile':
-          io.stdout([
-            'weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|bundle|ts,js|ts,bundle|js,bundle] [--diagnostics json]',
-            '',
-            'Compile matched stylesheets into artifacts. Use --sample to provide a sample XML document for composition. --emit chooses emitted artifact flavors.',
-            '',
-            'Machine-readable diagnostics: add "--diagnostics json" or "--format json" to emit a JSON diagnostics payload suitable for MSBuild/MSBuild targets.',
-            '',
-          ].join('\n'));
+          io.stdout(
+            [
+              'weaver-xslt compile <glob> [--sample <xml>] [--emit ts|js|bundle|ts,js|ts,bundle|js,bundle] [--diagnostics json]',
+              '',
+              'Compile matched stylesheets into artifacts. Use --sample to provide a sample XML document for composition. --emit chooses emitted artifact flavors.',
+              '',
+              'Machine-readable diagnostics: add "--diagnostics json" or "--format json" to emit a JSON diagnostics payload suitable for MSBuild/MSBuild targets.',
+              '',
+            ].join('\n'),
+          );
           return 0;
         case 'watch':
-          io.stdout([
-            'weaver-xslt watch <glob> [--sample <xml>] [--emit ...] [--diagnostics json]',
-            '',
-            'Watch matching files and recompile on change. Diagnostics can be emitted in JSON mode as above.',
-            '',
-          ].join('\n'));
+          io.stdout(
+            [
+              'weaver-xslt watch <glob> [--sample <xml>] [--emit ...] [--diagnostics json]',
+              '',
+              'Watch matching files and recompile on change. Diagnostics can be emitted in JSON mode as above.',
+              '',
+            ].join('\n'),
+          );
           return 0;
         case 'run':
-          io.stdout([
-            'weaver-xslt run <stylesheet> --input <xml> [--execution <interpreter|native|auto>] [--param <name=value> ...]',
-            '',
-            'Run a compiled or source stylesheet against an input XML and write the transform output to stdout. This command is primarily for quick validation and debugging.',
-            '',
-          ].join('\n'));
+          io.stdout(
+            [
+              'weaver-xslt run <stylesheet> --input <xml> [--execution <interpreter|native|auto>] [--param <name=value> ...]',
+              '',
+              'Run a compiled or source stylesheet against an input XML and write the transform output to stdout. This command is primarily for quick validation and debugging.',
+              '',
+            ].join('\n'),
+          );
           return 0;
         default:
           io.stderr(`Unknown help topic: ${helpCommand}\n`);
@@ -1009,7 +1026,9 @@ function writeDiagnostics(
         writeFileSync(cliDiagnosticsOutPath, JSON.stringify(output, null, 2), 'utf8');
       } catch (error) {
         // Fall back to writing JSON to stdout if we cannot write to file
-        io.stderr(`weaver: failed to write diagnostics to ${cliDiagnosticsOutPath}: ${String(error)}\n`);
+        io.stderr(
+          `weaver: failed to write diagnostics to ${cliDiagnosticsOutPath}: ${String(error)}\n`,
+        );
         io.stdout(`${JSON.stringify(output, null, 2)}\n`);
       }
     } else {
@@ -1038,179 +1057,80 @@ function writeDiagnostics(
   }
 }
 
-function globSync(
-  inputPattern: string,
-  _options: { readonly absolute: true; readonly nodir: true; readonly windowsPathsNoEscape: true },
-): string[] {
-  const resolvedPattern = resolve(inputPattern);
-  if (!hasGlobMagic(resolvedPattern)) {
-    return existsSync(resolvedPattern) ? [resolvedPattern] : [];
-  }
-
-  const baseDirectory = findGlobBaseDirectory(resolvedPattern);
-  if (!existsSync(baseDirectory)) {
-    return [];
-  }
-
-  const matcher = createGlobMatcher(resolvedPattern);
-  const matches: string[] = [];
-
-  collectFiles(baseDirectory, matches);
-  return matches.filter((filePath) => matcher(testPath(filePath)));
-}
-
-function collectFiles(directoryPath: string, files: string[]): void {
-  for (const entry of readdirSync(directoryPath, { withFileTypes: true })) {
-    const childPath = resolve(directoryPath, entry.name);
-    if (entry.isDirectory()) {
-      collectFiles(childPath, files);
-      continue;
-    }
-
-    if (entry.isFile()) {
-      files.push(childPath);
-    }
-  }
-}
-
-function createGlobMatcher(pattern: string): (candidatePath: string) => boolean {
-  const normalizedPattern = testPath(pattern);
-  let regexSource = '';
-
-  for (let index = 0; index < normalizedPattern.length; index += 1) {
-    const character = normalizedPattern[index];
-    if (character === undefined) {
-      continue;
-    }
-
-    if (character === '*') {
-      if (normalizedPattern[index + 1] === '*') {
-        regexSource += '.*';
-        index += 1;
-      } else {
-        regexSource += '[^/]*';
-      }
-      continue;
-    }
-
-    if (character === '?') {
-      regexSource += '[^/]';
-      continue;
-    }
-
-    regexSource += escapeRegexCharacter(character);
-  }
-
-  const matcher = new RegExp(`^${regexSource}$`, 'i');
-  return (candidatePath: string) => matcher.test(candidatePath);
-}
-
-function findGlobBaseDirectory(pattern: string): string {
-  const normalizedPattern = testPath(pattern);
-  const segments = normalizedPattern.split('/');
-  const baseSegments: string[] = [];
-
-  for (const segment of segments) {
-    if (segment.includes('*') || segment.includes('?')) {
-      break;
-    }
-
-    baseSegments.push(segment);
-  }
-
-  if (baseSegments.length === 0) {
-    return dirname(pattern);
-  }
-
-  return resolve(baseSegments.join('/'));
-}
-
-function hasGlobMagic(value: string): boolean {
-  return value.includes('*') || value.includes('?');
-}
-
-function testPath(value: string): string {
-  return value.replaceAll('\\', '/');
-}
-
-function escapeRegexCharacter(character: string): string {
-  return /[|\\{}()[\]^$+?.]/.test(character) ? `\\${character}` : character;
-}
-
 // If invoked as a CLI (node dist/cli.js ...), run the CLI and ensure any unexpected
 // errors are emitted as machine-readable diagnostics when --diagnostics-out was
 // requested. This guarantees MSBuild or other automation can always find a JSON
 // diagnostics payload even for thrown exceptions.
 if (process.argv[1] !== undefined && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
-  void runCli(process.argv.slice(2)).then((exitCode) => {
-    // If the CLI exited non-zero and the caller requested a diagnostics-out file,
-    // ensure a JSON payload exists so automation can consume it. Some error
-    // conditions produce textual output but don't emit the diagnostics file; in
-    // that case write a minimal fallback diagnostics JSON.
-    if (exitCode !== 0 && cliDiagnosticsOutPath !== undefined) {
-      try {
-        if (!existsSync(cliDiagnosticsOutPath)) {
-          const fallback = {
-            source: { path: process.cwd() },
-            diagnostics: [
-              {
-                severity: 'error',
-                code: `WEAVER_EXIT_${exitCode}`,
-                message: `Weaver CLI exited with code ${exitCode}. Check tool output for details.`,
-                primary: { uri: process.cwd(), lineStart: 1, columnStart: 1 },
-              },
-            ],
-          } as const;
-          try {
-            // Ensure parent directory exists
-            try {
-              mkdirSync(resolve(cliDiagnosticsOutPath, '..'), { recursive: true });
-            } catch {
-              /* ignore mkdir failure */
-            }
-            writeFileSync(cliDiagnosticsOutPath, JSON.stringify(fallback, null, 2), 'utf8');
-          }
-          catch {
-            // ignore write errors — there's nothing more we can do here
-          }
-        }
-      }
-      catch {
-        // ignore
-      }
-    }
-
-    void (async () => process.exit(exitCode))();
-  }).catch((err: unknown) => {
-    // If the caller requested JSON diagnostics, write a minimal diagnostics file
-    // describing the unexpected error so MSBuild consumers can parse it.
-    try {
-      const errMsg = err instanceof Error ? err.stack ?? err.message : String(err);
-      const diag = {
-        source: { path: process.cwd() },
-        diagnostics: [
-          {
-            severity: 'error',
-            code: 'WEAVER_UNHANDLED',
-            message: errMsg,
-            primary: { uri: process.cwd(), lineStart: 1, columnStart: 1 },
-          },
-        ],
-      } as const;
-
-      if (cliDiagnosticsOutPath !== undefined) {
+  void runCli(process.argv.slice(2))
+    .then((exitCode) => {
+      // If the CLI exited non-zero and the caller requested a diagnostics-out file,
+      // ensure a JSON payload exists so automation can consume it. Some error
+      // conditions produce textual output but don't emit the diagnostics file; in
+      // that case write a minimal fallback diagnostics JSON.
+      if (exitCode !== 0 && cliDiagnosticsOutPath !== undefined) {
         try {
-          writeFileSync(cliDiagnosticsOutPath, JSON.stringify(diag, null, 2), 'utf8');
-        } catch (writeErr) {
-          // Fall back silently — we'll still render the error below.
+          if (!existsSync(cliDiagnosticsOutPath)) {
+            const fallback = {
+              source: { path: process.cwd() },
+              diagnostics: [
+                {
+                  severity: 'error',
+                  code: `WEAVER_EXIT_${exitCode}`,
+                  message: `Weaver CLI exited with code ${exitCode}. Check tool output for details.`,
+                  primary: { uri: process.cwd(), lineStart: 1, columnStart: 1 },
+                },
+              ],
+            } as const;
+            try {
+              // Ensure parent directory exists
+              try {
+                mkdirSync(resolve(cliDiagnosticsOutPath, '..'), { recursive: true });
+              } catch {
+                /* ignore mkdir failure */
+              }
+              writeFileSync(cliDiagnosticsOutPath, JSON.stringify(fallback, null, 2), 'utf8');
+            } catch {
+              // ignore write errors — there's nothing more we can do here
+            }
+          }
+        } catch {
+          // ignore
         }
       }
-    } catch {
-      // swallow any further errors while trying to write diagnostics
-    }
 
-    // Render the error for console consumers and exit non-zero
-    defaultIo.stderr(renderDiagnosticError(err));
-    void (async () => process.exit(1))();
-  });
+      void (async () => process.exit(exitCode))();
+    })
+    .catch((err: unknown) => {
+      // If the caller requested JSON diagnostics, write a minimal diagnostics file
+      // describing the unexpected error so MSBuild consumers can parse it.
+      try {
+        const errMsg = err instanceof Error ? (err.stack ?? err.message) : String(err);
+        const diag = {
+          source: { path: process.cwd() },
+          diagnostics: [
+            {
+              severity: 'error',
+              code: 'WEAVER_UNHANDLED',
+              message: errMsg,
+              primary: { uri: process.cwd(), lineStart: 1, columnStart: 1 },
+            },
+          ],
+        } as const;
+
+        if (cliDiagnosticsOutPath !== undefined) {
+          try {
+            writeFileSync(cliDiagnosticsOutPath, JSON.stringify(diag, null, 2), 'utf8');
+          } catch (writeErr) {
+            // Fall back silently — we'll still render the error below.
+          }
+        }
+      } catch {
+        // swallow any further errors while trying to write diagnostics
+      }
+
+      // Render the error for console consumers and exit non-zero
+      defaultIo.stderr(renderDiagnosticError(err));
+      void (async () => process.exit(1))();
+    });
 }
