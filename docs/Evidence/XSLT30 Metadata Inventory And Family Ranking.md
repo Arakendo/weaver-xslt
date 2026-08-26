@@ -119,6 +119,13 @@ directory. `root-0502` passes and completes the family at 10/10 selected
 interpreter cases. This is not a new ambient resource capability or a native
 support claim; the v8 delta records native-direct and native-emitted at 0/10.
 
+The next ranked complete family is the fourteen-case `on-non-empty` set. Its
+initial overlay conserves one passing `XTSE0010` ordering diagnostic and
+thirteen explicit engine gaps. Eleven cases share conditional sequence-content
+buffering pressure, one combines that behavior with `xsl:on-empty`, one adds
+`xsl:sort`, and `on-non-empty-002` also exposes a hyphenated XPath name-test
+parser gap. This denominator is fixed before any dispositions move.
+
 ## Reproduction
 
 ```powershell

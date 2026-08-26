@@ -196,6 +196,12 @@ Weaver's existing relative `document()` support against its declared sibling
 resource and completes the interpreter family at 10/10. Native modes remain
 separately unsupported for all ten cases.
 
+The next conserved denominator is the complete fourteen-case
+`xsl:on-non-empty` family. Its initial interpreter baseline selects the one
+passing ordering-diagnostic case and retains thirteen case-specific gaps for
+conditional sequence content, `xsl:on-empty` coexistence, `xsl:sort`, and a
+hyphenated XPath name test.
+
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
 after the small-family queue. The 582-case generic error set is not an early
