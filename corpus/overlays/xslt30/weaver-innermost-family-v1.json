@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "profile": "weaver-innermost-family-v1",
+  "requiredBackends": ["interpreter"],
+  "selectionRationale": "Inventories the complete two-case non-streaming innermost family while separating static compilation, document loading, snapshot, and innermost node-reduction pressure.",
+  "cases": [
+    {
+      "setFile": "tests/fn/innermost/_innermost-test-set.xml",
+      "caseName": "innermost-001",
+      "selection": "engine-unsupported",
+      "rationale": "The first compiler boundary is the static global variable used by use-when; the case then requires stylesheet-relative doc(), snapshot(), and innermost()."
+    },
+    {
+      "setFile": "tests/fn/innermost/_innermost-test-set.xml",
+      "caseName": "innermost-901",
+      "selection": "engine-unsupported",
+      "rationale": "The first compiler boundary is the static global variable used by use-when; the case then requires stylesheet-relative doc() and innermost()."
+    }
+  ]
+}

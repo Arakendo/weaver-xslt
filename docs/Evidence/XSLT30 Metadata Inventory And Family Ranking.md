@@ -178,12 +178,20 @@ stylesheet-relative `xsl:source-document`, and a streaming dependency. The
 family overlay retains one engine gap while AR-0001 records why reproducing the
 expected value through buffering would not establish streamability.
 
+With streaming deferred, the next actionable ranked family is the two-case
+non-streaming `innermost` set. Both cases currently fail first on the static
+global `$RUN` referenced by `use-when`. Their fixed denominator then separates
+the common stylesheet-relative `doc()` and `innermost()` requirements from
+the grounded case's additional `snapshot()` requirement. Neither member is
+selected merely because Weaver already supports relative `doc()` in other
+contexts.
+
 ## Reproduction
 
 ```powershell
 npm run inventory:xslt30-metadata
 npm run rank:xslt30-families
-npx vitest run test/conformance/xslt30/metadataInventory.test.ts test/conformance/xslt30/familyRanking.test.ts test/conformance/xslt30/deep-equal-family.test.ts test/conformance/xslt30/for-family.test.ts test/conformance/xslt30/root-family.test.ts test/conformance/xslt30/on-non-empty-family.test.ts test/conformance/xslt30/current-family.test.ts test/conformance/xslt30/sf-fold-right-family.test.ts
+npx vitest run test/conformance/xslt30/metadataInventory.test.ts test/conformance/xslt30/familyRanking.test.ts test/conformance/xslt30/deep-equal-family.test.ts test/conformance/xslt30/for-family.test.ts test/conformance/xslt30/root-family.test.ts test/conformance/xslt30/on-non-empty-family.test.ts test/conformance/xslt30/current-family.test.ts test/conformance/xslt30/sf-fold-right-family.test.ts test/conformance/xslt30/innermost-family.test.ts
 ```
 
 These observations apply only to the pinned suite revision and the Weaver

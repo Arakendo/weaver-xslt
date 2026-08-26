@@ -130,7 +130,7 @@ execution back to upstream line 4.
 
 ## Phase 4: Metadata-driven XSLT30 widening
 
-**Status: in progress at the streaming fold-right decomposition checkpoint.**
+**Status: in progress at the innermost-family decomposition checkpoint.**
 
 - [x] Inventory dependency kinds, environment shapes, stylesheet references,
       and assertion families across all 14,600 XSLT30 cases.
@@ -242,6 +242,14 @@ claim. AR-0001 remains deferred because buffering this input could reproduce
 the expected output without proving streamability. Non-streaming prerequisites
 may advance independently; the corpus case will not be selected under a false
 streaming claim.
+
+Because AR-0001 keeps that streaming claim deferred, the next actionable
+denominator is the complete two-case non-streaming `innermost` family. Both
+members currently stop at the same static global variable used by `use-when`.
+Beyond that shared boundary, `innermost-901` isolates stylesheet-relative
+`doc()` plus `innermost()`, while `innermost-001` additionally applies
+`snapshot()`. The baseline retains both engine gaps before any static or node
+semantics change.
 
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
