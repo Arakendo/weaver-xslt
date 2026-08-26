@@ -13,3 +13,4 @@ than deleting them.
 - [Interpreter Source Decomposition](Interpreter%20Source%20Decomposition.md)
 - [Runtime Source Decomposition](Runtime%20Source%20Decomposition.md)
 - [CLI Source Decomposition](CLI%20Source%20Decomposition.md)
+- [Regex Source Decomposition](Regex%20Source%20Decomposition.md)
