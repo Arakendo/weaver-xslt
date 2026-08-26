@@ -9,4 +9,4 @@ checkboxes as execution history and mark superseded plans explicitly rather
 than deleting them.
 
 - [Codegen Source Decomposition](Codegen%20Source%20Decomposition.md)
-
+- [Static Analysis Source Decomposition](Static%20Analysis%20Source%20Decomposition.md)
