@@ -61,8 +61,8 @@ describePackageReference('integration Weaver.Build PackageReference consumers', 
 
 function prepareFreshWeaverBuildPackage(): void {
   execDotnet(
-    ['pack', WEAVER_BUILD_PROJECT, '-o', join('dotnet', 'Weaver.Build', 'artifacts')],
-    WORKSPACE_ROOT,
+    ['pack', 'Weaver.Build.csproj', '-o', 'artifacts'],
+    join(WORKSPACE_ROOT, 'dotnet', 'Weaver.Build'),
   );
 
   const globalPackagesPath = resolveGlobalPackagesPath();

@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { XMLSerializer, type Element } from '@xmldom/xmldom';
+
 import {
   XsltProcessor,
   type XmlTraceEvent,
@@ -12,6 +14,7 @@ import {
   type TransformOptions,
 } from '../src/index.js';
 import { composeStylesheetSourceFromFile } from '../src/processor/compile.js';
+import { parseXml } from '../src/xml/parse.js';
 
 interface AuditTarget {
   readonly fileName: string;
@@ -67,6 +70,7 @@ interface WorkerExecutionRequest {
   readonly mode: 'interpreter' | 'native' | 'bundle';
   readonly traceSummaryPath?: string;
   readonly captureTraceSummary?: boolean;
+  readonly refsLimit?: number;
 }
 
 interface ChildExecutionPayload {
@@ -82,6 +86,7 @@ interface TraceSummaryEntry {
 interface TraceSummary {
   readonly totalEvents: number;
   readonly eventCounts: Readonly<Record<string, number>>;
+  readonly topNodes: readonly TraceSummaryEntry[];
   readonly topTemplates: readonly TraceSummaryEntry[];
   readonly topInstructions: readonly TraceSummaryEntry[];
   readonly lastEvent?: string;
@@ -133,6 +138,8 @@ let format: 'json' | 'summary' = 'summary';
 let filterCaseName: string | undefined;
 let timeoutMs = 30_000;
 let captureTraceSummary = false;
+let refsLimit: number | undefined;
+let brLimit: number | undefined;
 let childMode = false;
 let childXmlPath: string | undefined;
 let childExistingHtmlPath: string | null = null;
@@ -161,6 +168,18 @@ for (let index = 0; index < args.length; index += 1) {
 
   if (argument === '--trace-summary') {
     captureTraceSummary = true;
+    continue;
+  }
+
+  if (argument === '--refs-limit') {
+    refsLimit = parseLimitArgument(args[index + 1], '--refs-limit');
+    index += 1;
+    continue;
+  }
+
+  if (argument === '--br-limit') {
+    brLimit = parseLimitArgument(args[index + 1], '--br-limit');
+    index += 1;
     continue;
   }
 
@@ -216,6 +235,8 @@ if (childMode) {
     mode: childExecutionMode,
     ...(childTraceSummaryPath === undefined ? {} : { traceSummaryPath: childTraceSummaryPath }),
     captureTraceSummary: childCaptureTraceSummary,
+    ...(refsLimit === undefined ? {} : { refsLimit }),
+    ...(brLimit === undefined ? {} : { brLimit }),
   });
   process.exit(0);
 }
@@ -269,18 +290,24 @@ async function createTargetReport(target: AuditTarget): Promise<TargetReport> {
     existingHtmlPath: existingHtml === null ? null : existingHtmlPath,
     mode: 'interpreter',
     captureTraceSummary,
+    ...(refsLimit === undefined ? {} : { refsLimit }),
+    ...(brLimit === undefined ? {} : { brLimit }),
   });
   const native = await executeModeWithTimeout({
     xmlPath,
     existingHtmlPath: existingHtml === null ? null : existingHtmlPath,
     mode: 'native',
     captureTraceSummary,
+    ...(refsLimit === undefined ? {} : { refsLimit }),
+    ...(brLimit === undefined ? {} : { brLimit }),
   });
   const bundle = await executeModeWithTimeout({
     xmlPath,
     existingHtmlPath: existingHtml === null ? null : existingHtmlPath,
     mode: 'bundle',
     captureTraceSummary,
+    ...(refsLimit === undefined ? {} : { refsLimit }),
+    ...(brLimit === undefined ? {} : { brLimit }),
   });
 
   return {
@@ -336,7 +363,11 @@ async function executeModeWithTimeout(
 }
 
 async function runChildMode(request: WorkerExecutionRequest): Promise<void> {
-  const sourceXml = readFileSync(request.xmlPath, 'utf8');
+  const sourceXml = limitDocumentIfRequested(
+    readFileSync(request.xmlPath, 'utf8'),
+    request.refsLimit,
+    request.brLimit,
+  );
   const existingHtml =
     request.existingHtmlPath !== null && existsSync(request.existingHtmlPath)
       ? readFileSync(request.existingHtmlPath, 'utf8')
@@ -461,8 +492,10 @@ function formatTraceSummary(traceSummary: TraceSummary | undefined): string {
 
   const topTemplate = traceSummary.topTemplates[0];
   const topInstruction = traceSummary.topInstructions[0];
+  const topNode = traceSummary.topNodes[0];
   return [
     `traceEvents=${traceSummary.totalEvents}`,
+    ...(topNode === undefined ? [] : [`hotNode=${JSON.stringify(topNode.key)} x${topNode.count}`]),
     ...(topTemplate === undefined
       ? []
       : [`hotTemplate=${JSON.stringify(topTemplate.key)} x${topTemplate.count}`]),
@@ -512,6 +545,84 @@ function parseTimeoutArgument(raw: string | undefined): number {
   return Math.floor(value);
 }
 
+function parseLimitArgument(raw: string | undefined, flagName: string): number {
+  if (raw === undefined) {
+    throw new Error(`${flagName} requires a numeric value.`);
+  }
+
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${flagName} requires a positive integer, got ${JSON.stringify(raw)}.`);
+  }
+
+  return value;
+}
+
+function limitDocumentIfRequested(
+  sourceXml: string,
+  refsLimitValue: number | undefined,
+  brLimitValue: number | undefined,
+): string {
+  if (refsLimitValue === undefined && brLimitValue === undefined) {
+    return sourceXml;
+  }
+
+  const document = parseXml(sourceXml, { role: 'source-document', sourceName: '<triage-input>' });
+  const content = findDirectChildElement(document.documentElement, 'content');
+  if (content !== undefined) {
+    if (refsLimitValue !== undefined) {
+      trimDirectChildElements(content, 'refs', refsLimitValue);
+    }
+
+    if (brLimitValue !== undefined) {
+      const brDoc = findDirectChildElement(content, 'brDoc');
+      const brDocRoot =
+        brDoc === undefined ? undefined : findDirectChildElement(brDoc, 'brLevelledPara');
+      if (brDocRoot !== undefined) {
+        trimDirectChildren(brDocRoot, brLimitValue);
+      }
+    }
+  }
+
+  const serializer = new XMLSerializer();
+  return serializer.serializeToString(document);
+}
+
+function trimDirectChildElements(parent: Element, childLocalName: string, limit: number): void {
+  const child = findDirectChildElement(parent, childLocalName);
+  if (child === undefined) {
+    return;
+  }
+
+  trimDirectChildren(child, limit);
+}
+
+function trimDirectChildren(parent: Element, limit: number): void {
+  let kept = 0;
+  for (let index = parent.childNodes.length - 1; index >= 0; index -= 1) {
+    const child = parent.childNodes.item(index);
+    if (child === null || child.nodeType !== 1) {
+      continue;
+    }
+
+    kept += 1;
+    if (kept > limit) {
+      parent.removeChild(child);
+    }
+  }
+}
+
+function findDirectChildElement(parent: Element, localName: string): Element | undefined {
+  for (let index = 0; index < parent.childNodes.length; index += 1) {
+    const child = parent.childNodes.item(index);
+    if (child !== null && child.nodeType === 1 && (child as Element).tagName === localName) {
+      return child as Element;
+    }
+  }
+
+  return undefined;
+}
+
 function createChildCommandArgs(request: WorkerExecutionRequest): string[] {
   return [
     TSX_CLI_PATH,
@@ -528,6 +639,7 @@ function createChildCommandArgs(request: WorkerExecutionRequest): string[] {
       ? []
       : ['--child-trace-summary-path', request.traceSummaryPath]),
     ...(request.captureTraceSummary === true ? ['--child-trace-summary'] : []),
+    ...(request.refsLimit === undefined ? [] : ['--refs-limit', String(request.refsLimit)]),
   ];
 }
 
@@ -587,6 +699,7 @@ function createTraceCollector(traceSummaryPath: string | undefined): {
   flush(): void;
 } {
   const eventCounts = new Map<string, number>();
+  const nodeCounts = new Map<string, number>();
   const templateCounts = new Map<string, number>();
   const instructionCounts = new Map<string, number>();
   let totalEvents = 0;
@@ -598,6 +711,7 @@ function createTraceCollector(traceSummaryPath: string | undefined): {
     eventCounts: Object.fromEntries(
       [...eventCounts.entries()].sort(([left], [right]) => left.localeCompare(right)),
     ),
+    topNodes: topEntries(nodeCounts),
     topTemplates: topEntries(templateCounts),
     topInstructions: topEntries(instructionCounts),
     ...(lastEvent === undefined ? {} : { lastEvent }),
@@ -615,6 +729,7 @@ function createTraceCollector(traceSummaryPath: string | undefined): {
     record(event: XmlTraceEvent): void {
       totalEvents += 1;
       eventCounts.set(event.kind, (eventCounts.get(event.kind) ?? 0) + 1);
+      nodeCounts.set(event.node.path, (nodeCounts.get(event.node.path) ?? 0) + 1);
 
       if (event.template?.match !== undefined || event.template?.name !== undefined) {
         const templateKey = event.template.match ?? `name:${event.template.name}`;

@@ -85,6 +85,7 @@ export function createBuiltinFunctionEvaluator(helpers: BuiltinFunctionHelpers):
   const support = createBuiltinFunctionSupport(helpers);
   const { evaluateOptionalSingletonItemArg, evaluateSingletonStringishArg, itemToStringValue } =
     support;
+  const documentCache = new Map<string, XdmItem[]>();
 
   const { evaluateStringBuiltinFunction } = createBuiltinStringFunctionEvaluator(helpers, support);
   const { evaluateSequenceBuiltinFunction } = createBuiltinSequenceFunctionEvaluator(
@@ -150,11 +151,18 @@ export function createBuiltinFunctionEvaluator(helpers: BuiltinFunctionHelpers):
 
         const uri = String((uriItems[0] as XdmAtomicValue).value);
         const resolvedPath = resolveDocumentPath(uri, context.staticContext.baseUri);
+        const cachedDocument = documentCache.get(resolvedPath);
+        if (cachedDocument !== undefined) {
+          return cachedDocument;
+        }
+
         const document = parseXml(readFileSync(resolvedPath, 'utf8'), {
           role: 'source-document',
           sourceName: resolvedPath,
         });
-        return [createXdmNode(document)];
+        const result = [createXdmNode(document)];
+        documentCache.set(resolvedPath, result);
+        return result;
       }
       case 'fn:deep-equal':
         helpers.requireArity(normalized, args, 2, span);

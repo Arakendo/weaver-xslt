@@ -42,8 +42,9 @@
     <None Include="..\..\node_modules\esbuild\lib\**" Pack="true" PackagePath="tools/weaver/node_modules/esbuild/lib/" />
     <None Include="..\..\node_modules\esbuild\bin\**" Pack="true" PackagePath="tools/weaver/node_modules/esbuild/bin/" />
 
-    <None Include="..\..\node_modules\@esbuild\darwin-arm64\package.json" Pack="true" PackagePath="tools/weaver/node_modules/@esbuild/darwin-arm64/" />
-    <None Include="..\..\node_modules\@esbuild\darwin-arm64\bin\**" Pack="true" PackagePath="tools/weaver/node_modules/@esbuild/darwin-arm64/bin/" />
+    <None Include="..\..\node_modules\@esbuild\win32-x64\package.json" Pack="true" PackagePath="tools/weaver/node_modules/@esbuild/win32-x64/" />
+    <None Include="..\..\node_modules\@esbuild\win32-x64\README.md" Pack="true" PackagePath="tools/weaver/node_modules/@esbuild/win32-x64/" />
+    <None Include="..\..\node_modules\@esbuild\win32-x64\esbuild.exe" Pack="true" PackagePath="tools/weaver/node_modules/@esbuild/win32-x64/" />
 
     <None Include="..\..\node_modules\typescript\package.json" Pack="true" PackagePath="tools/weaver/node_modules/typescript/" />
     <None Include="..\..\node_modules\typescript\lib\**\*.js;..\..\node_modules\typescript\lib\**\*.json" Pack="true" PackagePath="tools/weaver/node_modules/typescript/lib/" />

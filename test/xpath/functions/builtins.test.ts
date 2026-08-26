@@ -1,4 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import * as fs from 'node:fs';
+
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('node:fs', async () => {
+  const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
+  return {
+    ...actual,
+    readFileSync: vi.fn(actual.readFileSync),
+  };
+});
 
 import { XPathError } from '../../../src/errors/XPathError.js';
 import { parseXml } from '../../../src/xml/parse.js';
@@ -95,7 +109,9 @@ describe('XPath built-in function coverage', () => {
   });
 
   it('evaluates string-value and atomization built-ins', () => {
-    const context = createContext('<root><item>A</item><item>12.5</item><group><leaf>B</leaf></group></root>');
+    const context = createContext(
+      '<root><item>A</item><item>12.5</item><group><leaf>B</leaf></group></root>',
+    );
 
     expect([...evaluate(parseXPath('string(/root/item[1])'), context)]).toMatchObject([
       { type: 'xs:string', value: 'A' },
@@ -163,19 +179,22 @@ describe('XPath built-in function coverage', () => {
     expect([...evaluate(parseXPath('generate-id(/root/p:item)'), context)]).toMatchObject([
       { type: 'xs:string', value: expect.stringMatching(/^d\d+$/) },
     ]);
-    expect([...evaluate(parseXPath('generate-id(/root/p:item) = generate-id(/root/p:item)'), context)]).toMatchObject([
-      { type: 'xs:boolean', value: true },
-    ]);
+    expect([
+      ...evaluate(parseXPath('generate-id(/root/p:item) = generate-id(/root/p:item)'), context),
+    ]).toMatchObject([{ type: 'xs:boolean', value: true }]);
     expect([...evaluate(parseXPath('node-name(/root/p:item)'), context)]).toMatchObject([
       { type: 'xs:QName', value: 'p:item' },
     ]);
-    expect([...evaluate(parseXPath('local-name-from-QName(node-name(/root/p:item))'), context)]).toMatchObject([
-      { type: 'xs:string', value: 'item' },
-    ]);
+    expect([
+      ...evaluate(parseXPath('local-name-from-QName(node-name(/root/p:item))'), context),
+    ]).toMatchObject([{ type: 'xs:string', value: 'item' }]);
     expect([...evaluate(parseXPath('node-name(root(/root/p:item))'), context)]).toEqual([]);
-    expect([...evaluate(parseXPath('name((//namespace::*[. = "http://www.w3.org/XML/1998/namespace"])[1])'), createContext('<root xmlns:xml="http://www.w3.org/XML/1998/namespace"/>'))]).toMatchObject([
-      { type: 'xs:string', value: 'xml' },
-    ]);
+    expect([
+      ...evaluate(
+        parseXPath('name((//namespace::*[. = "http://www.w3.org/XML/1998/namespace"])[1])'),
+        createContext('<root xmlns:xml="http://www.w3.org/XML/1998/namespace"/>'),
+      ),
+    ]).toMatchObject([{ type: 'xs:string', value: 'xml' }]);
 
     const commentedDocumentContext = createContext('<!--lead--><root/>');
     expect([...evaluate(parseXPath('name(/*)'), commentedDocumentContext)]).toMatchObject([
@@ -183,12 +202,18 @@ describe('XPath built-in function coverage', () => {
     ]);
 
     const attributeParentContext = createContext('<works><employee name="Ada"/></works>');
-    expect([...evaluate(parseXPath('for $h in (/works/employee/@name) return name($h/parent::node())'), attributeParentContext)]).toMatchObject([
-      { type: 'xs:string', value: 'employee' },
-    ]);
-    expect([...evaluate(parseXPath('for $h in (/works/employee/@name) return local-name($h/parent::node())'), attributeParentContext)]).toMatchObject([
-      { type: 'xs:string', value: 'employee' },
-    ]);
+    expect([
+      ...evaluate(
+        parseXPath('for $h in (/works/employee/@name) return name($h/parent::node())'),
+        attributeParentContext,
+      ),
+    ]).toMatchObject([{ type: 'xs:string', value: 'employee' }]);
+    expect([
+      ...evaluate(
+        parseXPath('for $h in (/works/employee/@name) return local-name($h/parent::node())'),
+        attributeParentContext,
+      ),
+    ]).toMatchObject([{ type: 'xs:string', value: 'employee' }]);
   });
 
   it('evaluates sequence-shaping built-ins', () => {
@@ -197,7 +222,9 @@ describe('XPath built-in function coverage', () => {
     const reversed = [...evaluate(parseXPath('reverse(/root/item)'), context)] as XdmNode[];
     const head = [...evaluate(parseXPath('head(/root/item)'), context)] as XdmNode[];
     const tail = [...evaluate(parseXPath('tail(/root/item)'), context)] as XdmNode[];
-    const subsequence = [...evaluate(parseXPath('subsequence(/root/item, 2, 2)'), context)] as XdmNode[];
+    const subsequence = [
+      ...evaluate(parseXPath('subsequence(/root/item, 2, 2)'), context),
+    ] as XdmNode[];
     const exact = [...evaluate(parseXPath('exactly-one(/root/item[2])'), context)] as XdmNode[];
     const zeroOrOne = [...evaluate(parseXPath('zero-or-one(/root/item[2])'), context)] as XdmNode[];
     const oneOrMore = [...evaluate(parseXPath('one-or-more(/root/item)'), context)] as XdmNode[];
@@ -209,9 +236,9 @@ describe('XPath built-in function coverage', () => {
     expect([...evaluate(parseXPath('subsequence((1, 2, 3), 1.8, 1)'), context)]).toMatchObject([
       { type: 'xs:double', value: 2 },
     ]);
-    expect([...evaluate(parseXPath('subsequence(("a", 0 div 0E0, "b", "c"), 0, 2)'), context)]).toMatchObject([
-      { type: 'xs:string', value: 'a' },
-    ]);
+    expect([
+      ...evaluate(parseXPath('subsequence(("a", 0 div 0E0, "b", "c"), 0, 2)'), context),
+    ]).toMatchObject([{ type: 'xs:string', value: 'a' }]);
     expect(exact.map((item) => item.node.textContent)).toEqual(['B']);
     expect(zeroOrOne.map((item) => item.node.textContent)).toEqual(['B']);
     expect(oneOrMore.map((item) => item.node.textContent)).toEqual(['A', 'B', 'C']);
@@ -250,9 +277,9 @@ describe('XPath built-in function coverage', () => {
     expect([...evaluate(parseXPath('contains(/root/item[2], "Case")'), context)]).toMatchObject([
       { type: 'xs:boolean', value: true },
     ]);
-    expect([...evaluate(parseXPath('starts-with(/root/item[2], "Mixed")'), context)]).toMatchObject([
-      { type: 'xs:boolean', value: true },
-    ]);
+    expect([...evaluate(parseXPath('starts-with(/root/item[2], "Mixed")'), context)]).toMatchObject(
+      [{ type: 'xs:boolean', value: true }],
+    );
     expect([...evaluate(parseXPath('ends-with(/root/item[2], "Case")'), context)]).toMatchObject([
       { type: 'xs:boolean', value: true },
     ]);
@@ -271,12 +298,12 @@ describe('XPath built-in function coverage', () => {
     expect([...evaluate(parseXPath('substring("12345", 1.5, 2.6)'), context)]).toMatchObject([
       { type: 'xs:string', value: '234' },
     ]);
-    expect([...evaluate(parseXPath('count(substring("12345", 0 div 0E0, 3))'), context)]).toMatchObject([
-      { type: 'xs:integer', value: 1 },
-    ]);
-    expect([...evaluate(parseXPath('count(substring("12345", 1, 0 div 0E0))'), context)]).toMatchObject([
-      { type: 'xs:integer', value: 1 },
-    ]);
+    expect([
+      ...evaluate(parseXPath('count(substring("12345", 0 div 0E0, 3))'), context),
+    ]).toMatchObject([{ type: 'xs:integer', value: 1 }]);
+    expect([
+      ...evaluate(parseXPath('count(substring("12345", 1, 0 div 0E0))'), context),
+    ]).toMatchObject([{ type: 'xs:integer', value: 1 }]);
     expect([...evaluate(parseXPath('substring("A😀B", 2, 1)'), context)]).toMatchObject([
       { type: 'xs:string', value: '😀' },
     ]);
@@ -303,9 +330,12 @@ describe('XPath built-in function coverage', () => {
       { type: 'xs:integer', value: 128512 },
       { type: 'xs:integer', value: 66 },
     ]);
-    expect([...evaluate(parseXPath('count(for $s in ("red", "blue", "green") return string-to-codepoints($s))'), context)]).toMatchObject([
-      { type: 'xs:integer', value: 12 },
-    ]);
+    expect([
+      ...evaluate(
+        parseXPath('count(for $s in ("red", "blue", "green") return string-to-codepoints($s))'),
+        context,
+      ),
+    ]).toMatchObject([{ type: 'xs:integer', value: 12 }]);
     expect([...evaluate(parseXPath('string-join(/root/item, "|")'), context)]).toMatchObject([
       { type: 'xs:string', value: '  A  B  |MixedCase' },
     ]);
@@ -319,91 +349,114 @@ describe('XPath built-in function coverage', () => {
       { type: 'xs:string', value: 'abc' },
       { type: 'xs:string', value: 'def' },
     ]);
-    expect([...evaluate(parseXPath('count(tokenize(codepoints-to-string((97, 98, 99, 160, 100, 101, 102))))'), context)]).toMatchObject([
-      { type: 'xs:integer', value: 1 },
-    ]);
+    expect([
+      ...evaluate(
+        parseXPath('count(tokenize(codepoints-to-string((97, 98, 99, 160, 100, 101, 102))))'),
+        context,
+      ),
+    ]).toMatchObject([{ type: 'xs:integer', value: 1 }]);
     expect([...evaluate(parseXPath('tokenize(())'), context)]).toEqual([]);
     expect(() => [...evaluate(parseXPath('tokenize("input", ())'), context)]).toThrowError(
       expect.objectContaining({ code: 'XPTY0004' } satisfies Partial<XPathError>),
     );
-    expect([...evaluate(parseXPath('replace("a?bracadabra?", "a?", "\\$1", "q")'), context)]).toMatchObject([
-      { type: 'xs:string', value: '\\$1bracadabr\\$1' },
-    ]);
-    expect([...evaluate(parseXPath(`replace("Now, let's SEND OUT for QUICHE!!", "[A-Z][A-Z]+", "$0$0")`), context)]).toMatchObject([
+    expect([
+      ...evaluate(parseXPath('replace("a?bracadabra?", "a?", "\\$1", "q")'), context),
+    ]).toMatchObject([{ type: 'xs:string', value: '\\$1bracadabr\\$1' }]);
+    expect([
+      ...evaluate(
+        parseXPath(`replace("Now, let's SEND OUT for QUICHE!!", "[A-Z][A-Z]+", "$0$0")`),
+        context,
+      ),
+    ]).toMatchObject([
       { type: 'xs:string', value: "Now, let's SENDSEND OUTOUT for QUICHEQUICHE!!" },
     ]);
-    expect(() => [...evaluate(parseXPath('replace("input", (), "replacement")'), context)]).toThrowError(
-      expect.objectContaining({ code: 'XPTY0004' } satisfies Partial<XPathError>),
-    );
-    expect(() => [...evaluate(parseXPath('replace("input", "pattern", ())'), context)]).toThrowError(
-      expect.objectContaining({ code: 'XPTY0004' } satisfies Partial<XPathError>),
-    );
-    expect(() => [...evaluate(parseXPath('replace("abcd", "(asd)[\\1]", "")'), context)]).toThrowError(
-      expect.objectContaining({ code: 'FORX0002' } satisfies Partial<XPathError>),
-    );
-    expect(() => [...evaluate(parseXPath('replace("abcd", "1[asd\\0]", "")'), context)]).toThrowError(
-      expect.objectContaining({ code: 'FORX0002' } satisfies Partial<XPathError>),
-    );
-    expect([...evaluate(parseXPath("matches(codepoints-to-string(8490), '[A-Z]', 'i')"), context)]).toMatchObject([
-      { type: 'xs:boolean', value: true },
-    ]);
-    expect([...evaluate(parseXPath("matches(codepoints-to-string(1632), '^(?:\\d)$')"), context)]).toMatchObject([
-      { type: 'xs:boolean', value: true },
-    ]);
+    expect(() => [
+      ...evaluate(parseXPath('replace("input", (), "replacement")'), context),
+    ]).toThrowError(expect.objectContaining({ code: 'XPTY0004' } satisfies Partial<XPathError>));
+    expect(() => [
+      ...evaluate(parseXPath('replace("input", "pattern", ())'), context),
+    ]).toThrowError(expect.objectContaining({ code: 'XPTY0004' } satisfies Partial<XPathError>));
+    expect(() => [
+      ...evaluate(parseXPath('replace("abcd", "(asd)[\\1]", "")'), context),
+    ]).toThrowError(expect.objectContaining({ code: 'FORX0002' } satisfies Partial<XPathError>));
+    expect(() => [
+      ...evaluate(parseXPath('replace("abcd", "1[asd\\0]", "")'), context),
+    ]).toThrowError(expect.objectContaining({ code: 'FORX0002' } satisfies Partial<XPathError>));
+    expect([
+      ...evaluate(parseXPath("matches(codepoints-to-string(8490), '[A-Z]', 'i')"), context),
+    ]).toMatchObject([{ type: 'xs:boolean', value: true }]);
+    expect([
+      ...evaluate(parseXPath("matches(codepoints-to-string(1632), '^(?:\\d)$')"), context),
+    ]).toMatchObject([{ type: 'xs:boolean', value: true }]);
     expect([...evaluate(parseXPath("matches('-12', '^(?:\\-\\d\\d)$')"), context)]).toMatchObject([
       { type: 'xs:boolean', value: true },
     ]);
-    expect([...evaluate(parseXPath("matches(codepoints-to-string(58), '^(?:\\d)$')"), context)]).toMatchObject([
-      { type: 'xs:boolean', value: false },
-    ]);
+    expect([
+      ...evaluate(parseXPath("matches(codepoints-to-string(58), '^(?:\\d)$')"), context),
+    ]).toMatchObject([{ type: 'xs:boolean', value: false }]);
     expect([...evaluate(parseXPath("matches('A', '^(?:\\W)$')"), context)]).toMatchObject([
       { type: 'xs:boolean', value: false },
     ]);
     expect([...evaluate(parseXPath("matches(' ', '^(?:\\W)$')"), context)]).toMatchObject([
       { type: 'xs:boolean', value: true },
     ]);
-    expect([...evaluate(parseXPath("matches(codepoints-to-string(65536), '^(?:[𐀀])$')"), context)]).toMatchObject([
-      { type: 'xs:boolean', value: true },
-    ]);
-    expect([...evaluate(parseXPath("let $d := codepoints-to-string(13) return matches($d||$d||'a'||$d||$d||'b'||$d||$d, '^\\r\\ra\\r\\rb\\r\\r$')"), context)]).toMatchObject([
-      { type: 'xs:boolean', value: true },
-    ]);
-    expect([...evaluate(parseXPath("matches('abcdefghiabcdefghia0a1', '(a)(b)(c)(d)(e)(f)(g)(h)(i)\\1\\2\\3\\4\\5\\6\\7\\8\\9\\10\\11')"), context)]).toMatchObject([
-      { type: 'xs:boolean', value: true },
-    ]);
+    expect([
+      ...evaluate(parseXPath("matches(codepoints-to-string(65536), '^(?:[𐀀])$')"), context),
+    ]).toMatchObject([{ type: 'xs:boolean', value: true }]);
+    expect([
+      ...evaluate(
+        parseXPath(
+          "let $d := codepoints-to-string(13) return matches($d||$d||'a'||$d||$d||'b'||$d||$d, '^\\r\\ra\\r\\rb\\r\\r$')",
+        ),
+        context,
+      ),
+    ]).toMatchObject([{ type: 'xs:boolean', value: true }]);
+    expect([
+      ...evaluate(
+        parseXPath(
+          "matches('abcdefghiabcdefghia0a1', '(a)(b)(c)(d)(e)(f)(g)(h)(i)\\1\\2\\3\\4\\5\\6\\7\\8\\9\\10\\11')",
+        ),
+        context,
+      ),
+    ]).toMatchObject([{ type: 'xs:boolean', value: true }]);
     expect(() => [...evaluate(parseXPath('matches("input", ())'), context)]).toThrowError(
       expect.objectContaining({ code: 'XPTY0004' } satisfies Partial<XPathError>),
     );
-    expect(() => [...evaluate(parseXPath('matches("input", "pattern", ())'), context)]).toThrowError(
-      expect.objectContaining({ code: 'XPTY0004' } satisfies Partial<XPathError>),
-    );
+    expect(() => [
+      ...evaluate(parseXPath('matches("input", "pattern", ())'), context),
+    ]).toThrowError(expect.objectContaining({ code: 'XPTY0004' } satisfies Partial<XPathError>));
     expect(() => [...evaluate(parseXPath('matches("foo", "[a-\\b]")'), context)]).toThrowError(
       expect.objectContaining({ code: 'FORX0002' } satisfies Partial<XPathError>),
     );
     expect(() => [...evaluate(parseXPath('matches("foo", "[^]")'), context)]).toThrowError(
       expect.objectContaining({ code: 'FORX0002' } satisfies Partial<XPathError>),
     );
-    expect(() => [...evaluate(parseXPath('matches("qwerty", "[\\u0100\\u0102\\u0104]+")'), context)]).toThrowError(
-      expect.objectContaining({ code: 'FORX0002' } satisfies Partial<XPathError>),
-    );
+    expect(() => [
+      ...evaluate(parseXPath('matches("qwerty", "[\\u0100\\u0102\\u0104]+")'), context),
+    ]).toThrowError(expect.objectContaining({ code: 'FORX0002' } satisfies Partial<XPathError>));
     expect(() => [...evaluate(parseXPath('matches("qwerty", "[\\p]")'), context)]).toThrowError(
       expect.objectContaining({ code: 'FORX0002' } satisfies Partial<XPathError>),
     );
     expect(() => [...evaluate(parseXPath('matches("qwerty", "{5")'), context)]).toThrowError(
       expect.objectContaining({ code: 'FORX0002' } satisfies Partial<XPathError>),
     );
-    expect([...evaluate(parseXPath('matches("azBCDE1234567890BCDEFza", "^(?:([^0-9-[a-zAE-Z]]|[\\w-[a-zAF-Z]])+)$")'), context)]).toMatchObject([
-      { type: 'xs:boolean', value: false },
-    ]);
-    expect([...evaluate(parseXPath('matches("first.last@seznam.cz", "^(?:[\\w\\-\\.]+@.*)$")'), context)]).toMatchObject([
-      { type: 'xs:boolean', value: true },
-    ]);
-    expect([...evaluate(parseXPath('matches("first-last@seznam.cz", "^(?:[\\w\\-\\.]+@.*)$")'), context)]).toMatchObject([
-      { type: 'xs:boolean', value: true },
-    ]);
-    expect([...evaluate(parseXPath('matches("first_last@seznam.cz", "^(?:[\\w\\-\\.]+@.*)$")'), context)]).toMatchObject([
-      { type: 'xs:boolean', value: false },
-    ]);
+    expect([
+      ...evaluate(
+        parseXPath(
+          'matches("azBCDE1234567890BCDEFza", "^(?:([^0-9-[a-zAE-Z]]|[\\w-[a-zAF-Z]])+)$")',
+        ),
+        context,
+      ),
+    ]).toMatchObject([{ type: 'xs:boolean', value: false }]);
+    expect([
+      ...evaluate(parseXPath('matches("first.last@seznam.cz", "^(?:[\\w\\-\\.]+@.*)$")'), context),
+    ]).toMatchObject([{ type: 'xs:boolean', value: true }]);
+    expect([
+      ...evaluate(parseXPath('matches("first-last@seznam.cz", "^(?:[\\w\\-\\.]+@.*)$")'), context),
+    ]).toMatchObject([{ type: 'xs:boolean', value: true }]);
+    expect([
+      ...evaluate(parseXPath('matches("first_last@seznam.cz", "^(?:[\\w\\-\\.]+@.*)$")'), context),
+    ]).toMatchObject([{ type: 'xs:boolean', value: false }]);
     expect([...evaluate(parseXPath('matches("alpha", "alp^?ha")'), context)]).toMatchObject([
       { type: 'xs:boolean', value: true },
     ]);
@@ -422,12 +475,15 @@ describe('XPath built-in function coverage', () => {
     expect([...evaluate(parseXPath('matches("alpha", "alp${2,4}ha")'), context)]).toMatchObject([
       { type: 'xs:boolean', value: false },
     ]);
-    expect([...evaluate(parseXPath(String.raw`matches("hello world", "hello\ sworld", "x")`), context)]).toMatchObject([
-      { type: 'xs:boolean', value: true },
-    ]);
-    expect([...evaluate(parseXPath('string(//namespace::*[. = "http://www.w3.org/XML/1998/namespace"][1])'), createContext('<root xmlns:xml="http://www.w3.org/XML/1998/namespace"/>'))]).toMatchObject([
-      { type: 'xs:string', value: 'http://www.w3.org/XML/1998/namespace' },
-    ]);
+    expect([
+      ...evaluate(parseXPath(String.raw`matches("hello world", "hello\ sworld", "x")`), context),
+    ]).toMatchObject([{ type: 'xs:boolean', value: true }]);
+    expect([
+      ...evaluate(
+        parseXPath('string(//namespace::*[. = "http://www.w3.org/XML/1998/namespace"][1])'),
+        createContext('<root xmlns:xml="http://www.w3.org/XML/1998/namespace"/>'),
+      ),
+    ]).toMatchObject([{ type: 'xs:string', value: 'http://www.w3.org/XML/1998/namespace' }]);
   });
 
   it('raises FOCH0001 for invalid XML codepoints', () => {
@@ -446,18 +502,63 @@ describe('XPath built-in function coverage', () => {
     );
   });
 
+  it('caches document() loads within a single evaluation', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-document-cache-'));
+    const documentPath = join(tempDir, 'document.xml');
+    writeFileSync(documentPath, '<root><value>cached</value></root>', 'utf8');
+
+    try {
+      const context = createContext('<root/>');
+      const documentUri = `file:///${documentPath.replace(/\\/g, '/')}`;
+      const expression = `string-join((document('${documentUri}')/root/value, document('${documentUri}')/root/value), '|')`;
+
+      expect([...evaluate(parseXPath(expression), context)]).toMatchObject([
+        { type: 'xs:string', value: 'cached|cached' },
+      ]);
+
+      const readFileSyncMock = vi.mocked(fs.readFileSync);
+      expect(
+        readFileSyncMock.mock.calls.filter((call) => String(call[0]) === documentPath).length,
+      ).toBe(1);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('evaluates document-backed data lookups through a variable root', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-document-data-lookup-'));
+    const documentPath = join(tempDir, 'English.resx');
+    writeFileSync(
+      documentPath,
+      '<root><data name="PdfApplicTo"><value>Applicable to</value></data></root>',
+      'utf8',
+    );
+
+    try {
+      const context = createContext('<root/>');
+      const documentUri = `file:///${documentPath.replace(/\\/g, '/')}`;
+      const expression = `let $doc := document('${documentUri}') return string($doc/root/data[@name = "PdfApplicTo"]/value)`;
+
+      expect([...evaluate(parseXPath(expression), context)]).toMatchObject([
+        { type: 'xs:string', value: 'Applicable to' },
+      ]);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
   it('evaluates deep-equal over sequences and nodes', () => {
     const context = createContext('<root><item>A</item><item>A</item></root>');
 
-    expect([...evaluate(parseXPath('deep-equal((1, 2, 3), (1, 2, 3)[true()])'), context)]).toMatchObject([
-      { type: 'xs:boolean', value: true },
-    ]);
+    expect([
+      ...evaluate(parseXPath('deep-equal((1, 2, 3), (1, 2, 3)[true()])'), context),
+    ]).toMatchObject([{ type: 'xs:boolean', value: true }]);
     expect([...evaluate(parseXPath('deep-equal((1, 2, 3), (1, 2))'), context)]).toMatchObject([
       { type: 'xs:boolean', value: false },
     ]);
-    expect([...evaluate(parseXPath('deep-equal(/root/item[1], /root/item[2])'), context)]).toMatchObject([
-      { type: 'xs:boolean', value: true },
-    ]);
+    expect([
+      ...evaluate(parseXPath('deep-equal(/root/item[1], /root/item[2])'), context),
+    ]).toMatchObject([{ type: 'xs:boolean', value: true }]);
   });
 
   it('constructs QNames and rejects their effective boolean value', () => {
@@ -466,13 +567,16 @@ describe('XPath built-in function coverage', () => {
     expect([...evaluate(parseXPath('QName("urn:test", "p:name")'), context)]).toMatchObject([
       { type: 'xs:QName', value: 'p:name' },
     ]);
-    expect(([...evaluate(parseXPath('map:entry("a", "string")'), context)][0] as { xdmKind?: string })?.xdmKind).toBe('map');
-    expect(() => [...evaluate(parseXPath('string(map:entry("a", "string"))'), context)]).toThrowError(
-      expect.objectContaining({ code: 'FOTY0014' } satisfies Partial<XPathError>),
-    );
-    expect(() => [...evaluate(parseXPath('boolean(QName("urn:test", "p:name"))'), context)]).toThrowError(
-      expect.objectContaining({ code: 'FORG0006' } satisfies Partial<XPathError>),
-    );
+    expect(
+      ([...evaluate(parseXPath('map:entry("a", "string")'), context)][0] as { xdmKind?: string })
+        ?.xdmKind,
+    ).toBe('map');
+    expect(() => [
+      ...evaluate(parseXPath('string(map:entry("a", "string"))'), context),
+    ]).toThrowError(expect.objectContaining({ code: 'FOTY0014' } satisfies Partial<XPathError>));
+    expect(() => [
+      ...evaluate(parseXPath('boolean(QName("urn:test", "p:name"))'), context),
+    ]).toThrowError(expect.objectContaining({ code: 'FORG0006' } satisfies Partial<XPathError>));
   });
 
   it('evaluates numeric aggregation built-ins', () => {
@@ -509,19 +613,25 @@ describe('XPath built-in function coverage', () => {
     expect([...evaluate(parseXPath('min((false(), true(), false()))'), context)]).toMatchObject([
       { type: 'xs:boolean', value: false },
     ]);
-    expect(() => [...evaluate(parseXPath('max(("str1", "str2"), "http://example.com/UNSUPPORTED_COLLATION")'), context)]).toThrowError(
-      expect.objectContaining({ code: 'FOCH0002' } satisfies Partial<XPathError>),
-    );
+    expect(() => [
+      ...evaluate(
+        parseXPath('max(("str1", "str2"), "http://example.com/UNSUPPORTED_COLLATION")'),
+        context,
+      ),
+    ]).toThrowError(expect.objectContaining({ code: 'FOCH0002' } satisfies Partial<XPathError>));
     expect([...evaluate(parseXPath('sum(/root/missing)'), context)]).toMatchObject([
       { type: 'xs:double', value: 0 },
     ]);
     expect([...evaluate(parseXPath('avg(/root/missing)'), context)]).toEqual([]);
-    expect(() => [...evaluate(parseXPath('avg(/root/textValue)'), createContext('<root><textValue>A</textValue></root>'))]).toThrowError(
-      expect.objectContaining({ code: 'FORG0001' } satisfies Partial<XPathError>),
-    );
-    expect(() => [...evaluate(parseXPath('max(QName("urn:test", "p:name"))'), context)]).toThrowError(
-      expect.objectContaining({ code: 'FORG0006' } satisfies Partial<XPathError>),
-    );
+    expect(() => [
+      ...evaluate(
+        parseXPath('avg(/root/textValue)'),
+        createContext('<root><textValue>A</textValue></root>'),
+      ),
+    ]).toThrowError(expect.objectContaining({ code: 'FORG0001' } satisfies Partial<XPathError>));
+    expect(() => [
+      ...evaluate(parseXPath('max(QName("urn:test", "p:name"))'), context),
+    ]).toThrowError(expect.objectContaining({ code: 'FORG0006' } satisfies Partial<XPathError>));
   });
 
   it('evaluates distinct-values over atomized sequences', () => {

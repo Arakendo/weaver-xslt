@@ -154,6 +154,22 @@ Trace events explain runtime flow.
 If a paused event later turns into an error, the host may show both, but Weaver
 should keep the two contracts distinct.
 
+### 7. Summaries are the first aggregation layer
+
+The raw event stream is useful for precise debugging, but long-running cases
+also need a cheap aggregate view. Weaver should be able to return a
+`traceSummary` alongside the transform result when tracing is enabled.
+
+The first slice should summarize:
+
+- total event count
+- per-kind event counts
+- the most active template and instruction keys
+- the last observed trace event
+
+That gives hosts a low-cost answer to "what was this transform doing?" without
+requiring the full event log.
+
 ## Recommended contract shape
 
 The exact public names can evolve. The important part is the separation of
@@ -184,11 +200,7 @@ Notes:
 
 ```ts
 export interface XmlTraceEvent {
-  kind:
-    | 'focus-enter'
-    | 'template-enter'
-    | 'instruction-select'
-    | 'value-read';
+  kind: 'focus-enter' | 'template-enter' | 'instruction-select' | 'value-read';
   node: XmlNodeHandle;
   template?: {
     match?: string;

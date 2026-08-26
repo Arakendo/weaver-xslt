@@ -23,6 +23,7 @@ import {
   createTemporaryTreeNode,
   escapeAttribute,
   escapeText,
+  appendTraceSummary,
   localNameOfNode,
   matchesTemplatePath,
   selectDescendantElementTextByName,
@@ -37,6 +38,7 @@ import {
   stringValueOfNode,
   getRecordedTracePause,
   resetRecordedTracePause,
+  resetRecordedTraceSummary,
   traceFocusEnter,
   traceSelectedNodes,
   traceStringValueOfNode,
@@ -123,11 +125,12 @@ export class XsltProcessor {
       options,
       result,
     );
+    const resultWithTraceSummary = appendTraceSummary(options, resultWithCoverage);
 
     return executionInfo === undefined
-      ? resultWithCoverage
+      ? resultWithTraceSummary
       : {
-          ...resultWithCoverage,
+          ...resultWithTraceSummary,
           execution: executionInfo,
         };
   }
@@ -322,6 +325,7 @@ function executeNativeTransformPlan(
   context: TransformOptions,
 ): TransformResult {
   resetRecordedTracePause(context.trace);
+  resetRecordedTraceSummary(context.trace);
   const useInitialTemplateEntry =
     context.initialTemplate !== undefined && plan.initialTemplateName !== undefined;
   const activeEntryTemplate =
@@ -414,7 +418,7 @@ function executeNativeTransformPlan(
 
   const result = executeNative(sourceXml, context, NATIVE_RUNTIME_HELPERS);
   const pause = getRecordedTracePause(context.trace);
-  return pause === undefined ? result : { ...result, pause };
+  return appendTraceSummary(context, pause === undefined ? result : { ...result, pause });
 }
 
 function createExecutionFallbackReason(

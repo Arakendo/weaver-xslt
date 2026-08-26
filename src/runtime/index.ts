@@ -1,4 +1,7 @@
-import type { Node } from '@xmldom/xmldom';
+import { readFileSync } from 'node:fs';
+import type { Element, Node } from '@xmldom/xmldom';
+import { dirname, isAbsolute, resolve as resolvePath } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import type {
   TransformOptions,
@@ -6,7 +9,6 @@ import type {
   XmlNodeHandle,
   XmlTraceEvent,
   XmlTraceInstructionInfo,
-  XmlTracePause,
   XmlTraceTemplateInfo,
 } from '../processor/types.js';
 import { appendCoverageWarnings } from '../processor/coverage.js';
@@ -32,6 +34,7 @@ import {
   isTraceEnabled,
   resetRecordedTracePause,
 } from './tracePause.js';
+import { getRecordedTraceSummary, resetRecordedTraceSummary } from './traceSummary.js';
 import { computeLevenshteinDistance } from '../xslt/diagnostics.js';
 import { normalizeTemplateName } from '../xslt/eval/templateDispatch.js';
 import { runTransform } from '../xslt/eval/transform.js';
@@ -40,7 +43,14 @@ export { appendCoverageWarnings } from '../processor/coverage.js';
 
 export type TransformContext = TransformOptions;
 
-export type { TransformOptions, TransformResult, StylesheetIR, XmlNodeHandle, XmlTracePause };
+export type {
+  TransformOptions,
+  TransformResult,
+  XmlNodeHandle,
+  XmlTracePause,
+  XmlTraceSummary,
+  XmlTraceSummaryEntry,
+} from '../processor/types.js';
 
 export function createCompiledDocument(sourceXml: string): Document {
   return parseXml(sourceXml, { role: 'source-document', sourceName: '<source-xml>' });
@@ -75,7 +85,17 @@ function emitTraceEvent(ctx: TransformContext, event: XmlTraceEvent): void {
   publishTraceEvent(ctx.trace, event);
 }
 
-export { getRecordedTracePause, resetRecordedTracePause };
+export {
+  getRecordedTracePause,
+  getRecordedTraceSummary,
+  resetRecordedTracePause,
+  resetRecordedTraceSummary,
+};
+
+const simplePathNodeCache = new WeakMap<Node, Map<string, Node | null>>();
+const simplePathNodesCache = new WeakMap<Node, Map<string, readonly Node[]>>();
+const simplePathNodesByStepPlanCache = new WeakMap<Node, Map<string, readonly Node[]>>();
+const documentDataValueIndexCache = new Map<string, Map<string, Node | null>>();
 
 export function traceFocusEnter(node: Node, ctx: TransformContext): Node {
   if (!isTraceEnabled(ctx.trace)) {
@@ -186,6 +206,13 @@ export function createTemporaryTreeNode(serializedContent: string): Node {
 }
 
 export function selectSimplePathNode(startNode: Node, path: readonly string[]): Node | null {
+  const pathKey = JSON.stringify(path);
+  const cachedStartNodeEntries = simplePathNodeCache.get(startNode);
+  const cachedNode = cachedStartNodeEntries?.get(pathKey);
+  if (cachedNode !== undefined) {
+    return cachedNode;
+  }
+
   let current: Node = startNode;
 
   for (const segment of path) {
@@ -197,10 +224,23 @@ export function selectSimplePathNode(startNode: Node, path: readonly string[]): 
     current = next;
   }
 
-  return current;
+  const resolvedNode = current;
+  const pathEntries = cachedStartNodeEntries ?? new Map<string, Node | null>();
+  if (cachedStartNodeEntries === undefined) {
+    simplePathNodeCache.set(startNode, pathEntries);
+  }
+  pathEntries.set(pathKey, resolvedNode);
+  return resolvedNode;
 }
 
 export function selectSimplePathNodes(startNode: Node, path: readonly string[]): readonly Node[] {
+  const pathKey = JSON.stringify(path);
+  const cachedStartNodeEntries = simplePathNodesCache.get(startNode);
+  const cachedNodes = cachedStartNodeEntries?.get(pathKey);
+  if (cachedNodes !== undefined) {
+    return cachedNodes;
+  }
+
   let currentNodes: Node[] = [startNode];
 
   for (const segment of path) {
@@ -221,13 +261,25 @@ export function selectSimplePathNodes(startNode: Node, path: readonly string[]):
     }
 
     if (nextNodes.length === 0) {
-      return [];
+      const emptyResult: readonly Node[] = [];
+      const pathEntries = cachedStartNodeEntries ?? new Map<string, readonly Node[]>();
+      if (cachedStartNodeEntries === undefined) {
+        simplePathNodesCache.set(startNode, pathEntries);
+      }
+      pathEntries.set(pathKey, emptyResult);
+      return emptyResult;
     }
 
     currentNodes = nextNodes;
   }
 
-  return currentNodes;
+  const resolvedNodes = currentNodes;
+  const pathEntries = cachedStartNodeEntries ?? new Map<string, readonly Node[]>();
+  if (cachedStartNodeEntries === undefined) {
+    simplePathNodesCache.set(startNode, pathEntries);
+  }
+  pathEntries.set(pathKey, resolvedNodes);
+  return resolvedNodes;
 }
 
 type SimplePathStepPositionPlan = {
@@ -336,6 +388,13 @@ export function selectSimplePathNodesByStepPlan(
   startNode: Node,
   path: readonly ({ readonly name: string } & SimplePathStepPositionPlan)[],
 ): readonly Node[] {
+  const pathKey = JSON.stringify(path);
+  const cachedStartNodeEntries = simplePathNodesByStepPlanCache.get(startNode);
+  const cachedNodes = cachedStartNodeEntries?.get(pathKey);
+  if (cachedNodes !== undefined) {
+    return cachedNodes;
+  }
+
   let currentNodes: Node[] = [startNode];
 
   for (const step of path) {
@@ -372,13 +431,45 @@ export function selectSimplePathNodesByStepPlan(
     }
 
     if (nextNodes.length === 0) {
-      return [];
+      const emptyResult: readonly Node[] = [];
+      const pathEntries = cachedStartNodeEntries ?? new Map<string, readonly Node[]>();
+      if (cachedStartNodeEntries === undefined) {
+        simplePathNodesByStepPlanCache.set(startNode, pathEntries);
+      }
+      pathEntries.set(pathKey, emptyResult);
+      return emptyResult;
     }
 
     currentNodes = nextNodes;
   }
 
-  return currentNodes;
+  const resolvedNodes = currentNodes;
+  const pathEntries = cachedStartNodeEntries ?? new Map<string, readonly Node[]>();
+  if (cachedStartNodeEntries === undefined) {
+    simplePathNodesByStepPlanCache.set(startNode, pathEntries);
+  }
+  pathEntries.set(pathKey, resolvedNodes);
+  return resolvedNodes;
+}
+
+export function selectDocumentDataValueNode(
+  documentUri: string,
+  dataName: string,
+  ctx?: TransformContext,
+): Node | null {
+  const resolvedPath = resolveDocumentPath(documentUri, ctx?.baseUri);
+  const cachedIndex = documentDataValueIndexCache.get(resolvedPath);
+  if (cachedIndex !== undefined) {
+    return cachedIndex.get(dataName) ?? null;
+  }
+
+  const document = parseXml(readFileSync(resolvedPath, 'utf8'), {
+    role: 'source-document',
+    sourceName: resolvedPath,
+  });
+  const index = createDocumentDataValueIndex(document);
+  documentDataValueIndexCache.set(resolvedPath, index);
+  return index.get(dataName) ?? null;
 }
 
 function hasSimplePathStepPositionConstraints(plan: SimplePathStepPositionPlan): boolean {
@@ -632,6 +723,71 @@ export function selectDescendantElementsByName(
   return matches;
 }
 
+function createDocumentDataValueIndex(document: Node): Map<string, Node | null> {
+  const index = new Map<string, Node | null>();
+  const stack: Node[] = [document];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current === undefined) {
+      continue;
+    }
+
+    for (let childIndex = 0; childIndex < current.childNodes.length; childIndex += 1) {
+      const child = current.childNodes.item(childIndex);
+      if (child === null) {
+        continue;
+      }
+
+      if (child.nodeType === child.ELEMENT_NODE) {
+        stack.push(child);
+      }
+
+      if (child.nodeType !== child.ELEMENT_NODE || (child.localName ?? child.nodeName) !== 'data') {
+        continue;
+      }
+
+      const name = (child as Element).getAttribute('name');
+      if (name === null || name.length === 0 || index.has(name)) {
+        continue;
+      }
+
+      let valueNode: Node | null = null;
+      for (let valueIndex = 0; valueIndex < child.childNodes.length; valueIndex += 1) {
+        const valueChild = child.childNodes.item(valueIndex);
+        if (valueChild === null || valueChild.nodeType !== valueChild.ELEMENT_NODE) {
+          continue;
+        }
+
+        if ((valueChild.localName ?? valueChild.nodeName) === 'value') {
+          valueNode = valueChild;
+          break;
+        }
+      }
+
+      index.set(name, valueNode);
+    }
+  }
+
+  return index;
+}
+
+function resolveDocumentPath(uri: string, baseUri?: string): string {
+  if (uri.startsWith('file:')) {
+    return fileURLToPath(uri);
+  }
+
+  if (baseUri === undefined) {
+    return resolvePath(uri);
+  }
+
+  if (baseUri.startsWith('file:')) {
+    return resolvePath(dirname(fileURLToPath(baseUri)), uri);
+  }
+
+  return isAbsolute(uri) ? uri : resolvePath(dirname(baseUri), uri);
+}
+
 export function selectDescendantElementTextByName(startNode: Node, localName: string): string {
   const node = selectDescendantElementsByName(startNode, localName)[0];
   if (node === undefined) {
@@ -746,7 +902,18 @@ export function transformCompiledStylesheet(
   sourceXml: string,
   context: TransformContext = {},
 ): TransformResult {
-  return appendCoverageWarnings(ir, sourceXml, context, runTransform(ir, sourceXml, context));
+  return appendTraceSummary(
+    context,
+    appendCoverageWarnings(ir, sourceXml, context, runTransform(ir, sourceXml, context)),
+  );
+}
+
+export function appendTraceSummary(
+  context: TransformContext,
+  result: TransformResult,
+): TransformResult {
+  const traceSummary = getRecordedTraceSummary(context.trace);
+  return traceSummary === undefined ? result : { ...result, traceSummary };
 }
 
 export function normalizeNativeTemplateName(

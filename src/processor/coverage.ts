@@ -603,7 +603,7 @@ function visitSourceElement(element: Element, elements: NameCounts, attributes: 
 
   for (let index = 0; index < element.childNodes.length; index += 1) {
     const child = element.childNodes.item(index);
-    if (child?.nodeType === child.ELEMENT_NODE) {
+    if (child?.nodeType === 1) {
       visitSourceElement(child as Element, elements, attributes);
     }
   }

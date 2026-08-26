@@ -156,16 +156,13 @@ describe('xml node tracing', () => {
 
   it('emits focus-enter, template-enter, instruction-select, and value-read events on the interpreter path', () => {
     const events: XmlTraceEvent[] = [];
-    const result = new XsltProcessor(stylesheet).transform(
-      sourceXml,
-      {
-        execution: 'interpreter',
-        trace: {
-          documentUri: 'memory:/input.xml',
-          onEvent: (event) => events.push(event),
-        },
+    const result = new XsltProcessor(stylesheet).transform(sourceXml, {
+      execution: 'interpreter',
+      trace: {
+        documentUri: 'memory:/input.xml',
+        onEvent: (event) => events.push(event),
       },
-    );
+    });
 
     expect(result.output).toBe('<items><entry>alpha</entry><entry>beta</entry></items>');
     expect(events).toEqual(createExpectedTraceEvents());
@@ -173,16 +170,13 @@ describe('xml node tracing', () => {
 
   it('emits focus-enter, template-enter, instruction-select, and value-read events on the native path', () => {
     const events: XmlTraceEvent[] = [];
-    const result = new XsltProcessor(stylesheet).transform(
-      sourceXml,
-      {
-        execution: 'native',
-        trace: {
-          documentUri: 'memory:/input.xml',
-          onEvent: (event) => events.push(event),
-        },
+    const result = new XsltProcessor(stylesheet).transform(sourceXml, {
+      execution: 'native',
+      trace: {
+        documentUri: 'memory:/input.xml',
+        onEvent: (event) => events.push(event),
       },
-    );
+    });
 
     expect(result.execution?.resolved).toBe('native');
     expect(result.output).toBe('<items><entry>alpha</entry><entry>beta</entry></items>');
@@ -190,12 +184,18 @@ describe('xml node tracing', () => {
   });
 
   it('emits focus-enter, template-enter, instruction-select, and value-read events through the generated module path', () => {
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'trace-native-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'trace-native-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
     const generatedModule = exports as {
-      readonly transform: (source: string, ctx?: Parameters<XsltProcessor['transform']>[1]) => ReturnType<XsltProcessor['transform']>;
+      readonly transform: (
+        source: string,
+        ctx?: Parameters<XsltProcessor['transform']>[1],
+      ) => ReturnType<XsltProcessor['transform']>;
     };
     const events: XmlTraceEvent[] = [];
     const result = generatedModule.transform(sourceXml, {
@@ -220,7 +220,8 @@ describe('xml node tracing', () => {
       '  </xsl:template>',
       '</xsl:stylesheet>',
     ].join('\n');
-    const pathSourceXml = '<root><item><name>alpha</name></item><item><name>beta</name></item></root>';
+    const pathSourceXml =
+      '<root><item><name>alpha</name></item><item><name>beta</name></item></root>';
     const expectedEvents: XmlTraceEvent[] = [
       {
         kind: 'focus-enter',
@@ -369,12 +370,18 @@ describe('xml node tracing', () => {
     expect(nativeResult.output).toBe('<items><entry>alpha</entry><entry>beta</entry></items>');
     expect(nativeEvents).toEqual(expectedEvents);
 
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(pathStylesheet, 'trace-path-value-of-native-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      pathStylesheet,
+      'trace-path-value-of-native-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
     const generatedModule = exports as {
-      readonly transform: (source: string, ctx?: Parameters<XsltProcessor['transform']>[1]) => ReturnType<XsltProcessor['transform']>;
+      readonly transform: (
+        source: string,
+        ctx?: Parameters<XsltProcessor['transform']>[1],
+      ) => ReturnType<XsltProcessor['transform']>;
     };
     const generatedEvents: XmlTraceEvent[] = [];
     const generatedResult = generatedModule.transform(pathSourceXml, {
@@ -516,12 +523,18 @@ describe('xml node tracing', () => {
     expect(nativeResult.output).toBe('<items><entry>alpha</entry><entry>beta</entry></items>');
     expect(nativeEvents).toEqual(expectedEvents);
 
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(forEachStylesheet, 'trace-for-each-native-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      forEachStylesheet,
+      'trace-for-each-native-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
     const generatedModule = exports as {
-      readonly transform: (source: string, ctx?: Parameters<XsltProcessor['transform']>[1]) => ReturnType<XsltProcessor['transform']>;
+      readonly transform: (
+        source: string,
+        ctx?: Parameters<XsltProcessor['transform']>[1],
+      ) => ReturnType<XsltProcessor['transform']>;
     };
     const generatedEvents: XmlTraceEvent[] = [];
     const generatedResult = generatedModule.transform(sourceXml, {
@@ -679,36 +692,48 @@ describe('xml node tracing', () => {
     ];
 
     const interpreterEvents: XmlTraceEvent[] = [];
-    const interpreterResult = new XsltProcessor(defaultSelectStylesheet).transform(defaultSelectSourceXml, {
-      execution: 'interpreter',
-      trace: {
-        documentUri: 'memory:/input.xml',
-        onEvent: (event) => interpreterEvents.push(event),
+    const interpreterResult = new XsltProcessor(defaultSelectStylesheet).transform(
+      defaultSelectSourceXml,
+      {
+        execution: 'interpreter',
+        trace: {
+          documentUri: 'memory:/input.xml',
+          onEvent: (event) => interpreterEvents.push(event),
+        },
       },
-    });
+    );
 
     expect(interpreterResult.output).toBe('<items><entry>alpha</entry><entry>beta</entry></items>');
     expect(interpreterEvents).toEqual(expectedEvents);
 
     const nativeEvents: XmlTraceEvent[] = [];
-    const nativeResult = new XsltProcessor(defaultSelectStylesheet).transform(defaultSelectSourceXml, {
-      execution: 'native',
-      trace: {
-        documentUri: 'memory:/input.xml',
-        onEvent: (event) => nativeEvents.push(event),
+    const nativeResult = new XsltProcessor(defaultSelectStylesheet).transform(
+      defaultSelectSourceXml,
+      {
+        execution: 'native',
+        trace: {
+          documentUri: 'memory:/input.xml',
+          onEvent: (event) => nativeEvents.push(event),
+        },
       },
-    });
+    );
 
     expect(nativeResult.execution?.resolved).toBe('native');
     expect(nativeResult.output).toBe('<items><entry>alpha</entry><entry>beta</entry></items>');
     expect(nativeEvents).toEqual(expectedEvents);
 
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(defaultSelectStylesheet, 'trace-default-select-native-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      defaultSelectStylesheet,
+      'trace-default-select-native-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
     const generatedModule = exports as {
-      readonly transform: (source: string, ctx?: Parameters<XsltProcessor['transform']>[1]) => ReturnType<XsltProcessor['transform']>;
+      readonly transform: (
+        source: string,
+        ctx?: Parameters<XsltProcessor['transform']>[1],
+      ) => ReturnType<XsltProcessor['transform']>;
     };
     const generatedEvents: XmlTraceEvent[] = [];
     const generatedResult = generatedModule.transform(defaultSelectSourceXml, {
@@ -761,6 +786,15 @@ describe('xml node tracing', () => {
 
     expect(interpreterResult.output).toBe('<items><entry>alpha</entry><entry>beta</entry></items>');
     expect(interpreterResult.pause).toEqual(expectedPause);
+    expect(interpreterResult.traceSummary).toEqual(
+      expect.objectContaining({
+        totalEvents: expect.any(Number),
+        lastEvent: expect.objectContaining({ kind: expect.any(String) }),
+        topTemplates: expect.arrayContaining([
+          expect.objectContaining({ key: 'match="item"', count: expect.any(Number) }),
+        ]),
+      }),
+    );
     expect(interpreterPauses).toEqual([expectedPause]);
 
     const nativePauses: XmlTracePause[] = [];
@@ -776,14 +810,35 @@ describe('xml node tracing', () => {
     expect(nativeResult.execution?.resolved).toBe('native');
     expect(nativeResult.output).toBe('<items><entry>alpha</entry><entry>beta</entry></items>');
     expect(nativeResult.pause).toEqual(expectedPause);
+    expect(nativeResult.traceSummary?.totalEvents).toBe(
+      interpreterResult.traceSummary?.totalEvents,
+    );
+    expect(nativeResult.traceSummary?.eventCounts).toEqual(
+      interpreterResult.traceSummary?.eventCounts,
+    );
+    expect(nativeResult.traceSummary?.topTemplates).toEqual(
+      interpreterResult.traceSummary?.topTemplates,
+    );
+    expect(nativeResult.traceSummary?.topInstructions).toEqual(
+      interpreterResult.traceSummary?.topInstructions,
+    );
+    expect(nativeResult.traceSummary?.lastEvent?.kind).toBe(
+      interpreterResult.traceSummary?.lastEvent?.kind,
+    );
     expect(nativePauses).toEqual([expectedPause]);
 
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(stylesheet, 'trace-breakpoint-native-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      stylesheet,
+      'trace-breakpoint-native-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
     const generatedModule = exports as {
-      readonly transform: (source: string, ctx?: Parameters<XsltProcessor['transform']>[1]) => ReturnType<XsltProcessor['transform']>;
+      readonly transform: (
+        source: string,
+        ctx?: Parameters<XsltProcessor['transform']>[1],
+      ) => ReturnType<XsltProcessor['transform']>;
     };
     const generatedPauses: XmlTracePause[] = [];
     const generatedResult = generatedModule.transform(sourceXml, {
@@ -796,6 +851,21 @@ describe('xml node tracing', () => {
 
     expect(generatedResult.output).toBe('<items><entry>alpha</entry><entry>beta</entry></items>');
     expect(generatedResult.pause).toEqual(expectedPause);
+    expect(generatedResult.traceSummary?.totalEvents).toBe(
+      interpreterResult.traceSummary?.totalEvents,
+    );
+    expect(generatedResult.traceSummary?.eventCounts).toEqual(
+      interpreterResult.traceSummary?.eventCounts,
+    );
+    expect(generatedResult.traceSummary?.topTemplates).toEqual(
+      interpreterResult.traceSummary?.topTemplates,
+    );
+    expect(generatedResult.traceSummary?.topInstructions).toEqual(
+      interpreterResult.traceSummary?.topInstructions,
+    );
+    expect(generatedResult.traceSummary?.lastEvent?.kind).toBe(
+      interpreterResult.traceSummary?.lastEvent?.kind,
+    );
     expect(generatedPauses).toEqual([expectedPause]);
   });
 
@@ -849,12 +919,18 @@ describe('xml node tracing', () => {
     expect(nativeResult.output).toBe('<out xmlns:t="urn:test">ok</out>');
     expect(nativeEvents).toEqual(expectedEvents);
 
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(initialTemplateStylesheet, 'trace-initial-template-native-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      initialTemplateStylesheet,
+      'trace-initial-template-native-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
     const generatedModule = exports as {
-      readonly transform: (source: string, ctx?: Parameters<XsltProcessor['transform']>[1]) => ReturnType<XsltProcessor['transform']>;
+      readonly transform: (
+        source: string,
+        ctx?: Parameters<XsltProcessor['transform']>[1],
+      ) => ReturnType<XsltProcessor['transform']>;
     };
     const generatedEvents: XmlTraceEvent[] = [];
     const generatedResult = generatedModule.transform('<root/>', {
@@ -925,12 +1001,18 @@ describe('xml node tracing', () => {
     expect(nativeResult.output).toBe('<out>root:root</out>');
     expect(nativeEvents).toEqual(expectedEvents);
 
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(functionArgStylesheet, 'trace-function-arg-value-of-native-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      functionArgStylesheet,
+      'trace-function-arg-value-of-native-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
     const generatedModule = exports as {
-      readonly transform: (source: string, ctx?: Parameters<XsltProcessor['transform']>[1]) => ReturnType<XsltProcessor['transform']>;
+      readonly transform: (
+        source: string,
+        ctx?: Parameters<XsltProcessor['transform']>[1],
+      ) => ReturnType<XsltProcessor['transform']>;
     };
     const generatedEvents: XmlTraceEvent[] = [];
     const generatedResult = generatedModule.transform('<root/>', {
@@ -1008,12 +1090,18 @@ describe('xml node tracing', () => {
     expect(nativeResult.output).toBe('<out>ok</out>');
     expect(nativeEvents).toEqual(expectedEvents);
 
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(matchedStylesheet, 'trace-matched-entry-native-runtime.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      matchedStylesheet,
+      'trace-matched-entry-native-runtime.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
     const generatedModule = exports as {
-      readonly transform: (source: string, ctx?: Parameters<XsltProcessor['transform']>[1]) => ReturnType<XsltProcessor['transform']>;
+      readonly transform: (
+        source: string,
+        ctx?: Parameters<XsltProcessor['transform']>[1],
+      ) => ReturnType<XsltProcessor['transform']>;
     };
     const generatedEvents: XmlTraceEvent[] = [];
     const generatedResult = generatedModule.transform('<root/>', {
@@ -1046,7 +1134,12 @@ describe('xml node tracing', () => {
       '  </section>',
       '</doc>',
     ].join('');
-    const trackedNodeHandle = createTrackedElementHandle(trackedNodeSourceXml, 'memory:/tracked-node.xml', 'para', 1);
+    const trackedNodeHandle = createTrackedElementHandle(
+      trackedNodeSourceXml,
+      'memory:/tracked-node.xml',
+      'para',
+      1,
+    );
     const expectedPause: XmlTracePause = {
       event: {
         kind: 'focus-enter',
@@ -1055,16 +1148,21 @@ describe('xml node tracing', () => {
       frames: [],
     };
 
-    const interpreterResult = new XsltProcessor(trackedNodeStylesheet).transform(trackedNodeSourceXml, {
-      execution: 'interpreter',
-      trace: {
-        documentUri: 'memory:/tracked-node.xml',
-        breakpoints: [{
-          node: trackedNodeHandle,
-          on: ['focus-enter'],
-        }],
+    const interpreterResult = new XsltProcessor(trackedNodeStylesheet).transform(
+      trackedNodeSourceXml,
+      {
+        execution: 'interpreter',
+        trace: {
+          documentUri: 'memory:/tracked-node.xml',
+          breakpoints: [
+            {
+              node: trackedNodeHandle,
+              on: ['focus-enter'],
+            },
+          ],
+        },
       },
-    });
+    );
 
     expect(interpreterResult.output).toBe('<out><p>alpha</p><p>beta</p></out>');
     expect(interpreterResult.pause).toEqual(expectedPause);
@@ -1073,10 +1171,12 @@ describe('xml node tracing', () => {
       execution: 'native',
       trace: {
         documentUri: 'memory:/tracked-node.xml',
-        breakpoints: [{
-          node: trackedNodeHandle,
-          on: ['focus-enter'],
-        }],
+        breakpoints: [
+          {
+            node: trackedNodeHandle,
+            on: ['focus-enter'],
+          },
+        ],
       },
     });
 
@@ -1084,20 +1184,28 @@ describe('xml node tracing', () => {
     expect(nativeResult.output).toBe('<out><p>alpha</p><p>beta</p></out>');
     expect(nativeResult.pause).toEqual(expectedPause);
 
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(trackedNodeStylesheet, 'trace-tracked-node-focus-pause.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      trackedNodeStylesheet,
+      'trace-tracked-node-focus-pause.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
     const generatedModule = exports as {
-      readonly transform: (source: string, ctx?: Parameters<XsltProcessor['transform']>[1]) => ReturnType<XsltProcessor['transform']>;
+      readonly transform: (
+        source: string,
+        ctx?: Parameters<XsltProcessor['transform']>[1],
+      ) => ReturnType<XsltProcessor['transform']>;
     };
     const generatedResult = generatedModule.transform(trackedNodeSourceXml, {
       trace: {
         documentUri: 'memory:/tracked-node.xml',
-        breakpoints: [{
-          node: trackedNodeHandle,
-          on: ['focus-enter'],
-        }],
+        breakpoints: [
+          {
+            node: trackedNodeHandle,
+            on: ['focus-enter'],
+          },
+        ],
       },
     });
 
@@ -1124,7 +1232,12 @@ describe('xml node tracing', () => {
       '  </section>',
       '</doc>',
     ].join('');
-    const trackedNodeHandle = createTrackedElementHandle(trackedNodeSourceXml, 'memory:/tracked-node.xml', 'para', 1);
+    const trackedNodeHandle = createTrackedElementHandle(
+      trackedNodeSourceXml,
+      'memory:/tracked-node.xml',
+      'para',
+      1,
+    );
     const expectedPause: XmlTracePause = {
       event: {
         kind: 'template-enter',
@@ -1134,23 +1247,30 @@ describe('xml node tracing', () => {
           location: expect.any(Object),
         },
       },
-      frames: [{
-        kind: 'template',
-        label: 'match="para"',
-        location: expect.any(Object),
-      }],
+      frames: [
+        {
+          kind: 'template',
+          label: 'match="para"',
+          location: expect.any(Object),
+        },
+      ],
     };
 
-    const interpreterResult = new XsltProcessor(trackedNodeStylesheet).transform(trackedNodeSourceXml, {
-      execution: 'interpreter',
-      trace: {
-        documentUri: 'memory:/tracked-node.xml',
-        breakpoints: [{
-          node: trackedNodeHandle,
-          on: ['template-enter'],
-        }],
+    const interpreterResult = new XsltProcessor(trackedNodeStylesheet).transform(
+      trackedNodeSourceXml,
+      {
+        execution: 'interpreter',
+        trace: {
+          documentUri: 'memory:/tracked-node.xml',
+          breakpoints: [
+            {
+              node: trackedNodeHandle,
+              on: ['template-enter'],
+            },
+          ],
+        },
       },
-    });
+    );
 
     expect(interpreterResult.output).toBe('<out><p>alpha</p><p>beta</p></out>');
     expect(interpreterResult.pause).toEqual(expectedPause);
@@ -1159,10 +1279,12 @@ describe('xml node tracing', () => {
       execution: 'native',
       trace: {
         documentUri: 'memory:/tracked-node.xml',
-        breakpoints: [{
-          node: trackedNodeHandle,
-          on: ['template-enter'],
-        }],
+        breakpoints: [
+          {
+            node: trackedNodeHandle,
+            on: ['template-enter'],
+          },
+        ],
       },
     });
 
@@ -1170,20 +1292,28 @@ describe('xml node tracing', () => {
     expect(nativeResult.output).toBe('<out><p>alpha</p><p>beta</p></out>');
     expect(nativeResult.pause).toEqual(expectedPause);
 
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(trackedNodeStylesheet, 'trace-tracked-node-template-pause.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      trackedNodeStylesheet,
+      'trace-tracked-node-template-pause.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
     const generatedModule = exports as {
-      readonly transform: (source: string, ctx?: Parameters<XsltProcessor['transform']>[1]) => ReturnType<XsltProcessor['transform']>;
+      readonly transform: (
+        source: string,
+        ctx?: Parameters<XsltProcessor['transform']>[1],
+      ) => ReturnType<XsltProcessor['transform']>;
     };
     const generatedResult = generatedModule.transform(trackedNodeSourceXml, {
       trace: {
         documentUri: 'memory:/tracked-node.xml',
-        breakpoints: [{
-          node: trackedNodeHandle,
-          on: ['template-enter'],
-        }],
+        breakpoints: [
+          {
+            node: trackedNodeHandle,
+            on: ['template-enter'],
+          },
+        ],
       },
     });
 
@@ -1210,7 +1340,12 @@ describe('xml node tracing', () => {
       '  </section>',
       '</doc>',
     ].join('');
-    const trackedNodeHandle = createTrackedElementHandle(trackedNodeSourceXml, 'memory:/tracked-node.xml', 'para', 1);
+    const trackedNodeHandle = createTrackedElementHandle(
+      trackedNodeSourceXml,
+      'memory:/tracked-node.xml',
+      'para',
+      1,
+    );
     const expectedPause: XmlTracePause = {
       event: {
         kind: 'value-read',
@@ -1220,23 +1355,30 @@ describe('xml node tracing', () => {
           location: expect.any(Object),
         },
       },
-      frames: [{
-        kind: 'instruction',
-        label: 'xsl:value-of',
-        location: expect.any(Object),
-      }],
+      frames: [
+        {
+          kind: 'instruction',
+          label: 'xsl:value-of',
+          location: expect.any(Object),
+        },
+      ],
     };
 
-    const interpreterResult = new XsltProcessor(trackedNodeStylesheet).transform(trackedNodeSourceXml, {
-      execution: 'interpreter',
-      trace: {
-        documentUri: 'memory:/tracked-node.xml',
-        breakpoints: [{
-          node: trackedNodeHandle,
-          on: ['value-read'],
-        }],
+    const interpreterResult = new XsltProcessor(trackedNodeStylesheet).transform(
+      trackedNodeSourceXml,
+      {
+        execution: 'interpreter',
+        trace: {
+          documentUri: 'memory:/tracked-node.xml',
+          breakpoints: [
+            {
+              node: trackedNodeHandle,
+              on: ['value-read'],
+            },
+          ],
+        },
       },
-    });
+    );
 
     expect(interpreterResult.output).toBe('<out><p>alpha</p><p>beta</p></out>');
     expect(interpreterResult.pause).toEqual(expectedPause);
@@ -1245,10 +1387,12 @@ describe('xml node tracing', () => {
       execution: 'native',
       trace: {
         documentUri: 'memory:/tracked-node.xml',
-        breakpoints: [{
-          node: trackedNodeHandle,
-          on: ['value-read'],
-        }],
+        breakpoints: [
+          {
+            node: trackedNodeHandle,
+            on: ['value-read'],
+          },
+        ],
       },
     });
 
@@ -1256,20 +1400,28 @@ describe('xml node tracing', () => {
     expect(nativeResult.output).toBe('<out><p>alpha</p><p>beta</p></out>');
     expect(nativeResult.pause).toEqual(expectedPause);
 
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(trackedNodeStylesheet, 'trace-tracked-node-value-read-pause.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      trackedNodeStylesheet,
+      'trace-tracked-node-value-read-pause.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
     const generatedModule = exports as {
-      readonly transform: (source: string, ctx?: Parameters<XsltProcessor['transform']>[1]) => ReturnType<XsltProcessor['transform']>;
+      readonly transform: (
+        source: string,
+        ctx?: Parameters<XsltProcessor['transform']>[1],
+      ) => ReturnType<XsltProcessor['transform']>;
     };
     const generatedResult = generatedModule.transform(trackedNodeSourceXml, {
       trace: {
         documentUri: 'memory:/tracked-node.xml',
-        breakpoints: [{
-          node: trackedNodeHandle,
-          on: ['value-read'],
-        }],
+        breakpoints: [
+          {
+            node: trackedNodeHandle,
+            on: ['value-read'],
+          },
+        ],
       },
     });
 
@@ -1296,18 +1448,28 @@ describe('xml node tracing', () => {
       '  </section>',
       '</doc>',
     ].join('');
-    const nonMatchingHandle = createTrackedElementHandle(trackedNodeSourceXml, 'memory:/tracked-node.xml', 'para', 1);
+    const nonMatchingHandle = createTrackedElementHandle(
+      trackedNodeSourceXml,
+      'memory:/tracked-node.xml',
+      'para',
+      1,
+    );
 
-    const interpreterResult = new XsltProcessor(trackedNodeStylesheet).transform(trackedNodeSourceXml, {
-      execution: 'interpreter',
-      trace: {
-        documentUri: 'memory:/tracked-node.xml',
-        breakpoints: [{
-          node: nonMatchingHandle,
-          on: ['focus-enter', 'template-enter', 'instruction-select', 'value-read'],
-        }],
+    const interpreterResult = new XsltProcessor(trackedNodeStylesheet).transform(
+      trackedNodeSourceXml,
+      {
+        execution: 'interpreter',
+        trace: {
+          documentUri: 'memory:/tracked-node.xml',
+          breakpoints: [
+            {
+              node: nonMatchingHandle,
+              on: ['focus-enter', 'template-enter', 'instruction-select', 'value-read'],
+            },
+          ],
+        },
       },
-    });
+    );
 
     expect(interpreterResult.output).toBe('<out><p>alpha</p></out>');
     expect(interpreterResult.pause).toBeUndefined();
@@ -1316,10 +1478,12 @@ describe('xml node tracing', () => {
       execution: 'native',
       trace: {
         documentUri: 'memory:/tracked-node.xml',
-        breakpoints: [{
-          node: nonMatchingHandle,
-          on: ['focus-enter', 'template-enter', 'instruction-select', 'value-read'],
-        }],
+        breakpoints: [
+          {
+            node: nonMatchingHandle,
+            on: ['focus-enter', 'template-enter', 'instruction-select', 'value-read'],
+          },
+        ],
       },
     });
 
@@ -1327,20 +1491,28 @@ describe('xml node tracing', () => {
     expect(nativeResult.output).toBe('<out><p>alpha</p></out>');
     expect(nativeResult.pause).toBeUndefined();
 
-    const { diagnostics, exports } = compileAndLoadGeneratedModule(trackedNodeStylesheet, 'trace-tracked-node-non-match-pause.xsl');
+    const { diagnostics, exports } = compileAndLoadGeneratedModule(
+      trackedNodeStylesheet,
+      'trace-tracked-node-non-match-pause.xsl',
+    );
 
     expect(diagnostics).toEqual([]);
 
     const generatedModule = exports as {
-      readonly transform: (source: string, ctx?: Parameters<XsltProcessor['transform']>[1]) => ReturnType<XsltProcessor['transform']>;
+      readonly transform: (
+        source: string,
+        ctx?: Parameters<XsltProcessor['transform']>[1],
+      ) => ReturnType<XsltProcessor['transform']>;
     };
     const generatedResult = generatedModule.transform(trackedNodeSourceXml, {
       trace: {
         documentUri: 'memory:/tracked-node.xml',
-        breakpoints: [{
-          node: nonMatchingHandle,
-          on: ['focus-enter', 'template-enter', 'instruction-select', 'value-read'],
-        }],
+        breakpoints: [
+          {
+            node: nonMatchingHandle,
+            on: ['focus-enter', 'template-enter', 'instruction-select', 'value-read'],
+          },
+        ],
       },
     });
 
@@ -1349,7 +1521,12 @@ describe('xml node tracing', () => {
   });
 });
 
-function createTrackedElementHandle(sourceXml: string, documentUri: string, localName: string, zeroBasedIndex: number) {
+function createTrackedElementHandle(
+  sourceXml: string,
+  documentUri: string,
+  localName: string,
+  zeroBasedIndex: number,
+) {
   const document = createCompiledDocument(sourceXml);
   const nodes = document.getElementsByTagName(localName);
   const node = nodes.item(zeroBasedIndex);

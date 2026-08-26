@@ -162,7 +162,7 @@ export function emitStylesheetModule(
           ];
     return renderTsModule({
       statements: [
-        `import { ${[...new Set(['appendCoverageWarnings', 'throwMissingNativeInitialTemplate', 'throwUnsupportedNativeInitialMode', 'getRecordedTracePause', 'resetRecordedTracePause', 'traceFocusEnter', 'traceTemplateEnter', ...nativePlan.runtimeHelpers])].join(', ')} } from ${JSON.stringify(plan.moduleSpecifier)};`,
+        `import { ${[...new Set(['appendCoverageWarnings', 'appendTraceSummary', 'throwMissingNativeInitialTemplate', 'throwUnsupportedNativeInitialMode', 'getRecordedTracePause', 'resetRecordedTracePause', 'resetRecordedTraceSummary', 'traceFocusEnter', 'traceTemplateEnter', ...nativePlan.runtimeHelpers])].join(', ')} } from ${JSON.stringify(plan.moduleSpecifier)};`,
         `import type { StylesheetIR, TransformContext, TransformResult } from ${JSON.stringify(plan.moduleSpecifier)};`,
         ...typeBlock.importStatements,
         '',
@@ -175,8 +175,9 @@ export function emitStylesheetModule(
         renderTemplateProvenanceComment(nativePlan.entryTemplate, plan.sourcePath),
         `export function transform(sourceXml: string, ctx: ${typeBlock.transformContextTypeName} = {}): TransformResult {`,
         '  ctx = ctx.baseUri === undefined ? { ...ctx, baseUri: source.path } : ctx;',
-        '  const finish = (result: TransformResult): TransformResult => appendCoverageWarnings(stylesheet, sourceXml, ctx, result);',
+        '  const finish = (result: TransformResult): TransformResult => appendTraceSummary(ctx, appendCoverageWarnings(stylesheet, sourceXml, ctx, result));',
         '  resetRecordedTracePause(ctx.trace);',
+        '  resetRecordedTraceSummary(ctx.trace);',
         ...initialModeGuardStatements,
         ...missingInitialTemplateGuardStatements,
         ...initialTemplateValueStatements,

@@ -44,6 +44,19 @@ export interface XmlTracePause {
   frames: readonly ErrorFrame[];
 }
 
+export interface XmlTraceSummaryEntry {
+  key: string;
+  count: number;
+}
+
+export interface XmlTraceSummary {
+  totalEvents: number;
+  eventCounts: Readonly<Record<XmlTraceEventKind, number>>;
+  topTemplates: readonly XmlTraceSummaryEntry[];
+  topInstructions: readonly XmlTraceSummaryEntry[];
+  lastEvent?: XmlTraceEvent;
+}
+
 export interface XmlTraceBreakpoint {
   node: XmlNodeHandle;
   on: readonly XmlTraceEventKind[];
@@ -124,6 +137,8 @@ export interface TransformResult {
   coverageWarnings?: readonly TransformCoverageWarning[];
   /** First matched XML-node trace pause for the current transform, when any breakpoint fired. */
   pause?: XmlTracePause;
+  /** Runtime trace summary collected while tracing was enabled, when any trace event fired. */
+  traceSummary?: XmlTraceSummary;
   /** Execution strategy information when an explicit strategy was requested. */
   execution?: TransformExecutionInfo;
 }

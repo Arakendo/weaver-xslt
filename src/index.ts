@@ -19,6 +19,8 @@ export type {
   XmlTraceEvent,
   XmlTraceEventKind,
   XmlTracePause,
+  XmlTraceSummary,
+  XmlTraceSummaryEntry,
   TransformExecutionFallbackReason,
   TransformExecutionFallbackReasonCode,
   TransformCoverageOptions,

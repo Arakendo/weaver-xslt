@@ -89,6 +89,58 @@ describe('XSLT codegen MVP4 slice', () => {
     }
   });
 
+  it('lowers document-backed data lookups to indexed runtime access', () => {
+    const tempDir = mkdtempSync(join(tmpdir(), 'weaver-native-document-lookup-'));
+
+    const stylesheet = `
+      <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+        <xsl:param name="language_word" select="'PdfApplicTo'"/>
+        <xsl:template match="/">
+          <out><xsl:value-of select="document('../../Languages/English.resx')/root/data[@name = $language_word]/value"/></out>
+        </xsl:template>
+      </xsl:stylesheet>
+    `;
+
+    try {
+      const stylesheetDir = join(tempDir, '.workbench', 'vision xslts', 'S1000D');
+      const languagesDir = join(tempDir, '.workbench', 'Languages');
+      const stylesheetPath = resolve(join(stylesheetDir, 'language.xslt'));
+      const documentPath = join(languagesDir, 'English.resx');
+
+      mkdirSync(stylesheetDir, { recursive: true });
+      mkdirSync(languagesDir, { recursive: true });
+      writeFileSync(
+        documentPath,
+        '<root><data name="PdfApplicTo"><value>Applicable to</value></data></root>',
+        'utf8',
+      );
+
+      const emitted = compileStylesheetToTs(stylesheet, {
+        path: 'language.xsl',
+        filePath: stylesheetPath,
+      });
+      expect(emitted).toContain('selectDocumentDataValueNode("../../Languages/English.resx"');
+
+      const { diagnostics, exports } = compileAndLoadGeneratedModule(
+        stylesheet,
+        'language-lookup.xsl',
+        stylesheetPath,
+      );
+
+      expect(diagnostics).toEqual([]);
+
+      const generatedModule = exports as {
+        readonly transform: (source: string) => ReturnType<XsltProcessor['transform']>;
+      };
+      const sourceXml = '<root/>';
+      const interpreter = new XsltProcessor(stylesheet, { sourceName: stylesheetPath });
+
+      expect(generatedModule.transform(sourceXml)).toEqual(interpreter.transform(sourceXml));
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
+  });
+
   it('surfaces coverage warnings identically through generated modules', () => {
     const stylesheet = `
       <xsl:stylesheet version="3.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">

@@ -8,6 +8,23 @@ import type { PathExpression, XPathAst } from '../../xpath/parse/ast.js';
 import { createXdmNode, type XdmNode } from '../../xdm/types.js';
 import type { TemplateRule } from '../compile/ir.js';
 
+interface TemplateDispatchEntry {
+  readonly template: TemplateRule;
+  readonly index: number;
+}
+
+interface TemplateDispatchIndex {
+  readonly exactNameTemplates: ReadonlyMap<string, readonly TemplateDispatchEntry[]>;
+  readonly wildcardTemplates: readonly TemplateDispatchEntry[];
+  readonly complexTemplates: readonly TemplateDispatchEntry[];
+}
+
+const templateDispatchIndexCache = new WeakMap<readonly TemplateRule[], TemplateDispatchIndex>();
+const templateDispatchResultCache = new WeakMap<
+  readonly TemplateRule[],
+  Map<string, TemplateRule | undefined>
+>();
+
 const PREDEFINED_NAMESPACE_PREFIXES = new Map<string, string>([
   ['array', 'http://www.w3.org/2005/xpath-functions/array'],
   ['fn', 'http://www.w3.org/2005/xpath-functions'],
@@ -125,18 +142,27 @@ export function findBestMatchingTemplate(
   staticContext: StaticContext,
   modeSet: readonly string[] = [],
 ): TemplateRule | undefined {
+  const cacheKey = createTemplateDispatchCacheKey(node, modeSet);
+  const cachedResults = templateDispatchResultCache.get(templates);
+  if (cachedResults?.has(cacheKey)) {
+    return cachedResults.get(cacheKey);
+  }
+
+  const dispatchIndex = getTemplateDispatchIndex(templates);
+  const candidates = getTemplateDispatchCandidates(dispatchIndex, node);
+
   let bestTemplate: TemplateRule | undefined;
   let bestTemplateIndex = -1;
 
-  for (let index = 0; index < templates.length; index += 1) {
-    const candidate = templates[index]!;
+  for (const entry of candidates) {
+    const candidate = entry.template;
     if (!templateMatchesNode(candidate, node, staticContext, modeSet)) {
       continue;
     }
 
     if (bestTemplate === undefined) {
       bestTemplate = candidate;
-      bestTemplateIndex = index;
+      bestTemplateIndex = entry.index;
       continue;
     }
 
@@ -144,14 +170,111 @@ export function findBestMatchingTemplate(
     const bestPriority = getTemplatePriority(bestTemplate);
     if (
       candidatePriority > bestPriority ||
-      (candidatePriority === bestPriority && index > bestTemplateIndex)
+      (candidatePriority === bestPriority && entry.index > bestTemplateIndex)
     ) {
       bestTemplate = candidate;
-      bestTemplateIndex = index;
+      bestTemplateIndex = entry.index;
     }
   }
 
+  const results = cachedResults ?? new Map<string, TemplateRule | undefined>();
+  if (cachedResults === undefined) {
+    templateDispatchResultCache.set(templates, results);
+  }
+  results.set(cacheKey, bestTemplate);
+
   return bestTemplate;
+}
+
+function createTemplateDispatchCacheKey(node: Node, modeSet: readonly string[]): string {
+  return `${modeSet.join('\u001f')}\u001e${createNodePathSignature(node)}`;
+}
+
+function createNodePathSignature(node: Node): string {
+  const segments: string[] = [];
+  let current: Node | null = node;
+
+  while (current !== null) {
+    switch (current.nodeType) {
+      case current.DOCUMENT_NODE:
+        segments.push('#document');
+        current = null;
+        break;
+      case current.ELEMENT_NODE:
+        segments.push(`${current.namespaceURI ?? ''}:${current.localName ?? current.nodeName}`);
+        current = current.parentNode;
+        break;
+      default:
+        segments.push(`@${current.nodeType}`);
+        current = current.parentNode;
+        break;
+    }
+  }
+
+  return segments.reverse().join('/');
+}
+
+function getTemplateDispatchIndex(templates: readonly TemplateRule[]): TemplateDispatchIndex {
+  const cachedIndex = templateDispatchIndexCache.get(templates);
+  if (cachedIndex !== undefined) {
+    return cachedIndex;
+  }
+
+  const exactNameTemplates = new Map<string, TemplateDispatchEntry[]>();
+  const wildcardTemplates: TemplateDispatchEntry[] = [];
+  const complexTemplates: TemplateDispatchEntry[] = [];
+
+  for (let index = 0; index < templates.length; index += 1) {
+    const template = templates[index];
+    if (template === undefined || template.match === undefined) {
+      continue;
+    }
+
+    const simplePathMatch = tryGetSimpleTemplatePathMatch(template.match);
+    const entry = { template, index };
+    if (simplePathMatch === undefined) {
+      complexTemplates.push(entry);
+      continue;
+    }
+
+    const terminalSegment = simplePathMatch.path[simplePathMatch.path.length - 1];
+    if (terminalSegment === undefined || terminalSegment === '*') {
+      wildcardTemplates.push(entry);
+      continue;
+    }
+
+    const bucket = exactNameTemplates.get(terminalSegment);
+    if (bucket === undefined) {
+      exactNameTemplates.set(terminalSegment, [entry]);
+    } else {
+      bucket.push(entry);
+    }
+  }
+
+  const index: TemplateDispatchIndex = {
+    exactNameTemplates,
+    wildcardTemplates,
+    complexTemplates,
+  };
+  templateDispatchIndexCache.set(templates, index);
+  return index;
+}
+
+function getTemplateDispatchCandidates(
+  index: TemplateDispatchIndex,
+  node: Node,
+): readonly TemplateDispatchEntry[] {
+  const candidates: TemplateDispatchEntry[] = [];
+  const localName = node.localName ?? node.nodeName;
+
+  const exactNameCandidates = index.exactNameTemplates.get(localName);
+  if (exactNameCandidates !== undefined) {
+    candidates.push(...exactNameCandidates);
+  }
+
+  candidates.push(...index.wildcardTemplates);
+  candidates.push(...index.complexTemplates);
+  return candidates;
 }
 
 function tryNormalizeEqName(name: string): string | undefined {
@@ -242,7 +365,11 @@ function tryGetSimpleTemplatePathMatch(
   };
 }
 
-function matchesSimpleTemplatePath(node: Node, path: readonly string[], absolute: boolean): boolean {
+function matchesSimpleTemplatePath(
+  node: Node,
+  path: readonly string[],
+  absolute: boolean,
+): boolean {
   let current: Node | null = node;
 
   for (let index = path.length - 1; index >= 0; index -= 1) {

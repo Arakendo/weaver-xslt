@@ -35,6 +35,7 @@ import {
   isTraceEnabled,
   resetRecordedTracePause,
 } from '../../runtime/tracePause.js';
+import { resetRecordedTraceSummary } from '../../runtime/traceSummary.js';
 import { parseXml } from '../../xml/parse.js';
 import {
   createXdmNode,
@@ -71,6 +72,7 @@ import {
 import { buildTemporaryTree } from './temporaryTree.js';
 
 const xmlSerializer = new XMLSerializer();
+const languageLookupTemplateCache = new WeakMap<StylesheetIR, Map<string, string>>();
 
 type DeferredVariableBinding = {
   readonly evaluate: () => unknown;
@@ -91,6 +93,7 @@ export function runTransform(
   const trace = options.trace;
   const sourceDocumentUri = trace?.documentUri ?? '<source-xml>';
   resetRecordedTracePause(trace);
+  resetRecordedTraceSummary(trace);
 
   if (options.initialMode !== undefined) {
     throw new XsltError(
@@ -723,7 +726,19 @@ function renderTemplate(
     trace,
     sourceDocumentUri,
   );
-  return renderInstructions(
+
+  if (template.name === 'language_lookup') {
+    const cachedOutput = getCachedLanguageLookupTemplateOutput(
+      ir,
+      context.staticContext.baseUri,
+      variables,
+    );
+    if (cachedOutput !== undefined) {
+      return cachedOutput;
+    }
+  }
+
+  const output = renderInstructions(
     template.body,
     ir,
     {
@@ -734,6 +749,76 @@ function renderTemplate(
     sourceDocumentUri,
     attributeCollector,
   );
+
+  if (template.name === 'language_lookup') {
+    storeCachedLanguageLookupTemplateOutput(ir, context.staticContext.baseUri, variables, output);
+  }
+
+  return output;
+}
+
+function getCachedLanguageLookupTemplateOutput(
+  ir: StylesheetIR,
+  baseUri: string | undefined,
+  boundVariables: ReadonlyMap<string, unknown>,
+): string | undefined {
+  const scopeCache = languageLookupTemplateCache.get(ir);
+  if (scopeCache === undefined) {
+    return undefined;
+  }
+
+  const cacheKey = createLanguageLookupTemplateCacheKey(baseUri, boundVariables);
+  return scopeCache.get(cacheKey);
+}
+
+function storeCachedLanguageLookupTemplateOutput(
+  ir: StylesheetIR,
+  baseUri: string | undefined,
+  boundVariables: ReadonlyMap<string, unknown>,
+  output: string,
+): void {
+  const cacheKey = createLanguageLookupTemplateCacheKey(baseUri, boundVariables);
+  const scopeCache = languageLookupTemplateCache.get(ir) ?? new Map<string, string>();
+  scopeCache.set(cacheKey, output);
+  languageLookupTemplateCache.set(ir, scopeCache);
+}
+
+function createLanguageLookupTemplateCacheKey(
+  baseUri: string | undefined,
+  boundVariables: ReadonlyMap<string, unknown>,
+): string {
+  const baseUriPart = baseUri ?? '<no-base-uri>';
+  const languageCode = serializeLanguageLookupTemplateValue(boundVariables.get('language_code'));
+  const languageWord = serializeLanguageLookupTemplateValue(boundVariables.get('language_word'));
+  return `${baseUriPart}\u001f${languageCode}\u001f${languageWord}`;
+}
+
+function serializeLanguageLookupTemplateValue(value: unknown): string {
+  if (value === undefined) {
+    return '<undefined>';
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => serializeLanguageLookupTemplateValue(item)).join(',')}]`;
+  }
+
+  if (value !== null && typeof value === 'object' && 'xdmKind' in value) {
+    const item = value as XdmItem;
+    switch (item.xdmKind) {
+      case 'atomic':
+        return `atomic:${(item as XdmAtomicValue).type}:${String((item as XdmAtomicValue).value)}`;
+      case 'node':
+        return `node:${(item as XdmNode).node.nodeName}`;
+      case 'map':
+        return 'map';
+      case 'array':
+        return 'array';
+      default:
+        return item.xdmKind;
+    }
+  }
+
+  return `${typeof value}:${String(value)}`;
 }
 
 function bindTemplateParams(

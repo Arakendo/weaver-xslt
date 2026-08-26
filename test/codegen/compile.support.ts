@@ -8,6 +8,7 @@ import { XsltProcessor } from '../../src/index.js';
 import type { TransformOptions } from '../../src/processor/types.js';
 import {
   appendCoverageWarnings,
+  appendTraceSummary,
   applyBuiltInTemplatesByPath,
   createCompiledDocument,
   createTemporaryTreeNode,
@@ -25,7 +26,10 @@ import {
   stringValueOfNativeValue,
   stringValueOfNode,
   getRecordedTracePause,
+  getRecordedTraceSummary,
   resetRecordedTracePause,
+  resetRecordedTraceSummary,
+  selectDocumentDataValueNode,
   traceFocusEnter,
   traceSelectedNodes,
   traceStringValueOfNode,
@@ -44,6 +48,7 @@ const GENERATED_RUNTIME_MODULE_SPECIFIER = '@runtime-test';
 export const NATIVE_DIRECT_PARITY_TAG = '[native-direct]';
 const GENERATED_RUNTIME_MODULE = {
   appendCoverageWarnings,
+  appendTraceSummary,
   applyBuiltInTemplatesByPath,
   createCompiledDocument,
   createTemporaryTreeNode,
@@ -61,7 +66,10 @@ const GENERATED_RUNTIME_MODULE = {
   stringValueOfNativeValue,
   stringValueOfNode,
   getRecordedTracePause,
+  getRecordedTraceSummary,
   resetRecordedTracePause,
+  resetRecordedTraceSummary,
+  selectDocumentDataValueNode,
   traceFocusEnter,
   traceSelectedNodes,
   traceStringValueOfNode,

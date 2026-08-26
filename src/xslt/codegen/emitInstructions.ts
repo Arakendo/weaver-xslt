@@ -1903,6 +1903,20 @@ function emitTracedValueOfPathStringExpression(
   instructionInfoCode: string,
   variableBindings?: ReadonlyMap<string, TsExpression>,
 ): TsExpression | undefined {
+  const documentDataValueNode = emitDocumentDataValueNodeExpression(
+    ast,
+    runtimeHelpers,
+    variableBindings,
+  );
+  if (documentDataValueNode !== undefined) {
+    runtimeHelpers.add('traceStringValueOfNode');
+    return tsCallExpression('traceStringValueOfNode', [
+      documentDataValueNode,
+      tsRawExpression('ctx'),
+      tsRawExpression(instructionInfoCode),
+    ]);
+  }
+
   if (variableBindings === undefined) {
     const simplePath = tryGetSimpleChildPath(ast);
     if (simplePath !== undefined) {
@@ -1955,6 +1969,16 @@ function emitPathStringValueExpression(
   contextNodeIdentifier: string,
   variableBindings?: ReadonlyMap<string, TsExpression>,
 ): TsExpression | undefined {
+  const documentDataValueNode = emitDocumentDataValueNodeExpression(
+    ast,
+    runtimeHelpers,
+    variableBindings,
+  );
+  if (documentDataValueNode !== undefined) {
+    runtimeHelpers.add('stringValueOfNode');
+    return tsCallExpression('stringValueOfNode', [documentDataValueNode]);
+  }
+
   if (variableBindings === undefined) {
     const simplePath = tryGetSimpleChildPath(ast);
     if (simplePath !== undefined) {
@@ -2016,6 +2040,189 @@ function tryGetSimpleDescendantNamePath(
     absolute: ast.absolute,
     localName: terminalStep.nodeTest.name,
   };
+}
+
+function emitDocumentDataValueNodeExpression(
+  ast: PathExpression,
+  runtimeHelpers: Set<string>,
+  variableBindings?: ReadonlyMap<string, TsExpression>,
+): TsExpression | undefined {
+  const documentLookup = tryGetDocumentDataValueLookup(ast, variableBindings);
+  if (documentLookup === undefined) {
+    return undefined;
+  }
+
+  runtimeHelpers.add('selectDocumentDataValueNode');
+  return tsCallExpression('selectDocumentDataValueNode', [
+    tsStringLiteral(documentLookup.documentUri),
+    documentLookup.keyExpression,
+    tsRawExpression('ctx'),
+  ]);
+}
+
+function tryGetDocumentDataValueLookup(
+  ast: PathExpression,
+  variableBindings?: ReadonlyMap<string, TsExpression>,
+):
+  | {
+      readonly documentUri: string;
+      readonly keyExpression: TsExpression;
+    }
+  | undefined {
+  if (
+    ast.base === undefined ||
+    ast.base.kind !== 'functionCall' ||
+    ast.base.callee !== 'document' ||
+    ast.base.arguments.length !== 1 ||
+    ast.base.arguments[0]?.kind !== 'string'
+  ) {
+    return undefined;
+  }
+
+  const [documentUriExpression] = ast.base.arguments;
+  if (documentUriExpression === undefined) {
+    return undefined;
+  }
+
+  const steps = ast.steps;
+  let index = 0;
+
+  {
+    const step = steps[index];
+    if (
+      step !== undefined &&
+      step.kind === 'step' &&
+      step.axis === 'descendant-or-self' &&
+      step.predicates.length === 0 &&
+      step.nodeTest.kind === 'kindTest' &&
+      step.nodeTest.name === 'node'
+    ) {
+      index += 1;
+    }
+  }
+
+  {
+    const step = steps[index];
+    if (
+      step === undefined ||
+      step.kind !== 'step' ||
+      step.axis !== 'child' ||
+      step.predicates.length > 0 ||
+      step.nodeTest.kind !== 'nameTest' ||
+      step.nodeTest.name !== 'root'
+    ) {
+      return undefined;
+    }
+  }
+  index += 1;
+
+  {
+    const step = steps[index];
+    if (
+      step === undefined ||
+      step.kind !== 'step' ||
+      step.axis !== 'child' ||
+      step.predicates.length !== 1 ||
+      step.nodeTest.kind !== 'nameTest' ||
+      step.nodeTest.name !== 'data'
+    ) {
+      return undefined;
+    }
+  }
+
+  const dataStep = steps[index];
+  if (dataStep === undefined || dataStep.kind !== 'step') {
+    return undefined;
+  }
+
+  const keyExpression = tryGetDataNameLookupKeyExpression(
+    dataStep.predicates[0]!,
+    variableBindings,
+  );
+  if (keyExpression === undefined) {
+    return undefined;
+  }
+  index += 1;
+
+  {
+    const step = steps[index];
+    if (
+      step !== undefined &&
+      step.kind === 'step' &&
+      step.axis === 'descendant-or-self' &&
+      step.predicates.length === 0 &&
+      step.nodeTest.kind === 'kindTest' &&
+      step.nodeTest.name === 'node'
+    ) {
+      index += 1;
+    }
+  }
+
+  {
+    const step = steps[index];
+    if (
+      step === undefined ||
+      step.kind !== 'step' ||
+      step.axis !== 'child' ||
+      step.predicates.length > 0 ||
+      step.nodeTest.kind !== 'nameTest' ||
+      step.nodeTest.name !== 'value' ||
+      index !== steps.length - 1
+    ) {
+      return undefined;
+    }
+  }
+
+  return {
+    documentUri: documentUriExpression.value,
+    keyExpression,
+  };
+}
+
+function tryGetDataNameLookupKeyExpression(
+  predicate: XPathAst,
+  variableBindings?: ReadonlyMap<string, TsExpression>,
+): TsExpression | undefined {
+  if (predicate.kind !== 'binary' || predicate.operator !== '=') {
+    return undefined;
+  }
+
+  if (tryGetDataNameAttributeExpression(predicate.left)) {
+    return tryGetLookupKeyScalarExpression(predicate.right, variableBindings);
+  }
+
+  if (tryGetDataNameAttributeExpression(predicate.right)) {
+    return tryGetLookupKeyScalarExpression(predicate.left, variableBindings);
+  }
+
+  return undefined;
+}
+
+function tryGetDataNameAttributeExpression(ast: XPathAst): boolean {
+  return (
+    ast.kind === 'path' &&
+    ast.base === undefined &&
+    ast.steps.length === 1 &&
+    ast.steps[0]?.kind === 'step' &&
+    ast.steps[0]?.axis === 'attribute' &&
+    ast.steps[0]?.predicates.length === 0 &&
+    ast.steps[0]?.nodeTest.kind === 'nameTest' &&
+    ast.steps[0]?.nodeTest.name === 'name'
+  );
+}
+
+function tryGetLookupKeyScalarExpression(
+  ast: XPathAst,
+  variableBindings?: ReadonlyMap<string, TsExpression>,
+): TsExpression | undefined {
+  switch (ast.kind) {
+    case 'string':
+      return tsStringLiteral(ast.value);
+    case 'variable':
+      return resolveVariableBindingExpression(ast.name, variableBindings);
+    default:
+      return undefined;
+  }
 }
 
 function escapeTextLiteral(value: string): string {

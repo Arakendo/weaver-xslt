@@ -1,21 +1,36 @@
 import type { ErrorFrame } from '../errors/index.js';
-import type { TransformTraceOptions, XmlTraceEvent, XmlTracePause, XmlTraceTemplateInfo } from '../processor/types.js';
+import type {
+  TransformTraceOptions,
+  XmlTraceEvent,
+  XmlTracePause,
+  XmlTraceTemplateInfo,
+} from '../processor/types.js';
+import { recordTraceSummary } from './traceSummary.js';
 
 const recordedTracePauses = new WeakMap<TransformTraceOptions, XmlTracePause>();
 
 export function isTraceEnabled(trace: TransformTraceOptions | undefined): boolean {
-  return trace !== undefined
-    && (
-      trace.onEvent !== undefined
-      || trace.onPause !== undefined
-      || (trace.breakpoints !== undefined && trace.breakpoints.length > 0)
-    );
+  return (
+    trace !== undefined &&
+    (trace.onEvent !== undefined ||
+      trace.onPause !== undefined ||
+      (trace.breakpoints !== undefined && trace.breakpoints.length > 0))
+  );
 }
 
-export function emitTraceEvent(trace: TransformTraceOptions | undefined, event: XmlTraceEvent): void {
+export function emitTraceEvent(
+  trace: TransformTraceOptions | undefined,
+  event: XmlTraceEvent,
+): void {
   trace?.onEvent?.(event);
+  recordTraceSummary(trace, event);
 
-  if (trace === undefined || !isTraceEnabled(trace) || trace.breakpoints === undefined || trace.breakpoints.length === 0) {
+  if (
+    trace === undefined ||
+    !isTraceEnabled(trace) ||
+    trace.breakpoints === undefined ||
+    trace.breakpoints.length === 0
+  ) {
     return;
   }
 
@@ -26,11 +41,12 @@ export function emitTraceEvent(trace: TransformTraceOptions | undefined, event: 
     return;
   }
 
-  const matched = activeBreakpoints.some((breakpoint) =>
-    breakpoint.on.includes(event.kind)
-    && breakpoint.node.documentUri === event.node.documentUri
-    && breakpoint.node.kind === event.node.kind
-    && breakpoint.node.path === event.node.path,
+  const matched = activeBreakpoints.some(
+    (breakpoint) =>
+      breakpoint.on.includes(event.kind) &&
+      breakpoint.node.documentUri === event.node.documentUri &&
+      breakpoint.node.kind === event.node.kind &&
+      breakpoint.node.path === event.node.path,
   );
   if (!matched) {
     return;
@@ -41,7 +57,9 @@ export function emitTraceEvent(trace: TransformTraceOptions | undefined, event: 
   activeTrace.onPause?.(pause);
 }
 
-export function getRecordedTracePause(trace: TransformTraceOptions | undefined): XmlTracePause | undefined {
+export function getRecordedTracePause(
+  trace: TransformTraceOptions | undefined,
+): XmlTracePause | undefined {
   return trace === undefined ? undefined : recordedTracePauses.get(trace);
 }
 
