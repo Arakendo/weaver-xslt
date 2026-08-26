@@ -219,6 +219,12 @@ constructors, and misplaced sort instructions remain structured static
 errors. The interpreter family is complete at 14/14; native modes remain
 explicitly at 1/14.
 
+The next conserved denominator is the single-case `current()` family. Its
+initial interpreter profile selects no cases and retains one explicit engine
+gap. Decomposition shows an `xsl:copy` instruction boundary before the actual
+pattern predicate and XSLT `current()` focus semantics; the required
+`preceding-sibling` navigation already exists in the XPath engine.
+
 Larger coherent groups within parameters, variables, call-template, choose,
 literal result elements, node-tests, and apply-templates remain candidates
 after the small-family queue. The 582-case generic error set is not an early

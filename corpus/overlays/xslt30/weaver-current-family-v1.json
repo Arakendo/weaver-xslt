@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "suite": "W3C XSLT 3.0 test suite",
+  "suiteRevision": "6f8fd9e966ae74a251a2604abef9d904c7bc5c9b",
+  "profile": "weaver-current-family-v1",
+  "requiredBackends": ["interpreter"],
+  "selectionRationale": "Inventories the complete one-case current-function family while conserving its initial xsl:copy and predicate-pattern current() engine gaps.",
+  "cases": [
+    {
+      "setFile": "tests/fn/current/_current-test-set.xml",
+      "caseName": "current-001",
+      "selection": "engine-unsupported",
+      "rationale": "The case requires xsl:copy plus predicate-pattern evaluation with XSLT current() scoping."
+    }
+  ]
+}

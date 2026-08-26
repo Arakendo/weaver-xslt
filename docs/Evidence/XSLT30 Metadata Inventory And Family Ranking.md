@@ -150,6 +150,14 @@ explicitly unsupported. The v10 delta retains the completed-family counts and
 outcome digest without broadening that claim to numeric, descending,
 language-sensitive, or custom-collation sorting.
 
+The next ranked uncompleted family is the single-case `current` set. Its
+initial zero-pass overlay records that `current-001` is a composed boundary,
+not merely a missing function registration: the stylesheet first requires
+`xsl:copy`, then predicate-bearing match-pattern evaluation whose `current()`
+value is fixed by the outer pattern evaluation. The sibling axis used inside
+the predicate is already supported. This denominator is fixed before either
+remaining disposition moves.
+
 ## Reproduction
 
 ```powershell
