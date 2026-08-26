@@ -14,3 +14,4 @@ than deleting them.
 - [Runtime Source Decomposition](Runtime%20Source%20Decomposition.md)
 - [CLI Source Decomposition](CLI%20Source%20Decomposition.md)
 - [Regex Source Decomposition](Regex%20Source%20Decomposition.md)
+- [Stylesheet Compiler Source Decomposition](Stylesheet%20Compiler%20Source%20Decomposition.md)
